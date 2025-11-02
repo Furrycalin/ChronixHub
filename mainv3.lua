@@ -121,7 +121,16 @@ v3Text.Parent = titleContainer
 titleContainer.Size = UDim2.new(0, chronixTextSize + v3Text.TextBounds.X, 0, 50)
 titleContainer.Position = UDim2.new(0.53, -(chronixTextSize + v3Text.TextBounds.X)/2, 0, 50)
 
-local isProcessing = false
+local basicMenu = ModularDropdown.new("       基础       ", Vector2.new(150, 100), overlay)
+local combatMenu = ModularDropdown.new("       战斗       ", Vector2.new(350, 100), overlay)
+local moveMenu = ModularDropdown.new("       移动       ", Vector2.new(550, 100), overlay)
+local visualMenu = ModularDropdown.new("       视觉       ", Vector2.new(750, 100), overlay)
+local scriptsMenu = ModularDropdown.new("       脚本       ", Vector2.new(950, 100), overlay)
+local exploitMenu = ModularDropdown.new("       漏洞       ", Vector2.new(1150, 100), overlay)
+local settingMenu = ModularDropdown.new("       设置       ", Vector2.new(1350, 100), overlay)
+
+
+local isProcessing = true
 
 local boundkeyvisiblemenu = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode[RightShift] then
@@ -139,6 +148,7 @@ local boundkeyvisiblemenu = UserInputService.InputBegan:Connect(function(input, 
 end)
 
 local function unloadChronixHub()
+    cc:Disconnect()
     boundkeyvisiblemenu:Disconnect()
     overlay:Destroy()
 	Gui:Destroy()
@@ -149,3 +159,7 @@ end
 settingMenu:AddMenuItem("卸载脚本", function()
     unloadChronixHub()
 end, 1)
+
+overlay.Visible = false
+
+NotificationSystem:CreateNotification("ChronixHubv3已启动", "按下右SHIFT打开界面\n防挂机系统已自动开启.", 5, "rbxassetid://4590662766")
