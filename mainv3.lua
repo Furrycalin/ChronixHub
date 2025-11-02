@@ -150,7 +150,7 @@ end)
 
 local function unloadChronixHub()
     cc:Disconnect()
-    UserInputService:Destroy()
+    UserInputService:Disconnect()
     overlay:Destroy()
 	Gui:Destroy()
 	script:Destroy()
