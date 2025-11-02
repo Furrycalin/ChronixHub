@@ -181,7 +181,7 @@ end
     Returns:
         Instance - The created menu item button
 ]]
-function ModularDropdown:AddMenuItem(text, callback)
+function ModularDropdown:AddMenuItem(text, callback, mode)
     self.itemCount = self.itemCount + 1
     
     -- Create item button
@@ -196,6 +196,8 @@ function ModularDropdown:AddMenuItem(text, callback)
     itemButton.LayoutOrder = self.itemCount
     itemButton.AutoButtonColor = false
     itemButton.Parent = self.contentContainer
+
+    local enable = false
     
     -- Add hover effect
     itemButton.MouseEnter:Connect(function()
@@ -208,8 +210,16 @@ function ModularDropdown:AddMenuItem(text, callback)
     
     -- Add click event
     itemButton.MouseButton1Click:Connect(function()
-        if type(callback) == "function" then
+        if type(callback) == "function" and mode == 1 then
             callback()
+        elseif type(callback) == "function" and mode == 2 then
+            enable = not enable
+            if enable then
+                itemButton.BackgroundColor3 = Color3.new(0.8, 1, 0.5)
+            else
+                itemButton.BackgroundColor3 = UI_STYLES.Item.BackgroundColor3
+            end
+            callback(enable)
         end
     end)
     
