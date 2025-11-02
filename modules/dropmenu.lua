@@ -26,10 +26,10 @@ local UI_STYLES = {
         Height = 30
     },
     Item = {
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+        BackgroundColor3 = Color3.fromRGB(65, 65, 65),
         HoverColor = Color3.fromRGB(50, 50, 50),
         TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 14,
+        TextSize = 16,
         Font = Enum.Font.SourceSans,
         Height = 28
     }
