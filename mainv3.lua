@@ -78,7 +78,7 @@ overlay.Name = "FullscreenOverlay"
 overlay.Size = UDim2.new(1, 0, 1.08, 0) -- 全屏
 overlay.Position = UDim2.new(0, 0, -0.08, 0)
 overlay.BackgroundColor3 = Color3.new(0, 0, 0) -- 纯黑色
-overlay.BackgroundTransparency = 0.6 -- 60%透明度
+overlay.BackgroundTransparency = 0.4 -- 40%透明度
 overlay.ZIndex = 1
 overlay.Parent = Gui
 
@@ -120,3 +120,31 @@ v3Text.Parent = titleContainer
 -- 调整标题容器大小以适应文本
 titleContainer.Size = UDim2.new(0, chronixTextSize + v3Text.TextBounds.X, 0, 50)
 titleContainer.Position = UDim2.new(0.53, -(chronixTextSize + v3Text.TextBounds.X)/2, 0, 50)
+
+local isProcessing = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode[RightShift] then
+        if overlay.Visible then
+            if not isProcessing then
+                overlay.Visible = false
+                NotificationSystem:CreateNotification("ChronixHub已隐藏", "按下右SHIFT重新打开", 5, "rbxassetid://4590662766")
+            else
+                isProcessing = false
+            end
+        else
+            overlay.Visible = true
+        end
+    end
+end)
+
+local function unloadChronixHub()
+    overlay:Destroy()
+	Gui:Destroy()
+	script:Destroy()
+	_G.ChronixHubisLoaded = false
+end
+
+settingMenu:AddMenuItem("卸载脚本", function()
+    unloadChronixHub()
+end, 1)
