@@ -7,7 +7,8 @@ local config = {
     notificationHeight = 80,
     padding = 10,
     defaultDuration = 5,
-    glowImageId = "rbxassetid://154967497"
+    glowImageId = "rbxassetid://154967497",
+    cornerRadius = 5 -- 圆角半径（像素）
 }
 
 -- 通知管理器
@@ -51,10 +52,14 @@ local function createNotificationObject(title, description, duration, soundId)
     notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
     notificationFrame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
     notificationFrame.BorderSizePixel = 1
-    notificationFrame.CornerRadius = UDim.new(0, 5) -- 轻微圆角
     notificationFrame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在屏幕外
     notificationFrame.BackgroundTransparency = 0
     notificationFrame.Parent = notificationManager.container.NotificationContainer
+    
+    -- 添加圆角效果（替代直接设置CornerRadius属性）
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, config.cornerRadius)
+    corner.Parent = notificationFrame
     
     -- 添加黑色发光效果
     local glow = Instance.new("ImageLabel")
