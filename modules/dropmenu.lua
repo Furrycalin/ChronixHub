@@ -49,11 +49,6 @@ local UI_STYLES = {
 function ModularDropdown.new(title, position, parent)
     local self = setmetatable({}, ModularDropdown)
     
-    -- Create main UI components
-    self.screenGui = Instance.new("ScreenGui")
-    self.screenGui.Name = "ModularDropdown_" .. title
-    self.screenGui.Parent = parent
-    
     -- Main menu container (mainFrame in user's code)
     self.mainFrame = Instance.new("Frame")
     self.mainFrame.Name = "MenuContainer"
@@ -62,7 +57,7 @@ function ModularDropdown.new(title, position, parent)
     self.mainFrame.BorderColor3 = UI_STYLES.Menu.BorderColor3
     self.mainFrame.BorderSizePixel = UI_STYLES.Menu.BorderSizePixel
     self.mainFrame.ClipsDescendants = true
-    self.mainFrame.Parent = self.screenGui
+    self.mainFrame.Parent = parent
     
     -- Add corner radius
     local corner = Instance.new("UICorner")
