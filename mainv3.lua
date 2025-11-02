@@ -70,23 +70,23 @@ local Gui = Instance.new("ScreenGui")
 Gui.Name = "ChronixHubGui"
 Gui.Parent = game.CoreGui
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.ResetOnSpawn = true
+Gui.ResetOnSpawn = false
 
 -- 创建全屏黑色覆盖层
 local overlay = Instance.new("Frame")
 overlay.Name = "FullscreenOverlay"
-overlay.Size = UDim2.new(1, 0, 1, 0) -- 全屏
-overlay.Position = UDim2.new(0, 0, 0, 0)
+overlay.Size = UDim2.new(1, 0, 1.08, 0) -- 全屏
+overlay.Position = UDim2.new(0, 0, -0.08, 0)
 overlay.BackgroundColor3 = Color3.new(0, 0, 0) -- 纯黑色
-overlay.BackgroundTransparency = 0.9 -- 90%透明度
+overlay.BackgroundTransparency = 0.6 -- 60%透明度
 overlay.ZIndex = 1
 overlay.Parent = Gui
 
 -- 创建标题容器
 local titleContainer = Instance.new("Frame")
 titleContainer.Name = "TitleContainer"
-titleContainer.Size = UDim2.new(0, 200, 0, 50) -- 固定大小
-titleContainer.Position = UDim2.new(0.5, -100, 0, 20) -- 顶部居中，与顶部有20像素距离
+titleContainer.Size = UDim2.new(0, 150, 0, 50) -- 固定大小
+titleContainer.Position = UDim2.new(1, 100, 1, 1) -- 顶部居中，与顶部有20像素距离
 titleContainer.BackgroundTransparency = 1 -- 透明背景
 titleContainer.ZIndex = 2
 titleContainer.Parent = overlay
@@ -94,7 +94,7 @@ titleContainer.Parent = overlay
 -- 创建"Chronix"文本
 local chronixText = Instance.new("TextLabel")
 chronixText.Name = "ChronixText"
-chronixText.Text = "Chronix"
+chronixText.Text = "ChronixHub"
 chronixText.Font = Enum.Font.SourceSansBold
 chronixText.FontSize = Enum.FontSize.Size36
 chronixText.TextColor3 = Color3.new(1, 1, 1) -- 纯白色
@@ -113,10 +113,10 @@ v3Text.BackgroundTransparency = 1
 v3Text.ZIndex = 3
 
 -- 计算V3文本的位置，使其紧挨着Chronix文本
-local chronixTextSize = chronixText.TextBounds.X
+local chronixTextSize = chronixText.TextBounds.X - 50
 v3Text.Position = UDim2.new(0, chronixTextSize, 0, 0)
 v3Text.Parent = titleContainer
 
 -- 调整标题容器大小以适应文本
 titleContainer.Size = UDim2.new(0, chronixTextSize + v3Text.TextBounds.X, 0, 50)
-titleContainer.Position = UDim2.new(0.5, -(chronixTextSize + v3Text.TextBounds.X)/2, 0, 20)
+titleContainer.Position = UDim2.new(0.53, -(chronixTextSize + v3Text.TextBounds.X)/2, 0, 50)
