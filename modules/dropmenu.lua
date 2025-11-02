@@ -1,9 +1,8 @@
 --[[
-    Modular Roblox Dropdown Menu (Fixed Drag Version)
-    Version: 1.0.1
+    Modular Roblox Dropdown Menu (User's Drag Version)
+    Version: 1.0.2
     Description: A modular dropdown menu component for Roblox with draggable title bar,
-                 dynamic item addition, and custom function support.
-                 Fixed drag functionality issue.
+                 using the drag implementation style provided by the user.
 ]]
 
 local ModularDropdown = {}
@@ -55,20 +54,20 @@ function ModularDropdown.new(title, position, parent)
     self.screenGui.Name = "ModularDropdown_" .. title
     self.screenGui.Parent = parent
     
-    -- Main menu container
-    self.menuContainer = Instance.new("Frame")
-    self.menuContainer.Name = "MenuContainer"
-    self.menuContainer.Position = UDim2.new(0, position.X, 0, position.Y)
-    self.menuContainer.BackgroundColor3 = UI_STYLES.Menu.BackgroundColor3
-    self.menuContainer.BorderColor3 = UI_STYLES.Menu.BorderColor3
-    self.menuContainer.BorderSizePixel = UI_STYLES.Menu.BorderSizePixel
-    self.menuContainer.ClipsDescendants = true
-    self.menuContainer.Parent = self.screenGui
+    -- Main menu container (mainFrame in user's code)
+    self.mainFrame = Instance.new("Frame")
+    self.mainFrame.Name = "MenuContainer"
+    self.mainFrame.Position = UDim2.new(0, position.X, 0, position.Y)
+    self.mainFrame.BackgroundColor3 = UI_STYLES.Menu.BackgroundColor3
+    self.mainFrame.BorderColor3 = UI_STYLES.Menu.BorderColor3
+    self.mainFrame.BorderSizePixel = UI_STYLES.Menu.BorderSizePixel
+    self.mainFrame.ClipsDescendants = true
+    self.mainFrame.Parent = self.screenGui
     
     -- Add corner radius
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UI_STYLES.Menu.CornerRadius
-    corner.Parent = self.menuContainer
+    corner.Parent = self.mainFrame
     
     -- Add shadow effect
     local shadow = Instance.new("UIStroke")
@@ -76,7 +75,7 @@ function ModularDropdown.new(title, position, parent)
     shadow.Color = Color3.fromRGB(0, 0, 0)
     shadow.Transparency = UI_STYLES.Menu.ShadowTransparency
     shadow.Thickness = UI_STYLES.Menu.ShadowSize
-    shadow.Parent = self.menuContainer
+    shadow.Parent = self.mainFrame
     
     -- Title bar (draggable)
     self.titleBar = Instance.new("TextButton")
@@ -89,7 +88,7 @@ function ModularDropdown.new(title, position, parent)
     self.titleBar.Size = UDim2.new(1, 0, 0, UI_STYLES.Title.Height)
     self.titleBar.Position = UDim2.new(0, 0, 0, 0)
     self.titleBar.AutoButtonColor = false
-    self.titleBar.Parent = self.menuContainer
+    self.titleBar.Parent = self.mainFrame
     
     -- Content container for menu items
     self.contentContainer = Instance.new("Frame")
@@ -97,7 +96,7 @@ function ModularDropdown.new(title, position, parent)
     self.contentContainer.BackgroundTransparency = 1
     self.contentContainer.Size = UDim2.new(1, 0, 0, 0)
     self.contentContainer.Position = UDim2.new(0, 0, 0, UI_STYLES.Title.Height)
-    self.contentContainer.Parent = self.menuContainer
+    self.contentContainer.Parent = self.mainFrame
     
     -- UIListLayout for automatic item layout
     self.listLayout = Instance.new("UIListLayout")
@@ -112,7 +111,7 @@ function ModularDropdown.new(title, position, parent)
     self.menuItems = {}
     self.itemCount = 0
     
-    -- Initialize drag functionality
+    -- Initialize drag functionality using user's implementation
     self:InitializeDragBehavior()
     
     -- Update menu size initially
@@ -123,53 +122,52 @@ end
 
 --[[
     Initializes the drag behavior for the title bar.
-    FIXED: Changed input.position to input.Position (capital P)
+    IMPLEMENTATION: Using the exact style from the user's provided code
 ]]
 function ModularDropdown:InitializeDragBehavior()
     local UserInputService = game:GetService("UserInputService")
     local isDragging = false
-    local dragStartPosition = nil
-    local menuStartPosition = nil
+    local dragStartPos
+    local windowStartPos
     
-    -- Start dragging when mouse is pressed down on title bar
-    self.titleBar.MouseButton1Down:Connect(function(input)
-        isDragging = true
-        -- FIXED: Changed input.position to input.Position
-        dragStartPosition = Vector2.new(input.Position.X, input.Position.Y)
-        menuStartPosition = Vector2.new(
-            self.menuContainer.Position.X.Offset,
-            self.menuContainer.Position.Y.Offset
-        )
-        self.titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50) -- Darker when dragging
-    end)
-    
-    -- Stop dragging when mouse is released
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if isDragging then
-                isDragging = false
-                self.titleBar.BackgroundColor3 = UI_STYLES.Title.BackgroundColor3 -- Revert color
-            end
+    -- Title bar InputBegan event (as per user's code)
+    self.titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            dragStartPos = Vector2.new(input.Position.X, input.Position.Y)
+            windowStartPos = self.mainFrame.Position
+            
+            -- Visual feedback: darken title bar when dragging
+            self.titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         end
     end)
     
-    -- Update menu position while dragging
-    UserInputService.InputChanged:Connect(function(input)
-        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            -- FIXED: Changed input.position to input.Position
-            local currentPosition = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = currentPosition - dragStartPosition
+    -- Title bar InputEnded event (as per user's code)
+    self.titleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
             
-            self.menuContainer.Position = UDim2.new(
-                0, menuStartPosition.X + delta.X,
-                0, menuStartPosition.Y + delta.Y
+            -- Visual feedback: revert title bar color
+            self.titleBar.BackgroundColor3 = UI_STYLES.Title.BackgroundColor3
+        end
+    end)
+    
+    -- UserInputService InputChanged event (as per user's code)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = Vector2.new(input.Position.X, input.Position.Y) - dragStartPos
+            self.mainFrame.Position = UDim2.new(
+                windowStartPos.X.Scale,
+                windowStartPos.X.Offset + delta.X,
+                windowStartPos.Y.Scale,
+                windowStartPos.Y.Offset + delta.Y
             )
         end
     end)
     
-    -- Title bar click handler (does nothing by default)
+    -- Prevent title bar click from activating twice
     self.titleBar.MouseButton1Click:Connect(function()
-        -- Can be overridden if needed
+        -- Empty function to consume the click event
     end)
 end
 
@@ -252,7 +250,7 @@ function ModularDropdown:UpdateMenuSize()
     local menuWidth = math.max(maxTextWidth, titleWidth) + 40 -- Add padding
     
     -- Update menu container size
-    self.menuContainer.Size = UDim2.new(
+    self.mainFrame.Size = UDim2.new(
         0, menuWidth,
         0, UI_STYLES.Title.Height + contentHeight
     )
