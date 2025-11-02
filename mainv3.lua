@@ -65,17 +65,58 @@ uiclicker.SoundId = "rbxassetid://535716488"
 uiclicker.Volume = 0.3
 uiclicker.Parent = SoundService
 
---主体结构
+-- 创建主ScreenGui
 local Gui = Instance.new("ScreenGui")
+Gui.Name = "ChronixHubGui"
 Gui.Parent = game.CoreGui
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.ResetOnSpawn = true
 
--- 创建主窗口
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(1, 0, 1, 0) -- 中等大小
-mainFrame.Position = UDim2.new(0, 0, 0, 0) -- 屏幕中央
-mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 墨蓝色
-mainFrame.BorderSizePixel = 0
-mainFrame.BackgroundTransparency = 0.9
-mainFrame.Parent = Gui
+-- 创建全屏黑色覆盖层
+local overlay = Instance.new("Frame")
+overlay.Name = "FullscreenOverlay"
+overlay.Size = UDim2.new(1, 0, 1, 0) -- 全屏
+overlay.Position = UDim2.new(0, 0, 0, 0)
+overlay.BackgroundColor3 = Color3.new(0, 0, 0) -- 纯黑色
+overlay.BackgroundTransparency = 0.9 -- 90%透明度
+overlay.ZIndex = 1
+overlay.Parent = Gui
+
+-- 创建标题容器
+local titleContainer = Instance.new("Frame")
+titleContainer.Name = "TitleContainer"
+titleContainer.Size = UDim2.new(0, 200, 0, 50) -- 固定大小
+titleContainer.Position = UDim2.new(0.5, -100, 0, 20) -- 顶部居中，与顶部有20像素距离
+titleContainer.BackgroundTransparency = 1 -- 透明背景
+titleContainer.ZIndex = 2
+titleContainer.Parent = overlay
+
+-- 创建"Chronix"文本
+local chronixText = Instance.new("TextLabel")
+chronixText.Name = "ChronixText"
+chronixText.Text = "Chronix"
+chronixText.Font = Enum.Font.SourceSansBold
+chronixText.FontSize = Enum.FontSize.Size36
+chronixText.TextColor3 = Color3.new(1, 1, 1) -- 纯白色
+chronixText.BackgroundTransparency = 1
+chronixText.ZIndex = 3
+chronixText.Parent = titleContainer
+
+-- 创建"V3"文本
+local v3Text = Instance.new("TextLabel")
+v3Text.Name = "V3Text"
+v3Text.Text = "V3"
+v3Text.Font = Enum.Font.SourceSansBold
+v3Text.FontSize = Enum.FontSize.Size36
+v3Text.TextColor3 = Color3.new(0.8, 1, 0.5) -- 浅绿色
+v3Text.BackgroundTransparency = 1
+v3Text.ZIndex = 3
+
+-- 计算V3文本的位置，使其紧挨着Chronix文本
+local chronixTextSize = chronixText.TextBounds.X
+v3Text.Position = UDim2.new(0, chronixTextSize, 0, 0)
+v3Text.Parent = titleContainer
+
+-- 调整标题容器大小以适应文本
+titleContainer.Size = UDim2.new(0, chronixTextSize + v3Text.TextBounds.X, 0, 50)
+titleContainer.Position = UDim2.new(0.5, -(chronixTextSize + v3Text.TextBounds.X)/2, 0, 20)
