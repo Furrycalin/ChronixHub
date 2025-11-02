@@ -201,11 +201,12 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
 
     -- Add hover effect
     itemButton.MouseEnter:Connect(function()
-        itemButton.BackgroundColor3 = UI_STYLES.Item.HoverColor
+        itemButton.BackgroundColor3 = enable and Color3.new(0.3, 1, 0.5) or UI_STYLES.Item.HoverColor
     end)
     
     itemButton.MouseLeave:Connect(function()
         itemButton.BackgroundColor3 = enable and Color3.new(0.8, 1, 0.5) or UI_STYLES.Item.BackgroundColor3
+        itemButton.BackgroundColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.BackgroundColor3
     end)
     
     -- Add click event
@@ -214,11 +215,8 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
             callback()
         elseif type(callback) == "function" and mode == 2 then
             enable = not enable
-            if enable then
-                itemButton.BackgroundColor3 = Color3.new(0.8, 1, 0.5)
-            else
-                itemButton.BackgroundColor3 = UI_STYLES.Item.BackgroundColor3
-            end
+            itemButton.BackgroundColor3 = enable and Color3.new(0.8, 1, 0.5) or UI_STYLES.Item.BackgroundColor3
+            itemButton.BackgroundColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.BackgroundColor3
             callback(enable)
         end
     end)
