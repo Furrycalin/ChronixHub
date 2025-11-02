@@ -133,7 +133,7 @@ local settingMenu = ModularDropdown.new("       设置       ", Vector2.new(1350
 
 local isProcessing = true
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+local bkvm = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.RightShift then
         if overlay.Visible then
             if not isProcessing then
@@ -150,7 +150,7 @@ end)
 
 local function unloadChronixHub()
     cc:Disconnect()
-    UserInputService:Disconnect()
+    bkvm:Disconnect()
     overlay:Destroy()
 	Gui:Destroy()
     ModularDropdown:Destroy()
