@@ -111,6 +111,11 @@ local function createNotificationFrame(title, description)
     notificationFrame.BorderSizePixel = config.borderSize -- 边框大小
     notificationFrame.BackgroundTransparency = 0
     notificationFrame.ZIndex = config.zIndex -- 确保显示在最上层
+
+    local uiStroke = Instance.new("UIStroke", notificationFrame)
+    uiStroke.Color = config.borderColor -- 边框颜色
+    uiStroke.Thickness = 2 -- 边框厚度
+    uiStroke.Transparency = 0 -- 边框不透明
     
     -- 添加圆角效果
     local corner = Instance.new("UICorner")
