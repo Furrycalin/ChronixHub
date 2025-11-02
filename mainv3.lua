@@ -131,9 +131,9 @@ local exploitMenu = ModularDropdown.new("       漏洞       ", Vector2.new(1150
 local settingMenu = ModularDropdown.new("       设置       ", Vector2.new(1350, 100), overlay)
 
 
-local isProcessing = false
+local isProcessing = true
 
-local boundkeyvisiblemenu = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode[RightShift] then
         if overlay.Visible then
             if not isProcessing then
@@ -150,7 +150,7 @@ end)
 
 local function unloadChronixHub()
     cc:Disconnect()
-    boundkeyvisiblemenu:Disconnect()
+    UserInputService:Destroy()
     overlay:Destroy()
 	Gui:Destroy()
 	script:Destroy()
