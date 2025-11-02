@@ -8,6 +8,12 @@
 local ModularDropdown = {}
 ModularDropdown.__index = ModularDropdown
 
+-- 点击音效
+local uiclicker = Instance.new("Sound")
+uiclicker.SoundId = "rbxassetid://535716488"
+uiclicker.Volume = 0.3
+uiclicker.Parent = SoundService
+
 -- Constants for UI styling
 local UI_STYLES = {
     Menu = {
