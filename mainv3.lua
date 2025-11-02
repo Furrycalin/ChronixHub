@@ -153,6 +153,9 @@ local function unloadChronixHub()
     UserInputService:Disconnect()
     overlay:Destroy()
 	Gui:Destroy()
+    ModularDropdown:Destroy()
+    NotificationSystem:Destroy()
+    tpWalk:Destroy()
 	script:Destroy()
 	_G.ChronixHubisLoaded = false
 end
