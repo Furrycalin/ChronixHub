@@ -9,6 +9,7 @@ local ModularDropdown = {}
 ModularDropdown.__index = ModularDropdown
 
 -- 点击音效
+local SoundService = game:GetService("SoundService")
 local uiclicker = Instance.new("Sound")
 uiclicker.SoundId = "rbxassetid://535716488"
 uiclicker.Volume = 0.3
