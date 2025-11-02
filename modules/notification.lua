@@ -1,6 +1,11 @@
 -- 通知系统模块
 local NotificationSystem = {}
 
+-- 服务引用
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+
 -- 模块配置
 local config = {
     notificationWidth = 300,
@@ -8,42 +13,59 @@ local config = {
     padding = 10,
     defaultDuration = 5,
     glowImageId = "rbxassetid://154967497",
-    cornerRadius = 5 -- 圆角半径（像素）
+    cornerRadius = 5, -- 圆角半径（像素）
+    zIndex = 9999 -- 确保通知显示在最上层
 }
 
--- 通知管理器
-local notificationManager = {
-    container = nil,
-    notifications = {}
-}
+-- 全局变量
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local notifications = {}
+local notificationContainer = nil
 
--- 初始化通知管理器
-local function initNotificationManager()
-    -- 防止重复初始化
-    if notificationManager.container then return end
+-- 初始化通知容器
+local function initNotificationContainer()
+    if notificationContainer then return end
     
-    -- 创建通知容器
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "NotificationSystem"
-    screenGui.IgnoreGuiInset = true  -- 忽略Roblox默认UI留出的空间
-    screenGui.Parent = game.Players.LocalPlayer.PlayerGui
-    
-    notificationManager.container = screenGui
+    -- 创建 创建通知容器
+    notificationContainer = Instance.new("ScreenGui")
+    notificationContainer.Name = "NotificationSystem"
+    notificationContainer.IgnoreGuiInset = true -- 忽略Roblox默认UI留出的空间
+    notificationContainer.Parent = PlayerGui
+end
+
+-- 更新所有通知的位置
+local function updateNotificationPositions()
+    for index, notification in ipairs(notifications) do
+        if notification.frame and notification.frame.Parent then
+            -- 计算Y轴偏移量，新通知在最下面
+            local yOffset = (index - 1) * (config.notificationHeight + config.padding)
+            
+            -- 设置目标位置
+            local targetPosition = UDim2.new(1, -config.notificationWidth - 10, 1, -yOffset - config.notificationHeight - 10)
+            
+            -- 创建位置动画
+            local tween = TweenService:Create(notification.frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                Position = targetPosition
+            })
+            tween:Play()
+        end
+    end
 end
 
 -- 创建单个通知
-local function createNotificationObject(title, description, duration, soundId)
-    -- 确保管理器已初始化
-    initNotificationManager()
-    
+local function createNotificationFrame(title, description)
     -- 创建通知背景框
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Name = "NotificationFrame"
     notificationFrame.Size = UDim2.new(0, config.notificationWidth, 0, config.notificationHeight)
+    notificationFrame.Position = UDim2.new(1, 0, 1, -config.notificationHeight - 10) -- 初始位置在屏幕右侧
     notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
     notificationFrame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
     notificationFrame.BorderSizePixel = 1
     notificationFrame.BackgroundTransparency = 0
+    notificationFrame.ZIndex = config.zIndex -- 确保显示在最上层
+    notificationFrame.Parent = notificationContainer
     
     -- 添加圆角效果
     local corner = Instance.new("UICorner")
@@ -59,7 +81,7 @@ local function createNotificationObject(title, description, duration, soundId)
     glow.Image = config.glowImageId
     glow.ImageColor3 = Color3.new(0, 0, 0)
     glow.ImageTransparency = 0.7
-    glow.ZIndex = -1
+    glow.ZIndex = config.zIndex - 1
     glow.Parent = notificationFrame
     
     -- 创建标题文本
@@ -74,6 +96,7 @@ local function createNotificationObject(title, description, duration, soundId)
     titleText.TextSize = 16
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.TextYAlignment = Enum.TextYAlignment.Top
+    titleText.ZIndex = config.zIndex
     titleText.Parent = notificationFrame
     
     -- 创建描述文本
@@ -89,36 +112,10 @@ local function createNotificationObject(title, description, duration, soundId)
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.TextYAlignment = Enum.TextYAlignment.Top
     descText.TextWrapped = true -- 支持多行显示
+    descText.ZIndex = config.zIndex
     descText.Parent = notificationFrame
     
-    -- 创建通知对象
-    local notification = {
-        frame = notificationFrame,
-        titleText = titleText,
-        descText = descText,
-        duration = duration or config.defaultDuration,
-        soundId = soundId
-    }
-    
-    -- 添加到通知列表
-    table.insert(notificationManager.notifications, notification)
-    
-    return notification
-end
-
--- 更新所有通知的位置
-local function updateNotificationPositions()
-    for i, notification in ipairs(notificationManager.notifications) do
-        if notification.frame and notification.frame.Parent then
-            -- 计算Y轴偏移量，新通知在最下面
-            local yOffset = (i - 1) * (config.notificationHeight + config.padding)
-            
-            -- 设置通知框位置在右下角，从右侧滑入
-            -- 使用屏幕右下角为参考点，向右偏移整个宽度（屏幕外）
-            notification.frame.Position = UDim2.new(1, config.notificationWidth, 1, -yOffset - config.notificationHeight)
-            notification.frame.anchorPoint = Vector2.new(1, 1) -- 锚点在右下角
-        end
-    end
+    return notificationFrame
 end
 
 -- 播放通知音效
@@ -129,105 +126,29 @@ local function playNotificationSound(soundId)
     local sound = Instance.new("Sound")
     sound.SoundId = soundId
     sound.Volume = 0.5
-    sound.Parent = game:GetService("SoundService")
+    sound.Parent = SoundService
     sound:Play()
     
     -- 2秒后自动移除音效
     game.Debris:AddItem(sound, 2)
 end
 
--- 滑入动画
-local function animateNotificationIn(notification)
-    if not notification or not notification.frame then return end
-    
-    -- 获取TweenService
-    local TweenService = game:GetService("TweenService")
-    if not TweenService then
-        warn("TweenService not found, notification will appear immediately")
-        -- 直接设置到目标位置
-        notification.frame.position = UDim2.new(1, -10, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
-        return
-    end
-    
-    -- 滑入到屏幕右下角，留出10像素的边距
-    local targetPosition = UDim2.new(1, -10, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
-    
-    -- 创建滑入动画
-    local tweenInfo = TweenInfo.new(
-        0.3, -- 动画时长
-        Enum.EasingStyle.Quad, -- 缓动风格
-        Enum.EasingDirection.Out -- 缓动方向
-    )
-    
-    local tween = TweenService:Create(notification.frame, tweenInfo, {Position = targetPosition})
-    tween:Play()
-    
-    return tween
-end
-
--- 滑出动画
-local function animateNotificationOut(notification, onComplete)
-    if not notification or not notification.frame then 
-        if onComplete then onComplete() end
-        return 
-    end
-    
-    -- 获取TweenService
-    local TweenService = game:GetService("TweenService")
-    if not TweenService then
-        warn("TweenService not found, notification will be removed immediately")
-        if notification.frame and notification.frame.Parent then
-            notification.frame:Destroy()
-        end
-        if onComplete then onComplete() end
-        return
-    end
-    
-    -- 滑出到屏幕右侧（屏幕外）
-    local targetPosition = UDim2.new(1, config.notificationWidth, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
-    
-    -- 创建滑出动画
-    local tweenInfo = TweenInfo.new(
-        0.3, -- 动画时长
-        Enum.EasingStyle.Quad, -- 缓动风格
-        Enum.EasingDirection.In -- 缓动方向
-    )
-    
-    local tween = TweenService:Create(notification.frame, tweenInfo, {Position = targetPosition})
-    tween:Play()
-    
-    -- 动画结束后移除通知
-    tween.Completed:Connect(function()
-        if notification.frame and notification.frame.Parent then
-            notification.frame:Destroy()
-        end
-        if onComplete then onComplete() end
-    end)
-    
-    return tween
-end
-
--- 移除通知并更新位置
-local function removeNotification(notification)
-    if not notification then return end
-    
-    -- 从列表中移除
-    local index = table.find(notificationManager.notifications, notification)
-    if index then
-        table.remove(notificationManager.notifications, index)
-        
-        -- 更新其他通知的位置
-        updateNotificationPositions()
-    end
-end
-
 -- 创建通知的主函数
 function NotificationSystem:CreateNotification(title, description, duration, soundId)
-    -- 创建通知对象
-    local notification = createNotificationObject(title, description, duration, soundId)
+    -- 初始化通知容器
+    initNotificationContainer()
     
-    -- 将通知框添加到容器
-    notification.frame.Parent = notificationManager.container
+    -- 创建通知框
+    local notificationFrame = createNotificationFrame(title, description)
+    
+    -- 创建通知对象
+    local notification = {
+        frame = notificationFrame,
+        duration = duration or config.defaultDuration
+    }
+    
+    -- 添加到通知列表
+    table.insert(notifications, notification)
     
     -- 更新所有通知的位置
     updateNotificationPositions()
@@ -235,22 +156,31 @@ function NotificationSystem:CreateNotification(title, description, duration, sou
     -- 播放音效
     playNotificationSound(soundId)
     
-    -- 启动滑入动画
-    local slideInTween = animateNotificationIn(notification)
-    
-    -- 设置自动关闭
-    delay(notification.duration, function()
-        -- 启动滑出动画
-        animateNotificationOut(notification, function()
-            -- 移除通知
-            removeNotification(notification)
-        end)
-    end)
+    -- 独立协程处理通知生命周期
+    coroutine.wrap(function()
+        -- 等待显示时间
+        wait(notification.duration)
+        
+        -- 滑出动画
+        local tweenOut = TweenService:Create(notificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+            Position = UDim2.new(1, 0, notificationFrame.Position.Y.Scale, notificationFrame.Position.Y.Offset)
+        })
+        tweenOut:Play()
+        tweenOut.Completed:Wait()
+        
+        -- 移除元素并更新队列
+        local index = table.find(notifications, notification)
+        if index then
+            table.remove(notifications, index)
+            notificationFrame:Destroy()
+            updateNotificationPositions()
+        end
+    end)()
     
     return notification
 end
 
 -- 初始化通知系统
-initNotificationManager()
+initNotificationContainer()
 
 return NotificationSystem
