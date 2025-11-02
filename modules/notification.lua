@@ -81,7 +81,7 @@ local function createNotificationObject(title, description, duration, soundId)
     titleText.BackgroundTransparency = 1
     titleText.Text = title or "Notification"
     titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
-    titleText.TextFont = Enum.Font.SourceSansBold
+    titleText.Font = Enum.Font.SourceSansBold -- 替换TextFont为Font
     titleText.TextSize = 16
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.TextYAlignment = Enum.TextYAlignment.Top
@@ -95,7 +95,7 @@ local function createNotificationObject(title, description, duration, soundId)
     descText.BackgroundTransparency = 1
     descText.Text = description or ""
     descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
-    descText.TextFont = Enum.Font.SourceSans
+    descText.Font = Enum.Font.SourceSans -- 替换TextFont为Font
     descText.TextSize = 12
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.TextYAlignment = Enum.TextYAlignment.Top
