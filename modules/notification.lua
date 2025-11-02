@@ -14,6 +14,7 @@ local config = {
 -- 通知管理器
 local notificationManager = {
     container = nil,
+    notificationsContainer = nil,
     notifications = {}
 }
 
@@ -28,16 +29,18 @@ local function initNotificationManager()
     screenGui.IgnoreGuiInset = true  -- 忽略Roblox默认UI留出的空间
     screenGui.Parent = game.Players.LocalPlayer.PlayerGui
     
-    -- 设置容器位置在右下角
-    local containerFrame = Instance.new("Frame")
-    containerFrame.Name = "NotificationContainer"
-    containerFrame.Size = UDim2.new(0, config.notificationWidth, 0, 0)
-    containerFrame.Position = UDim2.new(1, -10, 1, -10)
-    containerFrame.AnchorPoint = Vector2.new(1, 1)
-    containerFrame.BackgroundTransparency = 1
-    containerFrame.Parent = screenGui
-    
     notificationManager.container = screenGui
+    
+    -- 创建通知列表容器
+    local notificationsContainer = Instance.new("Frame")
+    notificationsContainer.Name = "NotificationsContainer"
+    notificationsContainer.Size = UDim2.new(0, config.notificationWidth, 0, 0)
+    notificationsContainer.Position = UDim2.new(1, -10, 1, -10) -- 右下角
+    notificationsContainer.AnchorPoint = Vector2.new(1, 1) -- 锚点在右下角
+    notificationsContainer.BackgroundTransparency = 1
+    notificationsContainer.Parent = screenGui
+    
+    notificationManager.notificationsContainer = notificationsContainer
 end
 
 -- 创建单个通知
@@ -52,11 +55,11 @@ local function createNotificationObject(title, description, duration, soundId)
     notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
     notificationFrame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
     notificationFrame.BorderSizePixel = 1
-    notificationFrame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在屏幕外
+    notificationFrame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在容器右侧（屏幕外）
     notificationFrame.BackgroundTransparency = 0
-    notificationFrame.Parent = notificationManager.container.NotificationContainer
+    notificationFrame.Parent = notificationManager.notificationsContainer
     
-    -- 添加圆角效果（替代直接设置CornerRadius属性）
+    -- 添加圆角效果
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, config.cornerRadius)
     corner.Parent = notificationFrame
@@ -81,7 +84,7 @@ local function createNotificationObject(title, description, duration, soundId)
     titleText.BackgroundTransparency = 1
     titleText.Text = title or "Notification"
     titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
-    titleText.Font = Enum.Font.SourceSansBold -- 替换TextFont为Font
+    titleText.Font = Enum.Font.SourceSansBold
     titleText.TextSize = 16
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.TextYAlignment = Enum.TextYAlignment.Top
@@ -95,7 +98,7 @@ local function createNotificationObject(title, description, duration, soundId)
     descText.BackgroundTransparency = 1
     descText.Text = description or ""
     descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
-    descText.Font = Enum.Font.SourceSans -- 替换TextFont为Font
+    descText.Font = Enum.Font.SourceSans
     descText.TextSize = 12
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.TextYAlignment = Enum.TextYAlignment.Top
@@ -121,6 +124,7 @@ end
 local function updateNotificationPositions()
     for i, notification in ipairs(notificationManager.notifications) do
         if notification.frame and notification.frame.Parent then
+            -- 计算Y轴偏移量，新通知在最下面
             local yOffset = (i - 1) * (config.notificationHeight + config.padding)
             notification.frame.Position = UDim2.new(1, 0, 0, yOffset)
         end
@@ -154,6 +158,7 @@ local function animateNotificationIn(notification)
         return
     end
     
+    -- 滑入到容器内
     local targetPosition = UDim2.new(0, 0, notification.frame.Position.Y.Scale, notification.frame.Position.Y.Offset)
     
     -- 创建滑入动画
@@ -187,6 +192,7 @@ local function animateNotificationOut(notification, onComplete)
         return
     end
     
+    -- 滑出到容器右侧（屏幕外）
     local targetPosition = UDim2.new(1, 0, notification.frame.Position.Y.Scale, notification.frame.Position.Y.Offset)
     
     -- 创建滑出动画
