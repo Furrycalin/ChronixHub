@@ -1,9 +1,9 @@
 -- 创建通知系统模块
 local Notification = {}
-Notification.__index = Notification
+notification.__index = notification
 
 -- 通知管理器单例
-local NotificationManager = {
+local notificationManager = {
     notifications = {},
     container = nil,
     padding = 10,
@@ -11,11 +11,15 @@ local NotificationManager = {
 }
 
 -- 初始化通知管理器
-function NotificationManager:Init()
+function notificationManager:Init()
+    -- 确保只初始化一次
+    if self.container then return end
+    
     -- 创建通知容器
-    self.container = Instance.new("ScreenGui")
-    self.container.Name = "NotificationContainer"
-    self.container.Parent = game.Players.LocalPlayer.PlayerGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NotificationContainer"
+    screenGui.IgnoreGuiInset = true  -- 忽略Roblox默认UI留出的空间
+    screenGui.Parent = game.Players.LocalPlayer.PlayerGui
     
     -- 设置容器位置在右下角
     local containerFrame = Instance.new("Frame")
@@ -24,36 +28,49 @@ function NotificationManager:Init()
     containerFrame.Position = UDim2.new(1, -10, 1, -10)
     containerFrame.AnchorPoint = Vector2.new(1, 1)
     containerFrame.BackgroundTransparency = 1
-    containerFrame.Parent = self.container
+    containerFrame.Parent = screenGui
+    
+    self.container = screenGui
 end
 
 -- 创建新通知
-function Notification.new(title, description, duration)
-    local self = setmetatable({}, Notification)
+function notification.new(title, description, duration)
+    local self = setmetatable({}, notification)
     
-    -- 设置通知属性
+    -- 设置通知属性，添加默认值防止空值
     self.title = title or "Notification"
     self.description = description or ""
-    self.duration = duration or NotificationManager.defaultDuration
-    
-    -- 创建通知GUI
-    self:CreateGUI()
+    self.duration = duration or notificationManager.defaultDuration
+    self.frame = nil
+    self.titleText = nil
+    self.descText = nil
     
     return self
 end
 
 -- 创建通知GUI元素
-function Notification:CreateGUI()
+function notification:CreateGUI()
+    -- 确保通知管理器已初始化
+    if not notificationManager.container then
+        notificationManager:Init()
+    end
+    
+    -- 检查是否已经创建过GUI
+    if self.frame then
+        warn("Notification GUI already created")
+        return
+    end
+    
     -- 创建通知背景框
-    self.frame = Instance.new("Frame")
-    self.frame.Name = "NotificationFrame"
-    self.frame.Size = UDim2.new(1, 0, 0, 80)
-    self.frame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
-    self.frame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
-    self.frame.BorderSizePixel = 1
-    self.frame.CornerRadius = UDim.new(0, 5) -- 轻微圆角
-    self.frame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在屏幕外
-    self.frame.BackgroundTransparency = 0
+    local frame = Instance.new("Frame")
+    frame.Name = "NotificationFrame"
+    frame.Size = UDim2.new(1, 0, 0, 80)
+    frame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
+    frame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
+    frame.BorderSizePixel = 1
+    frame.CornerRadius = UDim.new(0, 5) -- 轻微圆角
+    frame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在屏幕外
+    frame.BackgroundTransparency = 0
     
     -- 添加黑色发光效果
     local glow = Instance.new("ImageLabel")
@@ -65,72 +82,83 @@ function Notification:CreateGUI()
     glow.ImageColor3 = Color3.new(0, 0, 0)
     glow.ImageTransparency = 0.7
     glow.ZIndex = -1
-    glow.Parent = self.frame
+    glow.Parent = frame
     
     -- 创建标题文本
-    self.titleText = Instance.new("TextLabel")
-    self.titleText.Name = "TitleText"
-    self.titleText.Size = UDim2.new(1, -10, 0, 30)
-    self.titleText.Position = UDim2.new(0, 5, 0, 5) -- 稍微靠上
-    self.titleText.BackgroundTransparency = 1
-    self.titleText.Text = self.title
-    self.titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
-    self.titleText.TextFont = Enum.Font.SourceSansBold
-    self.titleText.TextSize = 16
-    self.titleText.TextXAlignment = Enum.TextXAlignment.Left
-    self.titleText.TextYAlignment = Enum.TextYAlignment.Top
-    self.titleText.Parent = self.frame
+    local titleText = Instance.new("TextLabel")
+    titleText.Name = "TitleText"
+    titleText.Size = UDim2.new(1, -10, 0, 30)
+    titleText.Position = UDim2.new(0, 5, 0, 5) -- 稍微靠上
+    titleText.BackgroundTransparency = 1
+    titleText.Text = self.title
+    titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
+    titleText.TextFont = Enum.Font.SourceSansBold
+    titleText.TextSize = 16
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.TextYAlignment = Enum.TextYAlignment.Top
+    titleText.Parent = frame
     
     -- 创建描述文本
-    self.descText = Instance.new("TextLabel")
-    self.descText.Name = "DescriptionText"
-    self.descText.Size = UDim2.new(1, -10, 0, 40)
-    self.descText.Position = UDim2.new(0, 5, 0, 35)
-    self.descText.BackgroundTransparency = 1
-    self.descText.Text = self.description
-    self.descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
-    self.descText.TextFont = Enum.Font.SourceSans
-    self.descText.TextSize = 12
-    self.descText.TextXAlignment = Enum.TextXAlignment.Left
-    self.descText.TextYAlignment = Enum.TextYAlignment.Top
-    self.descText.TextWrapped = true -- 支持多行显示
-    self.descText.Parent = self.frame
+    local descText = Instance.new("TextLabel")
+    descText.Name = "DescriptionText"
+    descText.Size = UDim2.new(1, -10, 0, 40)
+    descText.Position = UDim2.new(0, 5, 0, 35)
+    descText.BackgroundTransparency = 1
+    descText.Text = self.description
+    descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
+    descText.TextFont = Enum.Font.SourceSans
+    descText.TextSize = 12
+    descText.TextXAlignment = Enum.TextXAlignment.Left
+    descText.TextYAlignment = Enum.TextYAlignment.Top
+    descText.TextWrapped = true -- 支持多行显示
+    descText.Parent = frame
     
     -- 添加到容器
-    self.frame.Parent = NotificationManager.container.ContainerFrame
+    frame.Parent = notificationManager.container.ContainerFrame
+    
+    -- 保存引用
+    self.frame = frame
+    self.titleText = titleText
+    self.descText = descText
     
     -- 调整通知位置
     self:UpdatePosition()
-    
-    -- 播放弹出音效
-    if self.soundId then
-        local sound = Instance.new("Sound")
-        sound.SoundId = self.soundId
-        sound.Volume = 0.5
-        sound.Parent = self.frame
-        sound:Play()
-        game.Debris:AddItem(sound, 2)
-    end
-    
-    -- 开始动画
-    self:AnimateIn()
 end
 
 -- 更新通知位置
-function Notification:UpdatePosition()
-    local index = table.find(NotificationManager.notifications, self)
+function notification:UpdatePosition()
+    -- 检查是否有有效的frame
+    if not self.frame then
+        warn("Notification frame not initialized")
+        return
+    end
+    
+    local index = table.find(notificationManager.notifications, self)
     if index then
-        local yOffset = (index - 1) * (self.frame.AbsoluteSize.Y + NotificationManager.padding)
+        local yOffset = (index - 1) * (self.frame.AbsoluteSize.Y + notificationManager.padding)
         self.frame.Position = UDim2.new(1, 0, 0, yOffset)
     end
 end
 
 -- 滑入动画
-function Notification:AnimateIn()
-    local targetPosition = self.frame.Position - UDim2.new(1, 0, 0, 0)
+function notification:AnimateIn()
+    -- 检查是否有有效的frame
+    if not self.frame then
+        warn("Notification frame not initialized")
+        return
+    end
+    
+    -- 获取TweenService
+    local TweenService = game:GetService("TweenService")
+    if not TweenService then
+        warn("TweenService not found")
+        self.frame.Position = UDim2.new(0, 0, self.frame.Position.Y.Scale, self.frame.Position.Y.Offset)
+        return
+    end
+    
+    local targetPosition = UDim2.new(0, 0, self.frame.Position.Y.Scale, self.frame.Position.Y.Offset)
     
     -- 使用TweenService创建平滑动画
-    local TweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(
         0.3, -- 动画时长
         Enum.EasingStyle.Quad, -- 缓动风格
@@ -147,11 +175,24 @@ function Notification:AnimateIn()
 end
 
 -- 滑出动画
-function Notification:AnimateOut()
-    local targetPosition = self.frame.Position + UDim2.new(1, 0, 0, 0)
+function notification:AnimateOut()
+    -- 检查是否有有效的frame
+    if not self.frame then
+        warn("Notification frame not initialized")
+        return
+    end
+    
+    -- 获取TweenService
+    local TweenService = game:GetService("TweenService")
+    if not TweenService then
+        warn("TweenService not found")
+        self:Destroy()
+        return
+    end
+    
+    local targetPosition = UDim2.new(1, 0, self.frame.Position.Y.Scale, self.frame.Position.Y.Offset)
     
     -- 使用TweenService创建平滑动画
-    local TweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(
         0.3, -- 动画时长
         Enum.EasingStyle.Quad, -- 缓动风格
@@ -168,9 +209,9 @@ function Notification:AnimateOut()
 end
 
 -- 销毁通知
-function Notification:Destroy()
+function notification:Destroy()
     -- 从管理器中移除
-    local index = table.find(NotificationManager.notifications, self)
+    local index = table.find(notificationManager.notifications, self)
     if index then
         table.remove(notificationManager.notifications, index)
         
@@ -181,11 +222,29 @@ function Notification:Destroy()
     end
     
     -- 销毁GUI元素
-    self.frame:Destroy()
+    if self.frame then
+        self.frame:Destroy()
+        self.frame = nil
+    end
+end
+
+-- 播放通知音效
+function notification:PlaySound(soundId)
+    if not soundId or soundId == "" then return end
+    
+    -- 创建音效
+    local sound = Instance.new("Sound")
+    sound.SoundId = soundId
+    sound.Volume = 0.5
+    sound.Parent = self.frame or game:GetService("SoundService")
+    sound:Play()
+    
+    -- 2秒后自动移除音效
+    game.Debris:AddItem(sound, 2)
 end
 
 -- 通知管理器创建通知的方法
-function NotificationManager:Create(title, description, duration, soundId)
+function notificationManager:Create(title, description, duration, soundId)
     -- 初始化管理器（如果尚未初始化）
     if not self.container then
         self:Init()
@@ -193,7 +252,9 @@ function NotificationManager:Create(title, description, duration, soundId)
     
     -- 创建新通知
     local newNotification = notification.new(title, description, duration)
-    newNotification.soundId = soundId
+    
+    -- 创建GUI
+    newNotification:CreateGUI()
     
     -- 添加到通知列表
     table.insert(self.notifications, newNotification)
@@ -203,11 +264,17 @@ function NotificationManager:Create(title, description, duration, soundId)
         notification:UpdatePosition()
     end
     
+    -- 播放音效
+    newNotification:PlaySound(soundId)
+    
+    -- 开始动画
+    newNotification:AnimateIn()
+    
     return newNotification
 end
 
 -- 初始化通知管理器
-NotificationManager:Init()
+notificationManager:Init()
 
 -- 将通知管理器设为全局可访问
-_G.Notification = NotificationManager
+_G.Notification = notificationManager
