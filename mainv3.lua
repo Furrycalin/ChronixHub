@@ -131,10 +131,10 @@ local exploitMenu = ModularDropdown.new("       漏洞       ", Vector2.new(1150
 local settingMenu = ModularDropdown.new("       设置       ", Vector2.new(1350, 100), overlay)
 
 
-local isProcessing = false
+local isProcessing = true
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode[RightShift] then
+    if input.KeyCode == Enum.KeyCode.RightShift then
         if overlay.Visible then
             if not isProcessing then
                 overlay.Visible = false
@@ -161,4 +161,6 @@ settingMenu:AddMenuItem("卸载脚本", function()
     unloadChronixHub()
 end, 1)
 
-NotificationSystem:CreateNotification("ChronixHubv3已启动", "防挂机系统已自动开启\n按下右SHIFT开关界面.", 5, "rbxassetid://4590662766")
+overlay.Visible = false
+
+NotificationSystem:CreateNotification("ChronixHubv3已启动", "防挂机系统已自动开启\n按下右SHIFT开关界面.", 10, "rbxassetid://4590662766")
