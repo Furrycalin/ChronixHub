@@ -8,30 +8,38 @@ local SoundService = game:GetService("SoundService")
 
 -- 模块配置
 local config = {
-    notificationWidth = 300,
-    notificationHeight = 80,
-    padding = 10,
-    defaultDuration = 5,
+    notificationWidth = 320,      -- 通知宽度
+    notificationHeight = 85,      -- 通知高度
+    padding = 5,                  -- 通知间距（缩小一半）
+    defaultDuration = 5,          -- 默认显示时间
     glowImageId = "rbxassetid://154967497",
-    cornerRadius = 5, -- 圆角半径（像素）
-    zIndex = 9999 -- 确保通知显示在最上层
+    cornerRadius = 8,             -- 圆角半径（增大）
+    zIndex = 10000,               -- 确保通知显示在最上层
+    borderSize = 2,               -- 边框大小
+    borderColor = Color3.new(0, 0, 0), -- 纯黑色边框
+    titleSize = 18,               -- 标题字体大小（增大）
+    descSize = 14,                -- 描述字体大小（增大）
+    textIndent = "  "             -- 首行缩进（2个空格）
 }
 
 -- 全局变量
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local notifications = {}
-local notificationContainer = nil
+local notificationScreenGui = nil
 
--- 初始化通知容器
-local function initNotificationContainer()
-    if notificationContainer then return end
+-- 初始化通知ScreenGui
+local function initNotificationScreenGui()
+    if notificationScreenGui then return end
     
-    -- 创建 创建通知容器
-    notificationContainer = Instance.new("ScreenGui")
-    notificationContainer.Name = "NotificationSystem"
-    notificationContainer.IgnoreGuiInset = true -- 忽略Roblox默认UI留出的空间
-    notificationContainer.Parent = PlayerGui
+    -- 创建ScreenGui，确保显示在最上层
+    notificationScreenGui = Instance.new("ScreenGui")
+    notificationScreenGui.Name = "NotificationSystem"
+    notificationScreenGui.IgnoreGuiInset = true -- 忽略Roblox默认UI留出的空间
+    notificationScreenGui.Parent = PlayerGui
+    
+    -- 设置DisplayOrder确保显示在最上层
+    notificationScreenGui.DisplayOrder = 10000
 end
 
 -- 更新所有通知的位置
@@ -41,8 +49,8 @@ local function updateNotificationPositions()
             -- 计算Y轴偏移量，新通知在最下面
             local yOffset = (index - 1) * (config.notificationHeight + config.padding)
             
-            -- 设置目标位置
-            local targetPosition = UDim2.new(1, -config.notificationWidth - 10, 1, -yOffset - config.notificationHeight - 10)
+            -- 设置目标位置，往上调整一些
+            local targetPosition = UDim2.new(1, -config.notificationWidth - 15, 1, -yOffset - config.notificationHeight - 50)
             
             -- 创建位置动画
             local tween = TweenService:Create(notification.frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
@@ -59,13 +67,13 @@ local function createNotificationFrame(title, description)
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Name = "NotificationFrame"
     notificationFrame.Size = UDim2.new(0, config.notificationWidth, 0, config.notificationHeight)
-    notificationFrame.Position = UDim2.new(1, 0, 1, -config.notificationHeight - 10) -- 初始位置在屏幕右侧
+    notificationFrame.Position = UDim2.new(1, 0, 1, -config.notificationHeight - 50) -- 初始位置在屏幕右侧，往上调整
     notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
-    notificationFrame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
-    notificationFrame.BorderSizePixel = 1
+    notificationFrame.BorderColor3 = config.borderColor -- 纯黑色边框
+    notificationFrame.BorderSizePixel = config.borderSize -- 边框大小
     notificationFrame.BackgroundTransparency = 0
     notificationFrame.ZIndex = config.zIndex -- 确保显示在最上层
-    notificationFrame.Parent = notificationContainer
+    notificationFrame.Parent = notificationScreenGui
     
     -- 添加圆角效果
     local corner = Instance.new("UICorner")
@@ -84,31 +92,31 @@ local function createNotificationFrame(title, description)
     glow.ZIndex = config.zIndex - 1
     glow.Parent = notificationFrame
     
-    -- 创建标题文本
+    -- 创建标题文本，添加首行缩进
     local titleText = Instance.new("TextLabel")
     titleText.Name = "TitleText"
-    titleText.Size = UDim2.new(1, -10, 0, 30)
-    titleText.Position = UDim2.new(0, 5, 0, 5) -- 稍微靠上
+    titleText.Size = UDim2.new(1, -20, 0, 35) -- 增加左右边距
+    titleText.Position = UDim2.new(0, 10, 0, 5) -- 稍微靠上，增加左边距
     titleText.BackgroundTransparency = 1
-    titleText.Text = title or "Notification"
+    titleText.Text = config.textIndent .. (title or "Notification") -- 添加首行缩进
     titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
     titleText.Font = Enum.Font.SourceSansBold
-    titleText.TextSize = 16
+    titleText.TextSize = config.titleSize -- 增大字体
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.TextYAlignment = Enum.TextYAlignment.Top
     titleText.ZIndex = config.zIndex
     titleText.Parent = notificationFrame
     
-    -- 创建描述文本
+    -- 创建描述文本，添加首行缩进
     local descText = Instance.new("TextLabel")
     descText.Name = "DescriptionText"
-    descText.Size = UDim2.new(1, -10, 0, 40)
-    descText.Position = UDim2.new(0, 5, 0, 35)
+    descText.Size = UDim2.new(1, -20, 0, 45) -- 增加左右边距
+    descText.Position = UDim2.new(0, 10, 0, 35) -- 增加左边距
     descText.BackgroundTransparency = 1
-    descText.Text = description or ""
+    descText.Text = config.textIndent .. (description or "") -- 添加首行缩进
     descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
     descText.Font = Enum.Font.SourceSans
-    descText.TextSize = 12
+    descText.TextSize = config.descSize -- 增大字体
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.TextYAlignment = Enum.TextYAlignment.Top
     descText.TextWrapped = true -- 支持多行显示
@@ -135,8 +143,8 @@ end
 
 -- 创建通知的主函数
 function NotificationSystem:CreateNotification(title, description, duration, soundId)
-    -- 初始化通知容器
-    initNotificationContainer()
+    -- 初始化通知ScreenGui
+    initNotificationScreenGui()
     
     -- 创建通知框
     local notificationFrame = createNotificationFrame(title, description)
@@ -181,6 +189,6 @@ function NotificationSystem:CreateNotification(title, description, duration, sou
 end
 
 -- 初始化通知系统
-initNotificationContainer()
+initNotificationScreenGui()
 
-return NotificationSystem
+return notificationSystem
