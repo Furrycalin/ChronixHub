@@ -206,6 +206,7 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
     
     -- Add click event
     itemButton.MouseButton1Click:Connect(function()
+        uiclicker:Play()
         if type(callback) == "function" and mode == 1 then
             callback()
         elseif type(callback) == "function" and mode == 2 then
