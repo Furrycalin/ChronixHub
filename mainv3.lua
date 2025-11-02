@@ -123,7 +123,7 @@ titleContainer.Position = UDim2.new(0.53, -(chronixTextSize + v3Text.TextBounds.
 
 local isProcessing = false
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+local boundkeyvisiblemenu = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode[RightShift] then
         if overlay.Visible then
             if not isProcessing then
@@ -139,6 +139,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 local function unloadChronixHub()
+    boundkeyvisiblemenu:Disconnect()
     overlay:Destroy()
 	Gui:Destroy()
 	script:Destroy()
