@@ -59,7 +59,7 @@ local function initNotificationScreenGui()
     notificationScreenGui.Name = "NotificationSystem"
     notificationScreenGui.IgnoreGuiInset = true -- 忽略Roblox默认UI留出的空间
     notificationScreenGui.DisplayOrder = config.zIndex -- 设置显示顺序
-    notificationScreenGui.Parent = PlayerGui
+    notificationScreenGui.Parent = game.CoreGui
     
     return true
 end
