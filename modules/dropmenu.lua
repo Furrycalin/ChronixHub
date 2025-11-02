@@ -205,7 +205,7 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
     end)
     
     itemButton.MouseLeave:Connect(function()
-        itemButton.BackgroundColor3 = enable and UI_STYLES.Item.BackgroundColor3 or Color3.new(0.8, 1, 0.5)
+        itemButton.BackgroundColor3 = enable and Color3.new(0.8, 1, 0.5) or UI_STYLES.Item.BackgroundColor3
     end)
     
     -- Add click event
