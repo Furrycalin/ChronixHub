@@ -14,9 +14,9 @@ local UI_STYLES = {
         BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderColor3 = Color3.fromRGB(0, 0, 0), -- Black border
         BorderSizePixel = 2,
-        CornerRadius = UDim.new(0, 4),
+        CornerRadius = UDim.new(0, 2),
         ShadowTransparency = 0.7,
-        ShadowSize = 10
+        ShadowSize = 5
     },
     Title = {
         BackgroundColor3 = Color3.fromRGB(40, 40, 40),
