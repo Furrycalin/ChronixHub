@@ -15,7 +15,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
         backgroundColor = Color3.new(0.102, 0.098, 0.102), -- #1a191a
         textColor = Color3.new(1, 1, 1),
         language = "zh",
-        onComplete = function() end,
+        onComplete = function(isCancelled) end,
         showCancelButton = true
     }
 
