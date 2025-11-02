@@ -14,7 +14,6 @@ local config = {
 -- 通知管理器
 local notificationManager = {
     container = nil,
-    notificationsContainer = nil,
     notifications = {}
 }
 
@@ -30,17 +29,6 @@ local function initNotificationManager()
     screenGui.Parent = game.Players.LocalPlayer.PlayerGui
     
     notificationManager.container = screenGui
-    
-    -- 创建通知列表容器
-    local notificationsContainer = Instance.new("Frame")
-    notificationsContainer.Name = "NotificationsContainer"
-    notificationsContainer.Size = UDim2.new(0, config.notificationWidth, 0, 0)
-    notificationsContainer.Position = UDim2.new(1, -10, 1, -10) -- 右下角
-    notificationsContainer.AnchorPoint = Vector2.new(1, 1) -- 锚点在右下角
-    notificationsContainer.BackgroundTransparency = 1
-    notificationsContainer.Parent = screenGui
-    
-    notificationManager.notificationsContainer = notificationsContainer
 end
 
 -- 创建单个通知
@@ -51,13 +39,11 @@ local function createNotificationObject(title, description, duration, soundId)
     -- 创建通知背景框
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Name = "NotificationFrame"
-    notificationFrame.Size = UDim2.new(1, 0, 0, config.notificationHeight)
+    notificationFrame.Size = UDim2.new(0, config.notificationWidth, 0, config.notificationHeight)
     notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
     notificationFrame.BorderColor3 = Color3.new(0, 0, 0) -- 黑色边框
     notificationFrame.BorderSizePixel = 1
-    notificationFrame.Position = UDim2.new(1, 0, 0, 0) -- 初始位置在容器右侧（屏幕外）
     notificationFrame.BackgroundTransparency = 0
-    notificationFrame.Parent = notificationManager.notificationsContainer
     
     -- 添加圆角效果
     local corner = Instance.new("UICorner")
@@ -126,7 +112,11 @@ local function updateNotificationPositions()
         if notification.frame and notification.frame.Parent then
             -- 计算Y轴偏移量，新通知在最下面
             local yOffset = (i - 1) * (config.notificationHeight + config.padding)
-            notification.frame.Position = UDim2.new(1, 0, 0, yOffset)
+            
+            -- 设置通知框位置在右下角，从右侧滑入
+            -- 使用屏幕右下角为参考点，向右偏移整个宽度（屏幕外）
+            notification.frame.Position = UDim2.new(1, config.notificationWidth, 1, -yOffset - config.notificationHeight)
+            notification.frame.anchorPoint = Vector2.new(1, 1) -- 锚点在右下角
         end
     end
 end
@@ -154,12 +144,13 @@ local function animateNotificationIn(notification)
     local TweenService = game:GetService("TweenService")
     if not TweenService then
         warn("TweenService not found, notification will appear immediately")
-        notification.frame.Position = UDim2.new(0, 0, notification.frame.Position.Y.Scale, notification.frame.Position.Y.Offset)
+        -- 直接设置到目标位置
+        notification.frame.position = UDim2.new(1, -10, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
         return
     end
     
-    -- 滑入到容器内
-    local targetPosition = UDim2.new(0, 0, notification.frame.Position.Y.Scale, notification.frame.Position.Y.Offset)
+    -- 滑入到屏幕右下角，留出10像素的边距
+    local targetPosition = UDim2.new(1, -10, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
     
     -- 创建滑入动画
     local tweenInfo = TweenInfo.new(
@@ -192,8 +183,8 @@ local function animateNotificationOut(notification, onComplete)
         return
     end
     
-    -- 滑出到容器右侧（屏幕外）
-    local targetPosition = UDim2.new(1, 0, notification.frame.Position.Y.Scale, notification.frame.Position.Y.Offset)
+    -- 滑出到屏幕右侧（屏幕外）
+    local targetPosition = UDim2.new(1, config.notificationWidth, notification.frame.position.Y.Scale, notification.frame.position.Y.Offset)
     
     -- 创建滑出动画
     local tweenInfo = TweenInfo.new(
@@ -234,6 +225,9 @@ end
 function NotificationSystem:CreateNotification(title, description, duration, soundId)
     -- 创建通知对象
     local notification = createNotificationObject(title, description, duration, soundId)
+    
+    -- 将通知框添加到容器
+    notification.frame.Parent = notificationManager.container
     
     -- 更新所有通知的位置
     updateNotificationPositions()
