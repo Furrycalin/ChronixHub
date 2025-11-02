@@ -149,6 +149,7 @@ local bkvm = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 local function unloadChronixHub()
+    _G.ChronixHubisLoaded = false
     cc:Disconnect()
     bkvm:Disconnect()
     overlay:Destroy()
@@ -157,7 +158,6 @@ local function unloadChronixHub()
     NotificationSystem:Destroy()
     tpWalk:Destroy()
 	script:Destroy()
-	_G.ChronixHubisLoaded = false
 end
 
 settingMenu:AddMenuItem("卸载脚本", function()
