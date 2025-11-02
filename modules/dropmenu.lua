@@ -206,7 +206,7 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
     
     itemButton.MouseLeave:Connect(function()
         itemButton.BackgroundColor3 = enable and Color3.new(0.8, 1, 0.5) or UI_STYLES.Item.BackgroundColor3
-        itemButton.BackgroundColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.BackgroundColor3
+        itemButton.TextColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.TextColor3
     end)
     
     -- Add click event
@@ -216,7 +216,7 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
         elseif type(callback) == "function" and mode == 2 then
             enable = not enable
             itemButton.BackgroundColor3 = enable and Color3.new(0.8, 1, 0.5) or UI_STYLES.Item.BackgroundColor3
-            itemButton.BackgroundColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.BackgroundColor3
+            itemButton.TextColor3 = enable and Color3.new(0, 0, 0) or UI_STYLES.Item.TextColor3
             callback(enable)
         end
     end)
