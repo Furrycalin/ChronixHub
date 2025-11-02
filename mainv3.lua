@@ -131,7 +131,7 @@ local exploitMenu = ModularDropdown.new("       漏洞       ", Vector2.new(1150
 local settingMenu = ModularDropdown.new("       设置       ", Vector2.new(1350, 100), overlay)
 
 
-local isProcessing = true
+local isProcessing = false
 
 local boundkeyvisiblemenu = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode[RightShift] then
