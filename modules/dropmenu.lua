@@ -199,15 +199,6 @@ function ModularDropdown:AddMenuItem(text, callback, mode)
 
     local enable = false
     
-    -- Add hover effect
-    itemButton.MouseEnter:Connect(function()
-        itemButton.BackgroundColor3 = UI_STYLES.Item.HoverColor
-    end)
-    
-    itemButton.MouseLeave:Connect(function()
-        itemButton.BackgroundColor3 = UI_STYLES.Item.BackgroundColor3
-    end)
-    
     -- Add click event
     itemButton.MouseButton1Click:Connect(function()
         if type(callback) == "function" and mode == 1 then
