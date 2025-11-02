@@ -15,7 +15,7 @@ local config = {
     glowImageId = "rbxassetid://154967497",
     cornerRadius = 8,             -- 圆角半径（增大）
     zIndex = 10000,               -- 确保通知显示在最上层
-    borderSize = 2,               -- 边框大小
+    borderSize = 1,               -- 边框大小（改为半毫米，Roblox中1像素约等于0.5毫米）
     borderColor = Color3.new(0, 0, 0), -- 纯黑色边框
     titleSize = 18,               -- 标题字体大小（增大）
     descSize = 14,                -- 描述字体字体大小（增大）
@@ -70,7 +70,7 @@ local function updateNotificationPositions()
     if #notifications == 0 then return end
     
     -- 遍历所有通知并更新位置
-    for index = #notifications, 1, -1 do
+    for index = 1, #notifications do
         local notification = notifications[index]
         
         -- 检查通知对象是否有效
@@ -80,7 +80,9 @@ local function updateNotificationPositions()
         end
         
         -- 计算Y轴偏移量，新通知在最下面
-        local yOffset = (index - 1) * (config.notificationHeight + config.padding)
+        -- 对于index=1（最旧的通知），yOffset最大，显示在最上方
+        -- 对于index=#notifications（最新的通知），yOffset=0，显示在最下方
+        local yOffset = (#notifications - index) * (config.notificationHeight + config.padding)
         
         -- 设置目标位置，往上调整一些
         local targetPosition = UDim2.new(1, -config.notificationWidth - 15, 1, -yOffset - config.notificationHeight - 50)
