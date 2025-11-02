@@ -1,283 +1,310 @@
--- 通知系统模块
+-- NotificationSystem.lua
+-- 一个从屏幕右下角滑入滑出的通知系统，支持多条通知叠加显示
+
 local NotificationSystem = {}
 
 -- 服务引用
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
 
--- 模块配置
-local config = {
-    notificationWidth = 320,      -- 通知宽度
-    notificationHeight = 85,      -- 通知高度
-    padding = 5,                  -- 通知间距（缩小一半）
-    defaultDuration = 5,          -- 默认显示时间
-    glowImageId = "rbxassetid://154967497",
-    cornerRadius = 8,             -- 圆角半径（增大）
-    zIndex = 10000,               -- 确保通知显示在最上层
-    borderSize = 2,               -- 边框大小
-    borderColor = Color3.new(0, 0, 0), -- 纯黑色边框
-    titleSize = 18,               -- 标题字体大小（增大）
-    descSize = 14,                -- 描述字体字体大小（增大）
-    textIndent = "  "             -- 首行缩进（2个空格）
+-- 配置
+local CONFIG = {
+    -- 通知框样式
+    BACKGROUND_COLOR = Color3.fromRGB(50, 50, 50), -- 深灰色背景
+    BORDER_COLOR = Color3.fromRGB(0, 0, 0),        -- 纯黑色边框
+    BORDER_SIZE = 2,                               -- 2像素边框
+    CORNER_RADIUS = 8,                             -- 8像素圆角
+    PADDING = 10,                                  -- 内边距
+    
+    -- 文本样式
+    TITLE_COLOR = Color3.fromRGB(204, 255, 128),   -- 淡绿色 (0.8,1,0.5)
+    TITLE_FONT_SIZE = 18,                          -- 18号字体
+    DESCRIPTION_COLOR = Color3.fromRGB(255, 255, 255), -- 白色
+    DESCRIPTION_FONT_SIZE = 14,                    -- 14号字体
+    TEXT_INDENT = 2,                               -- 首行缩进2字符
+    
+    -- 布局
+    NOTIFICATION_SPACING = 5,                      -- 通知间距5像素
+    BOTTOM_OFFSET = 50,                            -- 从底部往上调整50像素
+    MAX_NOTIFICATIONS = 5,                         -- 最大显示通知数量
+    
+    -- 动画
+    SLIDE_IN_DURATION = 0.5,                       -- 滑入动画时长
+    SLIDE_OUT_DURATION = 0.5,                      -- 滑出动画时长
+    DISPLAY_DURATION = 5,                          -- 显示时长（秒）
+    
+    -- 音效
+    ENABLE_SOUND = true,                           -- 是否启用音效
+    SOUND_ID = "rbxassetid://122220006",           -- 通知音效ID
 }
 
--- 全局变量
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = nil
-local notifications = {}
-local notificationScreenGui = nil
+-- 存储当前显示的通知
+local activeNotifications = {}
 
--- 初始化函数
-local function init()
-    -- 确保LocalPlayer存在
-    if not LocalPlayer then
-        warn("LocalPlayer not found")
-        return false
-    end
+-- 创建UI容器
+local function createUIContainer(player)
+    local playerGui = player:WaitForChild("PlayerGui")
     
-    -- 等待PlayerGui加载
-    PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
-    if not PlayerGui then
-        warn("PlayerGui not found")
-        return false
-    end
+    -- 创建主ScreenGui
+    local notificationGui = Instance.new("ScreenGui")
+    notificationGui.Name = "NotificationSystem"
+    notificationGui.IgnoreGuiInset = true  -- 忽略屏幕边缘 inset
+    notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    notificationGui.Parent = playerGui
     
-    return true
+    -- 创建通知容器
+    local notificationContainer = Instance.new("Frame")
+    notificationContainer.Name = "NotificationContainer"
+    notificationContainer.BackgroundTransparency = 1
+    notificationContainer.Size = UDim2.new(1, 0, 1, 0)
+    notificationContainer.Position = UDim2.new(0, 0, 0, 0)
+    notificationContainer.Parent = notificationGui
+    
+    return notificationContainer
 end
 
--- 初始化通知ScreenGui
-local function initNotificationScreenGui()
-    -- 检查是否已初始化
-    if notificationScreenGui then return true end
+-- 创建通知音效
+local function createNotificationSound()
+    local sound = Instance.new("Sound")
+    sound.Name = "NotificationSound"
+    sound.SoundId = CONFIG.SOUND_ID
+    sound.Volume = 0.5
+    sound.Parent = SoundService
     
-    -- 确保基础服务已初始化
-    if not init() then return false end
-    
-    -- 创建ScreenGui，确保显示在最上层
-    notificationScreenGui = Instance.new("ScreenGui")
-    notificationScreenGui.Name = "NotificationSystem"
-    notificationScreenGui.IgnoreGuiInset = true -- 忽略Roblox默认UI留出的空间
-    notificationScreenGui.DisplayOrder = config.zIndex -- 设置显示顺序
-    notificationScreenGui.Parent = PlayerGui
-    
-    return true
+    return sound
 end
 
--- 更新所有通知的位置
-local function updateNotificationPositions()
-    -- 检查是否有通知需要更新
-    if #notifications == 0 then return end
-    
-    -- 遍历所有通知并更新位置
-    for index = #notifications, 1, -1 do
-        local notification = notifications[index]
-        
-        -- 检查通知对象是否有效
-        if not notification or not notification.frame or not notification.frame.Parent then
-            table.remove(notifications, index)
-            continue
-        end
-        
-        -- 计算Y轴偏移量，新通知在最下面
-        local yOffset = (index - 1) * (config.notificationHeight + config.padding)
-        
-        -- 设置目标位置，往上调整一些
-        local targetPosition = UDim2.new(1, -config.notificationWidth - 15, 1, -yOffset - config.notificationHeight - 50)
-        
-        -- 创建位置动画
-        local tween = TweenService:Create(notification.frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            Position = targetPosition
-        })
-        tween:Play()
-    end
-end
-
--- 创建单个通知
-local function createNotificationFrame(title, description)
-    -- 确保通知内容有效
-    title = title or "Notification"
-    description = description or ""
-    
+-- 创建单个通知UI
+local function createNotificationUI(title, description)
     -- 创建通知背景框
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Name = "NotificationFrame"
-    notificationFrame.Size = UDim2.new(0, config.notificationWidth, 0, config.notificationHeight)
-    notificationFrame.Position = UDim2.new(1, 0, 1, -config.notificationHeight - 50) -- 初始位置在屏幕右侧，往上调整
-    notificationFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2) -- 深灰色背景
-    notificationFrame.BorderColor3 = config.borderColor -- 纯黑色边框
-    notificationFrame.BorderSizePixel = config.borderSize -- 边框大小
+    notificationFrame.BackgroundColor3 = CONFIG.BACKGROUND_COLOR
+    notificationFrame.BorderColor3 = CONFIG.BORDER_COLOR
+    notificationFrame.BorderSizePixel = CONFIG.BORDER_SIZE
     notificationFrame.BackgroundTransparency = 0
-    notificationFrame.ZIndex = config.zIndex -- 确保显示在最上层
+    notificationFrame.Size = UDim2.new(0, 300, 0, 0)  -- 宽度固定，高度自动
+    notificationFrame.Position = UDim2.new(1, 0, 1, 0)  -- 初始位置在屏幕外
+    notificationFrame.AutomaticSize = Enum.AutomaticSize.Y
+    notificationFrame.ZIndex = 100  -- 确保在最上层
     
-    -- 添加圆角效果
+    -- 添加圆角
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, config.cornerRadius)
+    corner.CornerRadius = UDim.new(0, CONFIG.CORNER_RADIUS)
     corner.Parent = notificationFrame
     
-    -- 添加黑色发光效果（使用条件时检查图片是否是否存在）
-    if config.glowImageId and config.glowImageId ~= "" then
-        local glow = Instance.new("ImageLabel")
-        glow.Name = "Glow"
-        glow.Size = UDim2.new(1, 10, 1, 10)
-        glow.Position = UDim2.new(0, -5, 0, -5)
-        glow.BackgroundTransparency = 1
-        glow.Image = config.glowImageId
-        glow.ImageColor3 = Color3.new(0, 0, 0)
-        glow.ImageTransparency = 0.7
-        glow.ZIndex = config.zIndex - 1
-        glow.Parent = notificationFrame
-    end
-    
-    -- 创建标题文本，添加首行缩进
+    -- 创建标题文本
     local titleText = Instance.new("TextLabel")
     titleText.Name = "TitleText"
-    titleText.Size = UDim2.new(1, -20, 0, 35) -- 增加左右边距
-    titleText.Position = UDim2.new(0, 10, 0, 5) -- 稍微靠上，增加左边距
-    titleText.BackgroundTransparency = 1
-    titleText.Text = config.textIndent .. title -- 添加首行缩进
-    titleText.TextColor3 = Color3.new(0.8, 1, 0.5) -- 淡绿色
+    titleText.Text = title
+    titleText.TextColor3 = CONFIG.TITLE_COLOR
     titleText.Font = Enum.Font.SourceSansBold
-    titleText.TextSize = config.titleSize -- 增大字体
+    titleText.TextSize = CONFIG.TITLE_FONT_SIZE
+    titleText.BackgroundTransparency = 1
+    titleText.Size = UDim2.new(1, -CONFIG.PADDING * 2, 0, CONFIG.TITLE_FONT_SIZE + 4)
+    titleText.Position = UDim2.new(0, CONFIG.PADDING, 0, CONFIG.PADDING)
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.TextYAlignment = Enum.TextYAlignment.Top
-    titleText.ZIndex = config.zIndex
+    titleText.TextWrapped = false
+    titleText.ZIndex = 101
+    
+    -- 添加首行缩进
+    local titleIndent = CONFIG.TEXT_INDENT * CONFIG.TITLE_FONT_SIZE / 2
+    titleText.Text = string.rep(" ", CONFIG.TEXT_INDENT) .. title
     titleText.Parent = notificationFrame
     
-    -- 创建描述文本，添加首行缩进
-    local descText = Instance.new("TextLabel")
-    descText.Name = "DescriptionText"
-    descText.Size = UDim2.new(1, -20, 0, 45) -- 增加左右边距
-    descText.Position = UDim2.new(0, 10, 0, 35) -- 增加左边距
-    descText.BackgroundTransparency = 1
-    descText.Text = config.textIndent .. description -- 添加首行缩进
-    descText.TextColor3 = Color3.new(1, 1, 1) -- 白色
-    descText.Font = Enum.Font.SourceSans
-    descText.TextSize = config.descSize -- 增大字体
-    descText.TextXAlignment = Enum.TextXAlignment.Left
-    descText.TextYAlignment = Enum.TextYAlignment.Top
-    descText.TextWrapped = true -- 支持多行显示
-    descText.ZIndex = config.zIndex
-    descText.Parent = notificationFrame
+    -- 创建描述文本
+    local descriptionText = Instance.new("TextLabel")
+    descriptionText.Name = "DescriptionText"
+    descriptionText.Text = description
+    descriptionText.TextColor3 = CONFIG.DESCRIPTION_COLOR
+    descriptionText.Font = Enum.Font.SourceSans
+    descriptionText.TextSize = CONFIG.DESCRIPTION_FONT_SIZE
+    descriptionText.BackgroundTransparency = 1
+    descriptionText.Size = UDim2.new(1, -CONFIG.PADDING * 2, 0, 0)
+    descriptionText.Position = UDim2.new(0, CONFIG.PADDING, 0, CONFIG.PADDING + CONFIG.TITLE_FONT_SIZE + 4)
+    descriptionText.TextXAlignment = Enum.TextXAlignment.Left
+    descriptionText.TextYAlignment = Enum.TextYAlignment.Top
+    descriptionText.TextWrapped = true
+    descriptionText.AutomaticSize = Enum.AutomaticSize.Y
+    descriptionText.ZIndex = 101
+    
+    -- 添加首行缩进
+    local descIndent = CONFIG.TEXT_INDENT * CONFIG.DESCRIPTION_FONT_SIZE / 2
+    descriptionText.Text = string.rep(" ", CONFIG.TEXT_INDENT) .. description
+    descriptionText.Parent = notificationFrame
     
     return notificationFrame
 end
 
--- 播放通知音效
-local function playNotificationSound(soundId)
-    if not soundId or soundId == "" then return end
-    
-    -- 检查SoundService是否可用
-    if not SoundService then
-        warn("SoundService not found")
-        return
+-- 更新通知位置
+local function updateNotificationPositions()
+    for i, notification in ipairs(activeNotifications) do
+        local frame = notification.frame
+        local targetPosition
+        
+        -- 计算每个通知的位置
+        -- 新通知在底部，旧通知往上移动
+        local totalHeight = 0
+        for j = i, #activeNotifications do
+            totalHeight += activeNotifications[j].frame.AbsoluteSize.Y + CONFIG.NOTIFICATION_SPACING
+        end
+        
+        targetPosition = UDim2.new(
+            1, -frame.AbsoluteSize.X - 10,  -- 右边距10像素
+            1, -totalHeight - CONFIG.BOTTOM_OFFSET  -- 底部偏移
+        )
+        
+        -- 应用位置动画
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(frame, tweenInfo, {Position = targetPosition})
+        tween:Play()
     end
+end
+
+-- 移除通知
+local function removeNotification(notification)
+    -- 找到通知在列表中的索引
+    local index = table.find(activeNotifications, notification)
+    if not index then return end
     
-    -- 创建音效
-    local sound = Instance.new("Sound")
-    sound.SoundId = soundId
-    sound.Volume = 0.5
-    sound.Parent = SoundService
+    -- 从列表中移除
+    table.remove(activeNotifications, index)
     
-    -- 播放音效并处理可能的错误
-    local success, err = pcall(function()
-        sound:Play()
+    -- 创建滑出动画
+    local tweenInfo = TweenInfo.new(
+        CONFIG.SLIDE_OUT_DURATION,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.In
+    )
+    
+    local targetPosition = UDim2.new(
+        1, 0,
+        notification.frame.Position.Y.Scale,
+        notification.frame.Position.Y.Offset
+    )
+    
+    local tween = TweenService:Create(notification.frame, tweenInfo, {
+        Position = targetPosition,
+        BackgroundTransparency = 1
+    })
+    
+    -- 动画结束后销毁通知
+    tween.Completed:Connect(function()
+        notification.frame:Destroy()
     end)
     
-    if not success then
-        warn("Failed to play sound: " .. err)
-        sound:Destroy()
-        return
-    end
+    tween:Play()
     
-    -- 2秒后自动移除音效
-    game.Debris:AddItem(sound, 2)
+    -- 更新剩余通知的位置
+    updateNotificationPositions()
 end
 
--- 创建通知的主函数
-function NotificationSystem:CreateNotification(title, description, duration, soundId)
-    -- 确保通知ScreenGui已初始化
-    if not initNotificationScreenGui() then
-        warn("Failed to initialize notification system")
-        return nil
+-- 显示通知
+function NotificationSystem:ShowNotification(title, description, duration)
+    -- 获取本地玩家
+    local player = Players.LocalPlayer
+    if not player then return end
+    
+    -- 确保UI容器存在
+    local playerGui = player:FindFirstChild("PlayerGui")
+    if not playerGui then return end
+    
+    local notificationContainer = playerGui:FindFirstChild("NotificationSystem")
+    if not notificationContainer then
+        notificationContainer = createUIContainer(player)
+    else
+        notificationContainer = notificationContainer:FindFirstChild("NotificationContainer")
+        if not notificationContainer then
+            notificationContainer = createUIContainer(player)
+        end
     end
     
-    -- 确保通知ScreenGui有效
-    if not notificationScreenGui or not notificationScreenGui.Parent then
-        warn("NotificationScreenGui is not valid")
-        return nil
-    end
+    -- 创建通知UI
+    local notificationFrame = createNotificationUI(title, description)
+    notificationFrame.Parent = notificationContainer
     
-    -- 创建通知框
-    local notificationFrame = createNotificationFrame(title, description)
-    if not notificationFrame then
-        warn("Failed to create notification frame")
-        return nil
-    end
+    -- 等待UI大小计算完成
+    task.wait()
     
-    -- 将通知框添加到ScreenGui
-    notificationFrame.Parent = notificationScreenGui
-    
-    -- 创建通知对象
-    local notification = {
+    -- 添加到活动通知列表
+    local newNotification = {
         frame = notificationFrame,
-        duration = duration or config.defaultDuration
+        startTime = os.clock()
     }
     
-    -- 添加到通知列表
-    table.insert(notifications, notification)
+    -- 将新通知添加到列表末尾（底部）
+    table.insert(activeNotifications, newNotification)
     
-    -- 更新所有通知的位置
+    -- 如果超过最大通知数量，移除最旧的通知
+    if #activeNotifications > CONFIG.MAX_NOTIFICATIONS then
+        removeNotification(activeNotifications[1])
+    end
+    
+    -- 先将通知放在屏幕外右侧
+    notificationFrame.Position = UDim2.new(
+        1, notificationFrame.AbsoluteSize.X + 10,
+        1, -notificationFrame.AbsoluteSize.Y - CONFIG.BOTTOM_OFFSET
+    )
+    
+    -- 更新所有通知位置
     updateNotificationPositions()
     
-    -- 播放音效
-    playNotificationSound(soundId)
+    -- 创建滑入动画
+    local targetPosition = notificationFrame.Position
+    local tweenInfo = TweenInfo.new(
+        CONFIG.SLIDE_IN_DURATION,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
     
-    -- 独立协程处理通知生命周期
-    coroutine.wrap(function()
-        -- 等待显示时间
-        wait(notification.duration)
-        
-        -- 检查通知框是否仍然有效
-        if not notificationFrame or not notificationFrame.Parent then
-            -- 从列表中移除
-            local index = table.find(notifications, notification)
-            if index then
-                table.remove(notifications, index)
-            end
-            return
-        end
-        
-        -- 滑出动画
-        local tweenOut = TweenService:Create(notificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            Position = UDim2.new(1, 0, notificationFrame.Position.Y.Scale, notificationFrame.Position.Y.Offset)
-        })
-        
-        -- 播放动画并等待完成
-        local success, err = pcall(function()
-            tweenOut:Play()
-            tweenOut.Completed:Wait()
-        end)
-        
-        -- 移除元素并更新队列
-        local index = table.find(notifications, notification)
-        if index then
-            table.remove(notifications, index)
-        end
-        
-        -- 确保通知框仍然存在再销毁
-        if notificationFrame and notificationFrame.Parent then
-            notificationFrame:Destroy()
-        end
-        
-        -- 更新位置
-        updateNotificationPositions()
-    end)()
+    local tween = TweenService:Create(notificationFrame, tweenInfo, {
+        Position = targetPosition
+    })
+    tween:Play()
     
-    return notification
+    -- 播放通知音效
+    if CONFIG.ENABLE_SOUND then
+        local sound = SoundService:FindFirstChild("NotificationSound")
+        if not sound then
+            sound = createNotificationSound()
+        end
+        
+        sound:Play()
+    end
+    
+    -- 设置自动移除
+    local displayDuration = duration or CONFIG.DISPLAY_DURATION
+    task.delay(displayDuration, function()
+        removeNotification(newNotification)
+    end)
+    
+    return newNotification
 end
 
--- 初始化通知系统
-initNotificationScreenGui()
+-- 初始化
+local function init()
+    -- 在客户端初始化
+    if RunService:IsClient() then
+        -- 预创建UI容器
+        local player = Players.LocalPlayer
+        if player then
+            player.PlayerGui.ChildAdded:Connect(function(child)
+                if child:IsA("ScreenGui") then
+                    -- 确保通知系统UI在最上层
+                    local notificationSystem = player.PlayerGui:FindFirstChild("NotificationSystem")
+                    if notificationSystem then
+                        notificationSystem.DisplayOrder = 1000
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- 启动初始化
+init()
 
 return NotificationSystem
