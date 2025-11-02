@@ -59,27 +59,23 @@ end
 local cc = game:service'Players'.LocalPlayer.Idled:connect(function()bb:CaptureController()bb:ClickButton2(Vector2.new())end)
 
 -- 创建基础部件
-local data = {
-    instance = {
-        -- 点击音效
-        local uiclicker = Instance.new("Sound")
-        uiclicker.SoundId = "rbxassetid://535716488"
-        uiclicker.Volume = 0.3
-        uiclicker.Parent = SoundService
-    }
-    mainmenu = {
-        local Gui = Instance.new("ScreenGui")
-        Gui.Parent = game.CoreGui
-        Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        Gui.ResetOnSpawn = true
+-- 点击音效
+local uiclicker = Instance.new("Sound")
+uiclicker.SoundId = "rbxassetid://535716488"
+uiclicker.Volume = 0.3
+uiclicker.Parent = SoundService
 
-        -- 创建主窗口
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(1, 0, 1, 0) -- 中等大小
-        mainFrame.Position = UDim2.new(0, 0, 0, 0) -- 屏幕中央
-        mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 墨蓝色
-        mainFrame.BorderSizePixel = 0
-        mainFrame.BackgroundTransparency = 0.9
-        mainFrame.Parent = Gui
-    }
-}
+--主体结构
+local Gui = Instance.new("ScreenGui")
+Gui.Parent = game.CoreGui
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.ResetOnSpawn = true
+
+-- 创建主窗口
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(1, 0, 1, 0) -- 中等大小
+mainFrame.Position = UDim2.new(0, 0, 0, 0) -- 屏幕中央
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- 墨蓝色
+mainFrame.BorderSizePixel = 0
+mainFrame.BackgroundTransparency = 0.9
+mainFrame.Parent = Gui
