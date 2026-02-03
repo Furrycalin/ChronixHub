@@ -30,7 +30,7 @@ function StandRecovery:init()
     self.isUnloaded = false -- 卸载状态标记
     self.isLoopRunning = true -- 主循环运行标记
     self.characterAddedConnection = nil -- 角色绑定连接引用
-    self.motor6DStates = {} -- 记录Motor6D原始状态，用于恢复
+    self.motor6DStates = {} -- 仅记录Motor6D的Enabled状态（移除无效的角度属性）
 
     -- 初始化角色绑定（保存连接引用，方便后续断开）
     self:bindCharacterAndComponents(self.localPlayer.Character)
@@ -89,26 +89,32 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         print("[站立恢复模块] HumanoidRootPart 组件绑定成功")
     end
 
-    -- 记录Motor6D初始状态（用于后续恢复）
+    -- 记录Motor6D初始状态（仅保留Enabled，移除无效的TargetAngle/CurrentAngle）
     self:recordMotor6DStates()
 end
 
--- 【新增】辅助方法：记录所有Motor6D初始状态
+-- 【修正】辅助方法：记录所有Motor6D的Enabled状态（仅保留有效属性）
 function StandRecovery:recordMotor6DStates()
     if not self.character then return end
     self.motor6DStates = {}
     
-    -- 遍历角色所有Motor6D
-    for _, motor in pairs(self.character:GetDescendants()) do
-        if motor:IsA("Motor6D") then
-            self.motor6DStates[motor] = {
-                Enabled = motor.Enabled,
-                CurrentAngle = motor.CurrentAngle,
-                TargetAngle = motor.TargetAngle
-            }
+    -- 遍历角色所有Motor6D，仅记录Enabled状态
+    pcall(function() -- 包裹pcall，防止个别异常Motor6D导致报错
+        for _, motor in pairs(self.character:GetDescendants()) do
+            if motor:IsA("Motor6D") then
+                self.motor6DStates[motor] = {
+                    Enabled = motor.Enabled -- 仅记录是否启用，去掉无效的角度属性
+                }
+            end
         end
+    end)
+    
+    -- 统计有效记录数（排除nil）
+    local validCount = 0
+    for _, _ in pairs(self.motor6DStates) do
+        validCount = validCount + 1
     end
-    print(string.format("[站立恢复模块] 已记录 %d 个Motor6D初始状态", #self.motor6DStates))
+    print(string.format("[站立恢复模块] 已记录 %d 个Motor6D的启用状态", validCount))
 end
 
 -- 4. 【升级】辅助方法：判定是否失控（新增Physics/Ragdoll状态检测）
@@ -157,7 +163,7 @@ function StandRecovery:isUncontrollable()
     return isUncontrol
 end
 
--- 5. 【升级】辅助方法：单次恢复逻辑（新增Motor6D恢复）
+-- 5. 【修正】辅助方法：单次恢复逻辑（仅恢复Motor6D的Enabled状态，去掉无效角度）
 function StandRecovery:singleRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -177,21 +183,18 @@ function StandRecovery:singleRestore()
         self.humanoid:ChangeState(Enum.HumanoidStateType.Standing)
     end)
 
-    -- 【新增】恢复所有Motor6D状态（修复身体乱摆）
+    -- 【修正】恢复所有Motor6D的Enabled状态（仅恢复启用状态，去掉无效角度）
     pcall(function()
         local restoredCount = 0
         for motor, state in pairs(self.motor6DStates) do
-            if motor and motor.Parent then
-                motor.Enabled = state.Enabled
-                -- 恢复角度参数，防止关节错位
-                if state.CurrentAngle then motor.CurrentAngle = state.CurrentAngle end
-                if state.TargetAngle then motor.TargetAngle = state.TargetAngle end
+            if motor and motor.Parent then -- 确保Motor6D未被销毁
+                motor.Enabled = state.Enabled -- 仅恢复启用状态，解决身体乱摆
                 restoredCount = restoredCount + 1
             end
             task.wait(self.MOTOR6D_RESTORE_DELAY) -- 延迟恢复，避免物理冲突
         end
         if restoredCount > 0 then
-            print(string.format("[站立恢复模块] 已恢复 %d 个Motor6D状态", restoredCount))
+            print(string.format("[站立恢复模块] 已恢复 %d 个Motor6D的启用状态", restoredCount))
         end
     end)
 
@@ -240,7 +243,7 @@ function StandRecovery:singleRestore()
     return true
 end
 
--- 5. 辅助方法：批量恢复逻辑（保持不变）
+-- 6. 辅助方法：批量恢复逻辑（保持不变）
 function StandRecovery:batchRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -260,7 +263,7 @@ function StandRecovery:batchRestore()
     return successCount > 0
 end
 
--- 6. 公有方法：开启检测（保持不变）
+-- 7. 公有方法：开启检测（保持不变）
 function StandRecovery:enableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -272,10 +275,10 @@ function StandRecovery:enableDetection()
         return
     end
     self.isDetectionEnabled = true
-    print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态（包含电击枪防护）")
+    print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态（包含电击枪+巴掌防护）")
 end
 
--- 7. 公有方法：关闭检测（保持不变）
+-- 8. 公有方法：关闭检测（保持不变）
 function StandRecovery:disableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -290,7 +293,7 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 8. 公有方法：卸载脚本/模块（保持不变）
+-- 9. 公有方法：卸载脚本/模块（保持不变）
 function StandRecovery:unload()
     -- 重复卸载提示
     if self.isUnloaded then
@@ -337,7 +340,7 @@ function StandRecovery:unload()
     print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
 end
 
--- 9. 私有方法：启动主检测循环（保持不变）
+-- 10. 私有方法：启动主检测循环（保持不变）
 function StandRecovery:startMainLoop()
     if not self.initialized then return end
     task.spawn(function() -- 用 task.spawn 开启独立线程，避免阻塞
@@ -371,8 +374,8 @@ function StandRecovery:startMainLoop()
     end)
 end
 
--- 10. 初始化模块（自动执行）
+-- 11. 初始化模块（自动执行）
 StandRecovery:init()
 
--- 11. 返回封装表（外部 require 即可获取所有公有方法）
+-- 12. 返回封装表（外部 require 即可获取所有公有方法）
 return StandRecovery
