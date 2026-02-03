@@ -26,10 +26,13 @@ function StandRecovery:init()
     self.humanoidRootPart = nil
     self.isDetectionEnabled = false -- 默认关闭
     self.initialized = true -- 初始化完成标记
+    self.isUnloaded = false -- 卸载状态标记 ❗核心新增
+    self.isLoopRunning = true -- 主循环运行标记 ❗核心新增
+    self.characterAddedConnection = nil -- 角色绑定连接引用 ❗核心新增（用于后续断开监听）
 
-    -- 初始化角色绑定
+    -- 初始化角色绑定（保存连接引用，方便后续断开）
     self:bindCharacterAndComponents(self.localPlayer.Character)
-    self.localPlayer.CharacterAdded:Connect(function(newCharacter)
+    self.characterAddedConnection = self.localPlayer.CharacterAdded:Connect(function(newCharacter)
         self:bindCharacterAndComponents(newCharacter)
     end)
 
@@ -41,7 +44,8 @@ end
 
 -- 3. 核心方法：绑定角色及核心组件
 function StandRecovery:bindCharacterAndComponents(newCharacter)
-    if not self.initialized then return end
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded then return end
     if not newCharacter then
         warn("[站立恢复模块] 角色对象为空，绑定失败")
         self.character = nil
@@ -85,7 +89,8 @@ end
 
 -- 4. 辅助方法：判定是否失控
 function StandRecovery:isUncontrollable()
-    if not self.initialized or not self.isDetectionEnabled then
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
         return false
     end
     if not self.character or not self.humanoid or not self.humanoidRootPart or self.humanoid.Health <= 0 then
@@ -113,7 +118,11 @@ end
 
 -- 5. 辅助方法：单次恢复逻辑
 function StandRecovery:singleRestore()
-    if not self.initialized or not self.character or not self.humanoid or not self.humanoidRootPart then
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded then
+        return false
+    end
+    if not self.character or not self.humanoid or not self.humanoidRootPart then
         return false
     end
 
@@ -172,7 +181,8 @@ end
 
 -- 6. 辅助方法：批量恢复逻辑
 function StandRecovery:batchRestore()
-    if not self.initialized or not self.isDetectionEnabled then
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
         return false
     end
     print("[站立恢复模块] 开始批量执行恢复逻辑（确保生效）")
@@ -191,8 +201,9 @@ end
 
 -- 7. 公有方法：开启检测（外部可调用）
 function StandRecovery:enableDetection()
-    if not self.initialized then
-        warn("[站立恢复模块] 未初始化完成，无法开启检测")
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded then
+        warn("[站立恢复模块] 模块已卸载，无法开启检测")
         return
     end
     if self.isDetectionEnabled then
@@ -205,8 +216,9 @@ end
 
 -- 8. 公有方法：关闭检测（外部可调用）
 function StandRecovery:disableDetection()
-    if not self.initialized then
-        warn("[站立恢复模块] 未初始化完成，无法关闭检测")
+    -- 卸载后禁止执行
+    if not self.initialized or self.isUnloaded then
+        warn("[站立恢复模块] 模块已卸载，无法关闭检测")
         return
     end
     if not self.isDetectionEnabled then
@@ -217,19 +229,65 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 私有方法：启动主检测循环
+-- 9. 【核心新增】公有方法：卸载脚本/模块（外部可调用）
+function StandRecovery:unload()
+    -- 重复卸载提示
+    if self.isUnloaded then
+        print("[站立恢复模块] 模块已卸载，无需重复卸载")
+        return
+    end
+    if not self.initialized then
+        warn("[站立恢复模块] 模块未初始化完成，无需卸载")
+        return
+    end
+
+    print("[站立恢复模块] 开始执行卸载流程...")
+
+    -- 步骤1：标记为已卸载，禁止所有方法后续执行
+    self.isUnloaded = true
+    self.isDetectionEnabled = false
+
+    -- 步骤2：终止主检测循环
+    self.isLoopRunning = false
+    print("[站立恢复模块] 主检测循环已终止")
+
+    -- 步骤3：断开角色新增监听（防止内存泄漏）
+    if self.characterAddedConnection and self.characterAddedConnection.Connected then
+        self.characterAddedConnection:Disconnect()
+        self.characterAddedConnection = nil
+        print("[站立恢复模块] 角色新增监听已断开")
+    end
+
+    -- 步骤4：清空所有核心引用（释放内存）
+    self.character = nil
+    self.humanoid = nil
+    self.humanoidRootPart = nil
+    self.localPlayer = nil
+    self.Players = nil
+    print("[站立恢复模块] 所有核心引用已清空")
+
+    -- 步骤5：（可选）销毁当前脚本实例（彻底移除脚本，注释可开启）
+    -- pcall(function()
+    --     script:Destroy()
+    --     print("[站立恢复模块] 脚本实例已销毁")
+    -- end)
+
+    print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
+end
+
+-- 10. 私有方法：启动主检测循环（受循环标记控制，支持终止）
 function StandRecovery:startMainLoop()
     if not self.initialized then return end
     task.spawn(function() -- 用 task.spawn 开启独立线程，避免阻塞
-        while task.wait(self.CHECK_INTERVAL) do
-            -- 开关关闭，跳过后续逻辑
-            if not self.isDetectionEnabled then
-                task.wait(0.1)
+        while self.isLoopRunning do -- 受 isLoopRunning 控制，卸载时终止循环
+            task.wait(self.CHECK_INTERVAL)
+
+            -- 卸载/开关关闭，跳过后续逻辑
+            if self.isUnloaded or not self.isDetectionEnabled then
                 continue
             end
 
             if not self.character or not self.humanoid or not self.humanoidRootPart then
-                task.wait(0.1)
                 continue
             end
 
@@ -239,7 +297,7 @@ function StandRecovery:startMainLoop()
                 -- 恢复后持续监控防复燃
                 local guardTime = 0.5
                 local guardStart = tick()
-                while tick() - guardStart < guardTime and self.isDetectionEnabled do
+                while tick() - guardStart < guardTime and self.isDetectionEnabled and self.isLoopRunning do
                     if self:isUncontrollable() then
                         pcall(function() self:singleRestore() end)
                     end
@@ -251,8 +309,8 @@ function StandRecovery:startMainLoop()
     end)
 end
 
--- 10. 初始化模块（自动执行）
+-- 11. 初始化模块（自动执行）
 StandRecovery:init()
 
--- 11. 返回封装表（外部 require 即可获取所有公有方法）
+-- 12. 返回封装表（外部 require 即可获取所有公有方法）
 return StandRecovery
