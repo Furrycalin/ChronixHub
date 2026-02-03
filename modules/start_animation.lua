@@ -204,11 +204,34 @@ function LoadAnimationModule:LoadAnimation(duration, config)
         slideIn:Play()
         slideIn.Completed:Wait()
 
+        -- ======================================
+        -- 新增：判断快速加载标志（安全校验，避免_G.SA_FASTLOADING不存在报错）
+        local isFastLoading = _G.SA_FASTLOADING == true
+        -- 新增：定义两套时间配置（正常加载 / 快速加载（总时长≈1秒））
+        local timeConfig = {
+            -- 正常加载：保持原有的时间配置
+            normal = {
+                stepDurations = {1.5, 2.0, 2.5, 2.0},   -- 进度动画时间
+                pauseDurations = {2.0, 1.0, 1.0},       -- 进度卡顿等待时间
+                completeWait = 0.5                      -- 加载完成后额外等待时间
+            },
+            -- 快速加载：压缩所有时间，总时长控制在1秒内
+            fast = {
+                stepDurations = {0.1, 0.1, 0.1, 0.1},   -- 进度动画时间（总和0.4秒）
+                pauseDurations = {0.05, 0.05, 0.05},    -- 进度卡顿等待时间（总和0.15秒）
+                completeWait = 0.1                      -- 加载完成后额外等待时间（缩短）
+            }
+        }
+        -- 新增：根据快速加载标志选择对应的时间配置
+        local currentConfig = isFastLoading and timeConfig.fast or timeConfig.normal
+        -- ======================================
+
         -- 模拟加载进度 - 跳跃式更新
         local isCancelled = false
         local progressSteps = {0, 0.2, 0.5, 0.9, 1}
-        local stepDurations = {1.5, 2.0, 2.5, 2.0}
-        local pauseDurations = {2.0, 1.0, 1.0}
+        -- 替换：使用选择后的时间配置（原固定表 → currentConfig）
+        local stepDurations = currentConfig.stepDurations
+        local pauseDurations = currentConfig.pauseDurations
         local currentStep = 1
 
         -- 取消按钮事件
@@ -272,7 +295,8 @@ function LoadAnimationModule:LoadAnimation(duration, config)
             -- 音乐跳转到指定位置
             loadingSound.TimePosition = 128
             
-            wait(0.5)
+            -- 替换：使用选择后的完成等待时间（原固定0.5 → currentConfig.completeWait）
+            wait(currentConfig.completeWait)
             loadingText.Text = config.loadingText .. "100%"
             
             -- 完成时的动画
