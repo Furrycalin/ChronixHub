@@ -26,9 +26,9 @@ function StandRecovery:init()
     self.humanoidRootPart = nil
     self.isDetectionEnabled = false -- 默认关闭
     self.initialized = true -- 初始化完成标记
-    self.isUnloaded = false -- 卸载状态标记 ❗核心新增
-    self.isLoopRunning = true -- 主循环运行标记 ❗核心新增
-    self.characterAddedConnection = nil -- 角色绑定连接引用 ❗核心新增（用于后续断开监听）
+    self.isUnloaded = false -- 卸载状态标记
+    self.isLoopRunning = true -- 主循环运行标记
+    self.characterAddedConnection = nil -- 角色绑定连接引用
 
     -- 初始化角色绑定（保存连接引用，方便后续断开）
     self:bindCharacterAndComponents(self.localPlayer.Character)
@@ -87,7 +87,7 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     end
 end
 
--- 4. 辅助方法：判定是否失控
+-- 4. 【核心修改】辅助方法：判定是否失控（排除正常跳跃，修复误触发）
 function StandRecovery:isUncontrollable()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -97,26 +97,36 @@ function StandRecovery:isUncontrollable()
         return false
     end
 
+    -- 新增：排除正常跳跃状态（关键修复，防止跳跃触发恢复）
+    local isJumping = self.humanoid.Jump -- 是否正在进行正常跳跃
+    local currentState = self.humanoid:GetState()
+    -- 正常跳跃的两种状态：Jumping（上升中）、Freefall（下落中）
+    local isJumpRelatedState = (currentState == Enum.HumanoidStateType.Jumping) or (currentState == Enum.HumanoidStateType.Freefall)
+    -- 如果是正常跳跃导致的Jumping/Freefall，直接返回false，不判定为失控
+    if isJumping and isJumpRelatedState then
+        return false
+    end
+
     local abnormalStates = {
         Enum.HumanoidStateType.FallingDown,
         Enum.HumanoidStateType.Ragdoll,
         Enum.HumanoidStateType.Flying,
-        Enum.HumanoidStateType.Freefall,
+        Enum.HumanoidStateType.Freefall, -- 保留该状态，仅排除正常跳跃导致的它
         Enum.HumanoidStateType.Seated
     }
-    local inAbnormalState = table.find(abnormalStates, self.humanoid:GetState()) ~= nil
+    local inAbnormalState = table.find(abnormalStates, currentState) ~= nil
     local inHighSpeed = self.humanoidRootPart.Velocity.Magnitude > self.SPEED_THRESHOLD
     local inLockedState = self.humanoid.PlatformStand or self.humanoid.WalkSpeed <= 0
 
     local isUncontrol = inAbnormalState or inHighSpeed or inLockedState
     if isUncontrol then
         print(string.format("[站立恢复模块] 检测到失控！状态：%s，速度：%.2f", 
-            tostring(self.humanoid:GetState()), self.humanoidRootPart.Velocity.Magnitude))
+            tostring(currentState), self.humanoidRootPart.Velocity.Magnitude))
     end
     return isUncontrol
 end
 
--- 5. 辅助方法：单次恢复逻辑
+-- 5. 辅助方法：单次恢复逻辑（保持不变）
 function StandRecovery:singleRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -179,7 +189,7 @@ function StandRecovery:singleRestore()
     return true
 end
 
--- 6. 辅助方法：批量恢复逻辑
+-- 6. 辅助方法：批量恢复逻辑（保持不变）
 function StandRecovery:batchRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -199,7 +209,7 @@ function StandRecovery:batchRestore()
     return successCount > 0
 end
 
--- 7. 公有方法：开启检测（外部可调用）
+-- 7. 公有方法：开启检测（外部可调用，保持不变）
 function StandRecovery:enableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -214,7 +224,7 @@ function StandRecovery:enableDetection()
     print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态")
 end
 
--- 8. 公有方法：关闭检测（外部可调用）
+-- 8. 公有方法：关闭检测（外部可调用，保持不变）
 function StandRecovery:disableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -229,7 +239,7 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 【核心新增】公有方法：卸载脚本/模块（外部可调用）
+-- 9. 公有方法：卸载脚本/模块（外部可调用，保持不变）
 function StandRecovery:unload()
     -- 重复卸载提示
     if self.isUnloaded then
@@ -275,7 +285,7 @@ function StandRecovery:unload()
     print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
 end
 
--- 10. 私有方法：启动主检测循环（受循环标记控制，支持终止）
+-- 10. 私有方法：启动主检测循环（保持不变）
 function StandRecovery:startMainLoop()
     if not self.initialized then return end
     task.spawn(function() -- 用 task.spawn 开启独立线程，避免阻塞
