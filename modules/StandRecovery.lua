@@ -1,7 +1,7 @@
 -- 1. 创建封装表（核心，所有功能、属性都挂载在这个表上）
 local StandRecovery = {}
 
--- 2. 封装私有/公有属性（通过 self 访问）
+-- 2. 封装私有/公有属性（新增连续攻击/持续压制配置）
 function StandRecovery:init()
     -- 服务引用
     self.Players = game:GetService("Players")
@@ -12,14 +12,17 @@ function StandRecovery:init()
         return
     end
 
-    -- 核心配置（可外部修改）
+    -- 核心配置（优化连续攻击/电击压制参数）
     self.DEFAULT_WALK_SPEED = 16
     self.DEFAULT_JUMP_POWER = 50
-    self.CHECK_INTERVAL = 0.05
+    self.CHECK_INTERVAL = 0.03 -- 提高检测频率，应对连续攻击
     self.SPEED_THRESHOLD = 50
-    self.RESTORE_REPEAT_TIMES = 3
-    self.RESTORE_REPEAT_INTERVAL = 0.05
-    self.MOTOR6D_RESTORE_DELAY = 0.02 -- 关节恢复延迟，避免物理冲突
+    self.RESTORE_REPEAT_TIMES = 5 -- 提升批量恢复次数，压过二次巴掌
+    self.RESTORE_REPEAT_INTERVAL = 0.03 -- 缩短批量恢复间隔
+    self.MOTOR6D_RESTORE_DELAY = 0.05 -- 延长Motor6D恢复延迟，减少冲突
+    self.GUARD_TIME = 3.0 -- 延长防复燃窗口，应对连续巴掌（从0.5→3秒）
+    self.BODY_POS_FIX_TIME = 0.3 -- 延长位置固定时间，稳定姿势（从0.1→0.3秒）
+    self.ELECTRIC_SUPPRESS_TIME = 2.0 -- 电击持续压制时间，对抗持续生效脚本
 
     -- 状态变量
     self.character = nil
@@ -30,7 +33,7 @@ function StandRecovery:init()
     self.isUnloaded = false -- 卸载状态标记
     self.isLoopRunning = true -- 主循环运行标记
     self.characterAddedConnection = nil -- 角色绑定连接引用
-    self.motor6DStates = {} -- 仅记录Motor6D的Enabled状态（移除无效的角度属性）
+    self.isSuppressing = false -- 新增：是否正在压制（防止重复进入压制逻辑）
 
     -- 初始化角色绑定（保存连接引用，方便后续断开）
     self:bindCharacterAndComponents(self.localPlayer.Character)
@@ -44,7 +47,7 @@ function StandRecovery:init()
     print("[站立恢复模块] 初始化完成，检测功能默认关闭（调用 :enableDetection() 开启）")
 end
 
--- 3. 核心方法：绑定角色及核心组件
+-- 3. 核心方法：绑定角色及核心组件（新增重置压制状态）
 function StandRecovery:bindCharacterAndComponents(newCharacter)
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then return end
@@ -53,7 +56,7 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         self.character = nil
         self.humanoid = nil
         self.humanoidRootPart = nil
-        self.motor6DStates = {} -- 清空Motor6D状态记录
+        self.isSuppressing = false -- 重置压制状态
         return
     end
 
@@ -63,12 +66,12 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
 
     -- 等待并获取 Humanoid
     local success1, tempHumanoid = pcall(function()
-        return self.character:WaitForChild("Humanoid")
+        return self.character:WaitForChild("Humanoid", 5) -- 延长等待时间，确保获取
     end)
 
     -- 等待并获取 HumanoidRootPart
     local success2, tempRootPart = pcall(function()
-        return self.character:WaitForChild("HumanoidRootPart")
+        return self.character:WaitForChild("HumanoidRootPart", 5)
     end)
 
     -- 验证并更新组件引用
@@ -78,6 +81,9 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     else
         self.humanoid = tempHumanoid
         self.humanoid.AutoRotate = true
+        -- 初始化Humanoid状态，防止残留锁定
+        self.humanoid.PlatformStand = false
+        self.humanoid.WalkSpeed = self.DEFAULT_WALK_SPEED
         print("[站立恢复模块] Humanoid 组件绑定成功")
     end
 
@@ -89,38 +95,14 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         print("[站立恢复模块] HumanoidRootPart 组件绑定成功")
     end
 
-    -- 记录Motor6D初始状态（仅保留Enabled，移除无效的TargetAngle/CurrentAngle）
-    self:recordMotor6DStates()
+    -- 重置压制状态，确保新角色绑定后检测正常
+    self.isSuppressing = false
 end
 
--- 【修正】辅助方法：记录所有Motor6D的Enabled状态（仅保留有效属性）
-function StandRecovery:recordMotor6DStates()
-    if not self.character then return end
-    self.motor6DStates = {}
-    
-    -- 遍历角色所有Motor6D，仅记录Enabled状态
-    pcall(function() -- 包裹pcall，防止个别异常Motor6D导致报错
-        for _, motor in pairs(self.character:GetDescendants()) do
-            if motor:IsA("Motor6D") then
-                self.motor6DStates[motor] = {
-                    Enabled = motor.Enabled -- 仅记录是否启用，去掉无效的角度属性
-                }
-            end
-        end
-    end)
-    
-    -- 统计有效记录数（排除nil）
-    local validCount = 0
-    for _, _ in pairs(self.motor6DStates) do
-        validCount = validCount + 1
-    end
-    print(string.format("[站立恢复模块] 已记录 %d 个Motor6D的启用状态", validCount))
-end
-
--- 4. 【升级】辅助方法：判定是否失控（新增Physics/Ragdoll状态检测）
+-- 4. 辅助方法：判定是否失控（优化状态检测，提升响应速度）
 function StandRecovery:isUncontrollable()
-    -- 卸载后禁止执行
-    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
+    -- 卸载/压制中/未开启检测，禁止执行
+    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled or self.isSuppressing then
         return false
     end
     if not self.character or not self.humanoid or not self.humanoidRootPart or self.humanoid.Health <= 0 then
@@ -130,95 +112,93 @@ function StandRecovery:isUncontrollable()
     local currentState = self.humanoid:GetState()
     local abnormalStates = {
         Enum.HumanoidStateType.FallingDown,
-        Enum.HumanoidStateType.Ragdoll, -- 布娃娃状态（旧版）
-        Enum.HumanoidStateType.Physics, -- 物理状态（电击枪常用）
+        Enum.HumanoidStateType.Ragdoll,
+        Enum.HumanoidStateType.Physics, -- 电击枪核心状态
         Enum.HumanoidStateType.Flying,
         Enum.HumanoidStateType.Freefall,
         Enum.HumanoidStateType.Seated
     }
     
-    -- 检测是否处于异常状态
+    -- 快速检测状态（优先返回，提升响应）
     local inAbnormalState = table.find(abnormalStates, currentState) ~= nil
-    -- 检测是否有禁用的Motor6D（电击枪常见手段）
+    if inAbnormalState then return true end
+
+    -- 检测禁用Motor6D（电击枪）
     local hasDisabledMotor6D = false
     pcall(function()
-        for _, motor in pairs(self.character:GetDescendants()) do
-            if motor:IsA("Motor6D") and not motor.Enabled then
-                hasDisabledMotor6D = true
-                break
+        -- 只检测关键骨骼Motor6D，提升检测速度，减少冲突
+        local keyBones = {"Head", "Torso", "RightUpperLeg", "LeftUpperLeg", "RightUpperArm", "LeftUpperArm"}
+        for _, boneName in pairs(keyBones) do
+            local bone = self.character:FindFirstChild(boneName, true)
+            if bone then
+                for _, motor in pairs(bone:GetChildren()) do
+                    if motor:IsA("Motor6D") and not motor.Enabled then
+                        hasDisabledMotor6D = true
+                        break
+                    end
+                end
             end
+            if hasDisabledMotor6D then break end
         end
     end)
-    
+
+    -- 检测巴掌的高速/锁定状态
     local inHighSpeed = self.humanoidRootPart.Velocity.Magnitude > self.SPEED_THRESHOLD
     local inLockedState = self.humanoid.PlatformStand or self.humanoid.WalkSpeed <= 0
 
-    local isUncontrol = inAbnormalState or hasDisabledMotor6D or inHighSpeed or inLockedState
-    if isUncontrol then
-        local stateStr = tostring(currentState)
-        local motorStr = hasDisabledMotor6D and "，检测到禁用Motor6D" or ""
-        print(string.format("[站立恢复模块] 检测到失控！状态：%s%s，速度：%.2f", 
-            stateStr, motorStr, self.humanoidRootPart.Velocity.Magnitude))
-    end
-    return isUncontrol
+    return hasDisabledMotor6D or inHighSpeed or inLockedState
 end
 
--- 5. 【修正】辅助方法：单次恢复逻辑（仅恢复Motor6D的Enabled状态，去掉无效角度）
+-- 5. 核心方法：单次强力恢复（优化优先级，减少冲突）
 function StandRecovery:singleRestore()
-    -- 卸载后禁止执行
-    if not self.initialized or self.isUnloaded then
-        return false
-    end
-    if not self.character or not self.humanoid or not self.humanoidRootPart then
-        return false
-    end
+    if not self.initialized or self.isUnloaded then return false end
+    if not self.character or not self.humanoid or not self.humanoidRootPart then return false end
 
-    -- 强制切换站立状态（针对Physics/Ragdoll状态）
+    -- 步骤1：强制锁定站立状态，优先级拉满
     pcall(function()
-        -- 先退出物理状态
-        self.humanoid:ChangeState(Enum.HumanoidStateType.None)
-        task.wait(0.001)
-        -- 切换到站立状态（重复两次确保生效）
         self.humanoid:ChangeState(Enum.HumanoidStateType.Standing)
-        self.humanoid:ChangeState(Enum.HumanoidStateType.Standing)
+        -- 锁定Humanoid属性，防止被覆盖
+        self.humanoid.PlatformStand = false
+        self.humanoid.WalkSpeed = self.DEFAULT_WALK_SPEED
+        self.humanoid.JumpPower = self.DEFAULT_JUMP_POWER
     end)
 
-    -- 【修正】恢复所有Motor6D的Enabled状态（仅恢复启用状态，去掉无效角度）
+    -- 步骤2：强制启用关键骨骼Motor6D（不记录初始状态，直接启用，对抗电击脚本）
+    local restoredCount = 0
     pcall(function()
-        local restoredCount = 0
-        for motor, state in pairs(self.motor6DStates) do
-            if motor and motor.Parent then -- 确保Motor6D未被销毁
-                motor.Enabled = state.Enabled -- 仅恢复启用状态，解决身体乱摆
-                restoredCount = restoredCount + 1
+        local keyBones = {"Head", "Torso", "RightUpperLeg", "LeftUpperLeg", "RightUpperArm", "LeftUpperArm"}
+        for _, boneName in pairs(keyBones) do
+            local bone = self.character:FindFirstChild(boneName, true)
+            if bone then
+                for _, motor in pairs(bone:GetChildren()) do
+                    if motor:IsA("Motor6D") then
+                        motor.Enabled = true -- 强制启用，不依赖历史记录，避免失效
+                        restoredCount = restoredCount + 1
+                    end
+                end
             end
-            task.wait(self.MOTOR6D_RESTORE_DELAY) -- 延迟恢复，避免物理冲突
-        end
-        if restoredCount > 0 then
-            print(string.format("[站立恢复模块] 已恢复 %d 个Motor6D的启用状态", restoredCount))
+            task.wait(self.MOTOR6D_RESTORE_DELAY) -- 分批恢复，减少和电击脚本冲突
         end
     end)
 
-    -- 恢复移动参数
-    self.humanoid.WalkSpeed = self.DEFAULT_WALK_SPEED
-    self.humanoid.JumpPower = self.DEFAULT_JUMP_POWER
-    self.humanoid.PlatformStand = false
-    self.humanoid.AutoRotate = true
-    self.humanoid.Health = math.min(self.humanoid.Health + 1, self.humanoid.MaxHealth)
+    -- 步骤3：清空惯性，延长位置固定，稳定姿势
+    pcall(function()
+        self.humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        self.humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
 
-    -- 清空惯性并临时固定位置
-    self.humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-    self.humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
-    local bodyPos = Instance.new("BodyPosition")
-    bodyPos.Parent = self.humanoidRootPart
-    bodyPos.Position = self.humanoidRootPart.Position
-    bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyPos.D = 100
-    bodyPos.P = 5000
-    task.delay(0.1, function()
-        if bodyPos then bodyPos:Destroy() end
+        -- 延长位置固定时间，让姿势稳定后再释放
+        local bodyPos = Instance.new("BodyPosition")
+        bodyPos.Parent = self.humanoidRootPart
+        bodyPos.Position = self.humanoidRootPart.Position
+        bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyPos.D = 200 -- 提高阻尼，减少抖动
+        bodyPos.P = 8000 -- 提高力度，稳定姿势
+        task.delay(self.BODY_POS_FIX_TIME, function()
+            if bodyPos and bodyPos.Parent then bodyPos:Destroy() end
+        end)
     end)
 
-    -- 深度清理物理对象
+    -- 步骤4：深度清理物理对象，重复清理避免残留
     local removedCount = 0
     local function clearPhysicsObjects(obj)
         for _, child in pairs(obj:GetChildren()) do
@@ -229,29 +209,67 @@ function StandRecovery:singleRestore()
             clearPhysicsObjects(child)
         end
     end
-    clearPhysicsObjects(self.character)
-
-    -- 重置角色姿势
-    local rootCF = self.humanoidRootPart.CFrame
-    pcall(function()
-        self.humanoidRootPart.CFrame = CFrame.new(rootCF.Position) * CFrame.Angles(0, rootCF:ToEulerAnglesYXZ().y, 0)
-    end)
-
-    if removedCount > 0 then
-        print(string.format("[站立恢复模块] 单次恢复：清除 %d 个物理对象", removedCount))
+    -- 重复清理2次，应对巴掌二次攻击的物理残留
+    for i = 1, 2 do
+        clearPhysicsObjects(self.character)
+        task.wait(0.01)
     end
+
+    -- 步骤5：小幅回血，避免濒死状态被持续攻击
+    self.humanoid.Health = math.min(self.humanoid.Health + 2, self.humanoid.MaxHealth)
+
+    -- 输出日志（简化，减少性能开销）
+    if restoredCount > 0 then
+        print(string.format("[站立恢复模块] 恢复 %d 个关键Motor6D", restoredCount))
+    end
+    if removedCount > 0 then
+        print(string.format("[站立恢复模块] 清理 %d 个物理对象", removedCount))
+    end
+
     return true
 end
 
--- 6. 辅助方法：批量恢复逻辑（保持不变）
-function StandRecovery:batchRestore()
-    -- 卸载后禁止执行
-    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
-        return false
+-- 6. 新增：持续压制逻辑（对抗电击枪持续生效脚本）
+function StandRecovery:startSuppress()
+    if self.isSuppressing or self.isUnloaded or not self.isDetectionEnabled then return end
+    self.isSuppressing = true
+    print("[站立恢复模块] 检测到持续失控（电击/连续巴掌），进入持续压制模式")
+
+    local suppressStart = tick()
+    local lastNormalStateTime = tick()
+
+    -- 压制循环：在压制时间内，高频率小幅恢复，压制游戏脚本
+    while tick() - suppressStart < self.ELECTRIC_SUPPRESS_TIME and not self.isUnloaded do
+        -- 每帧检测是否恢复正常
+        local currentState = self.humanoid:GetState()
+        local isNormal = (currentState == Enum.HumanoidStateType.Standing) and (self.humanoid.WalkSpeed > 0)
+
+        if isNormal then
+            lastNormalStateTime = tick()
+            -- 连续0.5秒正常，提前退出压制
+            if tick() - lastNormalStateTime > 0.5 then
+                break
+            end
+        else
+            -- 异常状态，立即执行单次恢复，压制游戏脚本
+            self:singleRestore()
+        end
+
+        task.wait(0.05) -- 压制频率，平衡效果和性能
     end
-    print("[站立恢复模块] 开始批量执行恢复逻辑（确保生效）")
+
+    -- 退出压制，重置状态
+    self.isSuppressing = false
+    print("[站立恢复模块] 持续压制结束，恢复正常监控")
+end
+
+-- 7. 批量恢复逻辑（强化，应对二次巴掌）
+function StandRecovery:batchRestore()
+    if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then return false end
+    print("[站立恢复模块] 开始批量恢复（应对强力失控）")
     local successCount = 0
 
+    -- 提升恢复次数，压过二次巴掌的优先级
     for i = 1, self.RESTORE_REPEAT_TIMES do
         if self:singleRestore() then
             successCount = successCount + 1
@@ -263,9 +281,8 @@ function StandRecovery:batchRestore()
     return successCount > 0
 end
 
--- 7. 公有方法：开启检测（保持不变）
+-- 8. 公有方法：开启检测（保持不变，新增压制说明）
 function StandRecovery:enableDetection()
-    -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
         warn("[站立恢复模块] 模块已卸载，无法开启检测")
         return
@@ -275,12 +292,11 @@ function StandRecovery:enableDetection()
         return
     end
     self.isDetectionEnabled = true
-    print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态（包含电击枪+巴掌防护）")
+    print("[站立恢复模块] 检测功能已开启（支持连续巴掌+电击枪压制，包含3秒防复燃窗口）")
 end
 
--- 8. 公有方法：关闭检测（保持不变）
+-- 9. 公有方法：关闭检测（保持不变）
 function StandRecovery:disableDetection()
-    -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
         warn("[站立恢复模块] 模块已卸载，无法关闭检测")
         return
@@ -290,12 +306,12 @@ function StandRecovery:disableDetection()
         return
     end
     self.isDetectionEnabled = false
+    self.isSuppressing = false -- 关闭时终止压制
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 公有方法：卸载脚本/模块（保持不变）
+-- 10. 公有方法：卸载脚本/模块（保持不变，重置压制状态）
 function StandRecovery:unload()
-    -- 重复卸载提示
     if self.isUnloaded then
         print("[站立恢复模块] 模块已卸载，无需重复卸载")
         return
@@ -307,9 +323,10 @@ function StandRecovery:unload()
 
     print("[站立恢复模块] 开始执行卸载流程...")
 
-    -- 步骤1：标记为已卸载，禁止所有方法后续执行
+    -- 步骤1：标记为已卸载，终止压制
     self.isUnloaded = true
     self.isDetectionEnabled = false
+    self.isSuppressing = false
 
     -- 步骤2：终止主检测循环
     self.isLoopRunning = false
@@ -328,7 +345,6 @@ function StandRecovery:unload()
     self.humanoidRootPart = nil
     self.localPlayer = nil
     self.Players = nil
-    self.motor6DStates = {}
     print("[站立恢复模块] 所有核心引用已清空")
 
     -- 步骤5：（可选）销毁当前脚本实例（彻底移除脚本，注释可开启）
@@ -340,11 +356,11 @@ function StandRecovery:unload()
     print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
 end
 
--- 10. 私有方法：启动主检测循环（保持不变）
+-- 11. 主检测循环（重构，新增压制触发逻辑）
 function StandRecovery:startMainLoop()
     if not self.initialized then return end
-    task.spawn(function() -- 用 task.spawn 开启独立线程，避免阻塞
-        while self.isLoopRunning do -- 受 isLoopRunning 控制，卸载时终止循环
+    task.spawn(function()
+        while self.isLoopRunning do
             task.wait(self.CHECK_INTERVAL)
 
             -- 卸载/开关关闭，跳过后续逻辑
@@ -356,26 +372,23 @@ function StandRecovery:startMainLoop()
                 continue
             end
 
-            -- 检测失控并执行批量恢复
+            -- 检测到失控，执行「批量恢复+持续压制」
             if self:isUncontrollable() then
+                -- 第一步：批量恢复，快速压制初始失控
                 pcall(function() self:batchRestore() end)
-                -- 恢复后持续监控防复燃
-                local guardTime = 0.5
-                local guardStart = tick()
-                while tick() - guardStart < guardTime and self.isDetectionEnabled and self.isLoopRunning do
-                    if self:isUncontrollable() then
-                        pcall(function() self:singleRestore() end)
-                    end
-                    task.wait(0.01)
-                end
-                task.wait(0.2)
+
+                -- 第二步：进入持续压制，对抗电击/连续巴掌的持续生效
+                pcall(function() self:startSuppress() end)
+
+                -- 第三步：延长防复燃等待，避免立即触发下一次检测
+                task.wait(0.5)
             end
         end
     end)
 end
 
--- 11. 初始化模块（自动执行）
+-- 12. 初始化模块（自动执行）
 StandRecovery:init()
 
--- 12. 返回封装表（外部 require 即可获取所有公有方法）
+-- 13. 返回封装表（外部 require 即可获取所有公有方法）
 return StandRecovery
