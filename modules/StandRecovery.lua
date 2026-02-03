@@ -19,6 +19,7 @@ function StandRecovery:init()
     self.SPEED_THRESHOLD = 50
     self.RESTORE_REPEAT_TIMES = 3
     self.RESTORE_REPEAT_INTERVAL = 0.05
+    self.MOTOR6D_RESTORE_DELAY = 0.02 -- 关节恢复延迟，避免物理冲突
 
     -- 状态变量
     self.character = nil
@@ -26,9 +27,10 @@ function StandRecovery:init()
     self.humanoidRootPart = nil
     self.isDetectionEnabled = false -- 默认关闭
     self.initialized = true -- 初始化完成标记
-    self.isUnloaded = false -- 卸载状态标记 ❗核心新增
-    self.isLoopRunning = true -- 主循环运行标记 ❗核心新增
-    self.characterAddedConnection = nil -- 角色绑定连接引用 ❗核心新增（用于后续断开监听）
+    self.isUnloaded = false -- 卸载状态标记
+    self.isLoopRunning = true -- 主循环运行标记
+    self.characterAddedConnection = nil -- 角色绑定连接引用
+    self.motor6DStates = {} -- 记录Motor6D原始状态，用于恢复
 
     -- 初始化角色绑定（保存连接引用，方便后续断开）
     self:bindCharacterAndComponents(self.localPlayer.Character)
@@ -36,7 +38,7 @@ function StandRecovery:init()
         self:bindCharacterAndComponents(newCharacter)
     end)
 
-    -- 启动主循环（封装为方法）
+    -- 启动主检测循环（封装为方法）
     self:startMainLoop()
 
     print("[站立恢复模块] 初始化完成，检测功能默认关闭（调用 :enableDetection() 开启）")
@@ -51,6 +53,7 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         self.character = nil
         self.humanoid = nil
         self.humanoidRootPart = nil
+        self.motor6DStates = {} -- 清空Motor6D状态记录
         return
     end
 
@@ -85,9 +88,30 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         self.humanoidRootPart = tempRootPart
         print("[站立恢复模块] HumanoidRootPart 组件绑定成功")
     end
+
+    -- 记录Motor6D初始状态（用于后续恢复）
+    self:recordMotor6DStates()
 end
 
--- 4. 辅助方法：判定是否失控
+-- 【新增】辅助方法：记录所有Motor6D初始状态
+function StandRecovery:recordMotor6DStates()
+    if not self.character then return end
+    self.motor6DStates = {}
+    
+    -- 遍历角色所有Motor6D
+    for _, motor in pairs(self.character:GetDescendants()) do
+        if motor:IsA("Motor6D") then
+            self.motor6DStates[motor] = {
+                Enabled = motor.Enabled,
+                CurrentAngle = motor.CurrentAngle,
+                TargetAngle = motor.TargetAngle
+            }
+        end
+    end
+    print(string.format("[站立恢复模块] 已记录 %d 个Motor6D初始状态", #self.motor6DStates))
+end
+
+-- 4. 【升级】辅助方法：判定是否失控（新增Physics/Ragdoll状态检测）
 function StandRecovery:isUncontrollable()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -97,26 +121,43 @@ function StandRecovery:isUncontrollable()
         return false
     end
 
+    local currentState = self.humanoid:GetState()
     local abnormalStates = {
         Enum.HumanoidStateType.FallingDown,
-        Enum.HumanoidStateType.Ragdoll,
+        Enum.HumanoidStateType.Ragdoll, -- 布娃娃状态（旧版）
+        Enum.HumanoidStateType.Physics, -- 物理状态（电击枪常用）
         Enum.HumanoidStateType.Flying,
         Enum.HumanoidStateType.Freefall,
         Enum.HumanoidStateType.Seated
     }
-    local inAbnormalState = table.find(abnormalStates, self.humanoid:GetState()) ~= nil
+    
+    -- 检测是否处于异常状态
+    local inAbnormalState = table.find(abnormalStates, currentState) ~= nil
+    -- 检测是否有禁用的Motor6D（电击枪常见手段）
+    local hasDisabledMotor6D = false
+    pcall(function()
+        for _, motor in pairs(self.character:GetDescendants()) do
+            if motor:IsA("Motor6D") and not motor.Enabled then
+                hasDisabledMotor6D = true
+                break
+            end
+        end
+    end)
+    
     local inHighSpeed = self.humanoidRootPart.Velocity.Magnitude > self.SPEED_THRESHOLD
     local inLockedState = self.humanoid.PlatformStand or self.humanoid.WalkSpeed <= 0
 
-    local isUncontrol = inAbnormalState or inHighSpeed or inLockedState
+    local isUncontrol = inAbnormalState or hasDisabledMotor6D or inHighSpeed or inLockedState
     if isUncontrol then
-        print(string.format("[站立恢复模块] 检测到失控！状态：%s，速度：%.2f", 
-            tostring(self.humanoid:GetState()), self.humanoidRootPart.Velocity.Magnitude))
+        local stateStr = tostring(currentState)
+        local motorStr = hasDisabledMotor6D and "，检测到禁用Motor6D" or ""
+        print(string.format("[站立恢复模块] 检测到失控！状态：%s%s，速度：%.2f", 
+            stateStr, motorStr, self.humanoidRootPart.Velocity.Magnitude))
     end
     return isUncontrol
 end
 
--- 5. 辅助方法：单次恢复逻辑
+-- 5. 【升级】辅助方法：单次恢复逻辑（新增Motor6D恢复）
 function StandRecovery:singleRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -126,12 +167,32 @@ function StandRecovery:singleRestore()
         return false
     end
 
-    -- 强制切换站立状态
+    -- 强制切换站立状态（针对Physics/Ragdoll状态）
     pcall(function()
+        -- 先退出物理状态
         self.humanoid:ChangeState(Enum.HumanoidStateType.None)
         task.wait(0.001)
+        -- 切换到站立状态（重复两次确保生效）
         self.humanoid:ChangeState(Enum.HumanoidStateType.Standing)
         self.humanoid:ChangeState(Enum.HumanoidStateType.Standing)
+    end)
+
+    -- 【新增】恢复所有Motor6D状态（修复身体乱摆）
+    pcall(function()
+        local restoredCount = 0
+        for motor, state in pairs(self.motor6DStates) do
+            if motor and motor.Parent then
+                motor.Enabled = state.Enabled
+                -- 恢复角度参数，防止关节错位
+                if state.CurrentAngle then motor.CurrentAngle = state.CurrentAngle end
+                if state.TargetAngle then motor.TargetAngle = state.TargetAngle end
+                restoredCount = restoredCount + 1
+            end
+            task.wait(self.MOTOR6D_RESTORE_DELAY) -- 延迟恢复，避免物理冲突
+        end
+        if restoredCount > 0 then
+            print(string.format("[站立恢复模块] 已恢复 %d 个Motor6D状态", restoredCount))
+        end
     end)
 
     -- 恢复移动参数
@@ -179,7 +240,7 @@ function StandRecovery:singleRestore()
     return true
 end
 
--- 6. 辅助方法：批量恢复逻辑
+-- 5. 辅助方法：批量恢复逻辑（保持不变）
 function StandRecovery:batchRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -199,7 +260,7 @@ function StandRecovery:batchRestore()
     return successCount > 0
 end
 
--- 7. 公有方法：开启检测（外部可调用）
+-- 6. 公有方法：开启检测（保持不变）
 function StandRecovery:enableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -211,10 +272,10 @@ function StandRecovery:enableDetection()
         return
     end
     self.isDetectionEnabled = true
-    print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态")
+    print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态（包含电击枪防护）")
 end
 
--- 8. 公有方法：关闭检测（外部可调用）
+-- 7. 公有方法：关闭检测（保持不变）
 function StandRecovery:disableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -229,7 +290,7 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 【核心新增】公有方法：卸载脚本/模块（外部可调用）
+-- 8. 公有方法：卸载脚本/模块（保持不变）
 function StandRecovery:unload()
     -- 重复卸载提示
     if self.isUnloaded then
@@ -264,6 +325,7 @@ function StandRecovery:unload()
     self.humanoidRootPart = nil
     self.localPlayer = nil
     self.Players = nil
+    self.motor6DStates = {}
     print("[站立恢复模块] 所有核心引用已清空")
 
     -- 步骤5：（可选）销毁当前脚本实例（彻底移除脚本，注释可开启）
@@ -275,7 +337,7 @@ function StandRecovery:unload()
     print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
 end
 
--- 10. 私有方法：启动主检测循环（受循环标记控制，支持终止）
+-- 9. 私有方法：启动主检测循环（保持不变）
 function StandRecovery:startMainLoop()
     if not self.initialized then return end
     task.spawn(function() -- 用 task.spawn 开启独立线程，避免阻塞
@@ -309,8 +371,8 @@ function StandRecovery:startMainLoop()
     end)
 end
 
--- 11. 初始化模块（自动执行）
+-- 10. 初始化模块（自动执行）
 StandRecovery:init()
 
--- 12. 返回封装表（外部 require 即可获取所有公有方法）
+-- 11. 返回封装表（外部 require 即可获取所有公有方法）
 return StandRecovery
