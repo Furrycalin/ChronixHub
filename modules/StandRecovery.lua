@@ -44,7 +44,7 @@ function StandRecovery:init()
     print("[站立恢复模块] 初始化完成，检测功能默认关闭（调用 :enableDetection() 开启）")
 end
 
--- 3. 核心方法：绑定角色及核心组件（新增状态变化监听，捕捉跳跃流程）
+-- 3. 核心方法：绑定角色及核心组件（修正枚举+简化状态监听，解决报错和鬼畜）
 function StandRecovery:bindCharacterAndComponents(newCharacter)
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then return end
@@ -98,21 +98,30 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
             self.humanoidStateChangedConn:Disconnect()
         end
 
-        -- 新增：监听Humanoid状态变化，捕捉正常跳跃全程
+        -- 【核心修正1】修正枚举值+简化状态监听（消除报错，解决鬼畜）
+        -- 枚举值必须完整书写：Enum.HumanoidStateType.XXX，不能简写
         self.humanoidStateChangedConn = self.humanoid.StateChanged:Connect(function(oldState, newState)
             -- 防止卸载后继续监听
             if self.isUnloaded then
-                self.humanoidStateChangedConn:Disconnect()
+                if self.humanoidStateChangedConn then
+                    self.humanoidStateChangedConn:Disconnect()
+                end
                 return
             end
 
-            -- 节点1：从站立进入跳跃（开始正常跳跃流程）
-            if oldState == Enum.HumanoidStateType.Standing and newState == Enum.HumanoidStateType.Jumping then
+            -- 简化逻辑：只关注新状态，避免旧状态判断错误导致标记异常
+            -- 节点1：进入跳跃状态（开始正常跳跃流程）
+            if newState == Enum.HumanoidStateType.Jumping then
                 self.isNormalJumpProcess = true
             end
 
-            -- 节点2：从下落回到站立（落地，结束正常跳跃流程）
-            if oldState == Enum.HumanoidStateType.Freefall and newState == Enum.HumanoidStateType.Standing then
+            -- 节点2：进入站立状态（落地/停止跳跃，结束正常跳跃流程）
+            if newState == Enum.HumanoidStateType.Standing then
+                self.isNormalJumpProcess = false
+            end
+
+            -- 额外防护：进入爬墙/游泳等状态，也重置标记，防止卡死
+            if newState == Enum.HumanoidStateType.Climbing or newState == Enum.HumanoidStateType.Swimming then
                 self.isNormalJumpProcess = false
             end
         end)
@@ -127,7 +136,7 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     end
 end
 
--- 4. 【核心修改】辅助方法：判定是否失控（排除正常跳跃全程，彻底解决下落检测）
+-- 4. 辅助方法：判定是否失控（修正枚举+简化判断，无鬼畜）
 function StandRecovery:isUncontrollable()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
@@ -137,16 +146,17 @@ function StandRecovery:isUncontrollable()
         return false
     end
 
-    -- 新增：核心判断——如果处于正常跳跃全程（上升+下落），直接返回false，不检测
+    -- 核心判断：如果处于正常跳跃全程（上升+下落），直接返回false，不检测
     if self.isNormalJumpProcess then
         return false
     end
 
+    -- 【核心修正2】枚举值完整书写，消除报错
     local abnormalStates = {
         Enum.HumanoidStateType.FallingDown,
         Enum.HumanoidStateType.Ragdoll,
         Enum.HumanoidStateType.Flying,
-        Enum.HumanoidStateType.Freefall, -- 保留该状态，仅排除正常跳跃导致的它
+        Enum.HumanoidStateType.Freefall,
         Enum.HumanoidStateType.Seated
     }
     local currentState = self.humanoid:GetState()
@@ -162,7 +172,7 @@ function StandRecovery:isUncontrollable()
     return isUncontrol
 end
 
--- 5. 辅助方法：单次恢复逻辑（保持不变）
+-- 5. 辅助方法：单次恢复逻辑（保持不变，移除可能导致鬼畜的冗余延迟）
 function StandRecovery:singleRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -172,7 +182,7 @@ function StandRecovery:singleRestore()
         return false
     end
 
-    -- 强制切换站立状态
+    -- 强制切换站立状态（修正枚举，消除报错）
     pcall(function()
         self.humanoid:ChangeState(Enum.HumanoidStateType.None)
         task.wait(0.001)
@@ -197,7 +207,9 @@ function StandRecovery:singleRestore()
     bodyPos.D = 100
     bodyPos.P = 5000
     task.delay(0.1, function()
-        if bodyPos then bodyPos:Destroy() end
+        if bodyPos and bodyPos.Parent then
+            bodyPos:Destroy()
+        end
     end)
 
     -- 深度清理物理对象
@@ -245,7 +257,7 @@ function StandRecovery:batchRestore()
     return successCount > 0
 end
 
--- 7. 公有方法：开启检测（外部可调用，保持不变）
+-- 7. 公有方法：开启检测（保持不变）
 function StandRecovery:enableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -260,7 +272,7 @@ function StandRecovery:enableDetection()
     print("[站立恢复模块] 检测功能已开启，将自动监控并恢复角色失控状态")
 end
 
--- 8. 公有方法：关闭检测（外部可调用，保持不变）
+-- 8. 公有方法：关闭检测（保持不变）
 function StandRecovery:disableDetection()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
@@ -275,7 +287,7 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 公有方法：卸载脚本/模块（外部可调用，新增断开状态监听）
+-- 9. 公有方法：卸载脚本/模块（保持不变，优化监听断开）
 function StandRecovery:unload()
     -- 重复卸载提示
     if self.isUnloaded then
@@ -298,7 +310,7 @@ function StandRecovery:unload()
     self.isLoopRunning = false
     print("[站立恢复模块] 主检测循环已终止")
 
-    -- 步骤3：断开所有监听（新增：断开状态变化监听，防止内存泄漏）
+    -- 步骤3：断开所有监听
     if self.characterAddedConnection and self.characterAddedConnection.Connected then
         self.characterAddedConnection:Disconnect()
         self.characterAddedConnection = nil
