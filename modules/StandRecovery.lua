@@ -44,7 +44,7 @@ function StandRecovery:init()
     print("[站立恢复模块] 初始化完成，检测功能默认关闭（调用 :enableDetection() 开启）")
 end
 
--- 3. 核心方法：绑定角色及核心组件（修正枚举+简化状态监听，解决报错和鬼畜）
+-- 3. 核心方法：绑定角色及核心组件（稳健化枚举判断，解决循环报错）
 function StandRecovery:bindCharacterAndComponents(newCharacter)
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then return end
@@ -56,7 +56,7 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         self.isNormalJumpProcess = false -- 重置跳跃标记
         -- 断开旧的状态监听，防止内存泄漏
         if self.humanoidStateChangedConn then
-            self.humanoidStateChangedConn:Disconnect()
+            pcall(function() self.humanoidStateChangedConn:Disconnect() end)
             self.humanoidStateChangedConn = nil
         end
         return
@@ -68,23 +68,24 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
 
     -- 等待并获取 Humanoid
     local success1, tempHumanoid = pcall(function()
-        return self.character:WaitForChild("Humanoid")
+        return self.character:WaitForChild("Humanoid", 3) -- 增加超时，避免卡死
     end)
 
     -- 等待并获取 HumanoidRootPart
     local success2, tempRootPart = pcall(function()
-        return self.character:WaitForChild("HumanoidRootPart")
+        return self.character:WaitForChild("HumanoidRootPart", 3)
     end)
 
     -- 验证并更新组件引用
-    if not success1 or not tempHumanoid then
-        warn("[站立恢复模块] 无法获取角色 Humanoid 组件")
+    if not success1 or not tempHumanoid or not tempHumanoid:IsA("Humanoid") then
+        warn("[站立恢复模块] 无法获取有效角色 Humanoid 组件")
         self.humanoid = nil
         -- 断开旧的状态监听
         if self.humanoidStateChangedConn then
-            self.humanoidStateChangedConn:Disconnect()
+            pcall(function() self.humanoidStateChangedConn:Disconnect() end)
             self.humanoidStateChangedConn = nil
         end
+        return
     else
         self.humanoid = tempHumanoid
         self.humanoid.AutoRotate = true
@@ -95,33 +96,50 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
 
         -- 断开旧的状态监听，防止重复监听
         if self.humanoidStateChangedConn then
-            self.humanoidStateChangedConn:Disconnect()
+            pcall(function() self.humanoidStateChangedConn:Disconnect() end)
         end
 
-        -- 【核心修正1】修正枚举值+简化状态监听（消除报错，解决鬼畜）
-        -- 枚举值必须完整书写：Enum.HumanoidStateType.XXX，不能简写
+        -- 【核心修复】稳健化状态监听（杜绝循环枚举报错）
         self.humanoidStateChangedConn = self.humanoid.StateChanged:Connect(function(oldState, newState)
-            -- 防止卸载后继续监听
-            if self.isUnloaded then
-                if self.humanoidStateChangedConn then
-                    self.humanoidStateChangedConn:Disconnect()
-                end
+            -- 步骤1：提前做空引用/有效性校验，无效直接返回，不执行后续逻辑
+            if self.isUnloaded or not self.humanoid or not self.humanoid.Parent or not newState then
+                pcall(function() self.humanoidStateChangedConn:Disconnect() end)
+                self.humanoidStateChangedConn = nil
+                self.isNormalJumpProcess = false
                 return
             end
 
-            -- 简化逻辑：只关注新状态，避免旧状态判断错误导致标记异常
-            -- 节点1：进入跳跃状态（开始正常跳跃流程）
-            if newState == Enum.HumanoidStateType.Jumping then
-                self.isNormalJumpProcess = true
-            end
+            -- 步骤2：用pcall包裹枚举判断，容错异常，避免循环报错
+            local success, result = pcall(function()
+                -- 转换为字符串比较，兼容性更强，不易报错
+                local newStateStr = tostring(newState)
 
-            -- 节点2：进入站立状态（落地/停止跳跃，结束正常跳跃流程）
-            if newState == Enum.HumanoidStateType.Standing then
-                self.isNormalJumpProcess = false
-            end
+                -- 节点1：进入跳跃状态（开始正常跳跃流程）
+                if newStateStr == tostring(Enum.HumanoidStateType.Jumping) then
+                    self.isNormalJumpProcess = true
+                end
 
-            -- 额外防护：进入爬墙/游泳等状态，也重置标记，防止卡死
-            if newState == Enum.HumanoidStateType.Climbing or newState == Enum.HumanoidStateType.Swimming then
+                -- 节点2：进入站立状态（落地/停止跳跃，结束正常跳跃流程）
+                if newStateStr == tostring(Enum.HumanoidStateType.Standing) then
+                    self.isNormalJumpProcess = false
+                end
+
+                -- 额外防护：进入爬墙/游泳等状态，也重置标记
+                local protectStates = {
+                    tostring(Enum.HumanoidStateType.Climbing),
+                    tostring(Enum.HumanoidStateType.Swimming),
+                    tostring(Enum.HumanoidStateType.Dead)
+                }
+                if table.find(protectStates, newStateStr) then
+                    self.isNormalJumpProcess = false
+                end
+            end)
+
+            -- 步骤3：枚举判断报错时，断开监听，防止循环报错
+            if not success then
+                warn(string.format("[站立恢复模块] 状态判断异常：%s", result))
+                pcall(function() self.humanoidStateChangedConn:Disconnect() end)
+                self.humanoidStateChangedConn = nil
                 self.isNormalJumpProcess = false
             end
         end)
@@ -136,13 +154,14 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     end
 end
 
--- 4. 辅助方法：判定是否失控（修正枚举+简化判断，无鬼畜）
+-- 4. 辅助方法：判定是否失控（稳健化，无循环报错）
 function StandRecovery:isUncontrollable()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded or not self.isDetectionEnabled then
         return false
     end
-    if not self.character or not self.humanoid or not self.humanoidRootPart or self.humanoid.Health <= 0 then
+    if not self.character or not self.humanoid or not self.humanoid.Parent or not self.humanoidRootPart or self.humanoid.Health <= 0 then
+        self.isNormalJumpProcess = false
         return false
     end
 
@@ -151,38 +170,48 @@ function StandRecovery:isUncontrollable()
         return false
     end
 
-    -- 【核心修正2】枚举值完整书写，消除报错
-    local abnormalStates = {
-        Enum.HumanoidStateType.FallingDown,
-        Enum.HumanoidStateType.Ragdoll,
-        Enum.HumanoidStateType.Flying,
-        Enum.HumanoidStateType.Freefall,
-        Enum.HumanoidStateType.Seated
-    }
-    local currentState = self.humanoid:GetState()
-    local inAbnormalState = table.find(abnormalStates, currentState) ~= nil
+    -- 稳健化枚举定义，用pcall包裹状态获取
+    local abnormalStates = {}
+    pcall(function()
+        abnormalStates = {
+            Enum.HumanoidStateType.FallingDown,
+            Enum.HumanoidStateType.Ragdoll,
+            Enum.HumanoidStateType.Flying,
+            Enum.HumanoidStateType.Freefall,
+            Enum.HumanoidStateType.Seated
+        }
+    end)
+
+    local currentState, inAbnormalState = nil, false
+    pcall(function()
+        currentState = self.humanoid:GetState()
+        inAbnormalState = table.find(abnormalStates, currentState) ~= nil
+    end)
+
     local inHighSpeed = self.humanoidRootPart.Velocity.Magnitude > self.SPEED_THRESHOLD
     local inLockedState = self.humanoid.PlatformStand or self.humanoid.WalkSpeed <= 0
 
     local isUncontrol = inAbnormalState or inHighSpeed or inLockedState
     if isUncontrol then
-        print(string.format("[站立恢复模块] 检测到失控！状态：%s，速度：%.2f", 
-            tostring(currentState), self.humanoidRootPart.Velocity.Magnitude))
+        pcall(function()
+            print(string.format("[站立恢复模块] 检测到失控！状态：%s，速度：%.2f", 
+                tostring(currentState), self.humanoidRootPart.Velocity.Magnitude))
+        end)
     end
     return isUncontrol
 end
 
--- 5. 辅助方法：单次恢复逻辑（保持不变，移除可能导致鬼畜的冗余延迟）
+-- 5. 辅助方法：单次恢复逻辑（保持不变，稳健化状态切换）
 function StandRecovery:singleRestore()
     -- 卸载后禁止执行
     if not self.initialized or self.isUnloaded then
         return false
     end
-    if not self.character or not self.humanoid or not self.humanoidRootPart then
+    if not self.character or not self.humanoid or not self.humanoid.Parent or not self.humanoidRootPart then
         return false
     end
 
-    -- 强制切换站立状态（修正枚举，消除报错）
+    -- 强制切换站立状态（pcall包裹，避免枚举报错）
     pcall(function()
         self.humanoid:ChangeState(Enum.HumanoidStateType.None)
         task.wait(0.001)
@@ -223,7 +252,7 @@ function StandRecovery:singleRestore()
             clearPhysicsObjects(child)
         end
     end
-    clearPhysicsObjects(self.character)
+    pcall(function() clearPhysicsObjects(self.character) end)
 
     -- 重置角色姿势
     local rootCF = self.humanoidRootPart.CFrame
@@ -287,7 +316,7 @@ function StandRecovery:disableDetection()
     print("[站立恢复模块] 检测功能已关闭，不再监控角色失控状态")
 end
 
--- 9. 公有方法：卸载脚本/模块（保持不变，优化监听断开）
+-- 9. 公有方法：卸载脚本/模块（优化监听断开）
 function StandRecovery:unload()
     -- 重复卸载提示
     if self.isUnloaded then
@@ -310,13 +339,13 @@ function StandRecovery:unload()
     self.isLoopRunning = false
     print("[站立恢复模块] 主检测循环已终止")
 
-    -- 步骤3：断开所有监听
+    -- 步骤3：断开所有监听（pcall包裹，确保断开成功）
     if self.characterAddedConnection and self.characterAddedConnection.Connected then
-        self.characterAddedConnection:Disconnect()
+        pcall(function() self.characterAddedConnection:Disconnect() end)
         self.characterAddedConnection = nil
     end
     if self.humanoidStateChangedConn then
-        self.humanoidStateChangedConn:Disconnect()
+        pcall(function() self.humanoidStateChangedConn:Disconnect() end)
         self.humanoidStateChangedConn = nil
     end
     print("[站立恢复模块] 所有监听已断开")
