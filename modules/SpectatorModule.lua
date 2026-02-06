@@ -276,17 +276,5 @@ function SpectatorModule.unload()
     end
 end
 
--- 示例：绑定F键触发开启/关闭（可删除或修改）
-keybindConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        if isSpectating then
-            SpectatorModule.close()
-        else
-            SpectatorModule.start()
-        end
-    end
-end)
-
 -- 返回模块，供外部调用
 return SpectatorModule
