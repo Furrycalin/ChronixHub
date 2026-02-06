@@ -1,13 +1,22 @@
 -- LocalPlayerLightAttachmentFixed.lua
--- 模块化封装：仅为本地玩家创建可配置的绑定光源 (修复版)
--- 使用方式：local LightModule = require(此脚本); local playerLight = LightModule.new(自定义配置); playerLight.enable = true; playerLight:unload()
+-- 单例模块化封装：仅为本地玩家创建可配置的绑定光源
+-- 使用方式：local LightModule = require(此脚本); LightModule.new(自定义配置); LightModule.enable = true; LightModule:unload()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
--- 定义模块核心类
+-- 模块核心（单例）
 local LocalPlayerLight = {}
 LocalPlayerLight.__index = LocalPlayerLight
+
+-- 模块私有状态（存储全局资源）
+local _state = {
+    isLoaded = false,          -- 模块是否已加载
+    config = nil,              -- 合并后的配置
+    lightData = nil,           -- 光源/附件实例
+    localPlayer = nil,         -- 本地玩家
+    characterAddedConn = nil,  -- 角色重生事件连接
+}
 
 -- 默认配置表（默认关闭光源）
 local DEFAULT_CONFIG = {
@@ -25,17 +34,12 @@ local DEFAULT_CONFIG = {
     AttachToBodyPart = "UpperTorso",          -- 绑定到上躯干
 }
 
--- 私有方法：合并配置（用户配置覆盖默认配置）
-local function mergeConfig(customConfig)
-    local merged = {}
-    -- 先复制默认配置
-    for k, v in pairs(DEFAULT_CONFIG) do
-        merged[k] = v
-    end
-    -- 用用户配置覆盖
+-- 私有方法：合并配置（用户配置覆盖默认）
+local function _mergeConfig(customConfig)
+    local merged = table.clone(DEFAULT_CONFIG)
     if type(customConfig) == "table" then
         for k, v in pairs(customConfig) do
-            if merged[k] ~= nil then -- 只覆盖存在的配置项，避免无效参数
+            if merged[k] ~= nil then -- 仅覆盖有效配置项
                 merged[k] = v
             end
         end
@@ -43,40 +47,54 @@ local function mergeConfig(customConfig)
     return merged
 end
 
+-- 私有方法：清理光源和附件
+local function _cleanupLight()
+    if _state.lightData then
+        -- 销毁光源
+        if _state.lightData.PointLight and _state.lightData.PointLight.Parent then
+            _state.lightData.PointLight:Destroy()
+        end
+        -- 销毁附件
+        if _state.lightData.Attachment and _state.lightData.Attachment.Parent then
+            _state.lightData.Attachment:Destroy()
+        end
+        _state.lightData = nil
+    end
+end
+
 -- 私有方法：创建并附加光源到角色
-local function attachLightToCharacter(self, character)
-    -- 清理旧光源
-    self:cleanupLight()
+local function _attachLightToCharacter(character)
+    _cleanupLight() -- 先清理旧光源
 
     -- 查找目标身体部位
-    local bodyPart = character:FindFirstChild(self.config.AttachToBodyPart)
+    local bodyPart = character:FindFirstChild(_state.config.AttachToBodyPart)
     if not bodyPart or not bodyPart:IsA("BasePart") then
-        warn("无法在角色上找到身体部位: " .. self.config.AttachToBodyPart)
+        warn("无法在角色上找到身体部位: " .. _state.config.AttachToBodyPart)
         return
     end
 
     -- 创建Attachment
     local attachment = Instance.new("Attachment")
-    attachment.Name = self.config.Attachment_Name
-    attachment.CFrame = CFrame.new(self.config.Offset_Position) 
+    attachment.Name = _state.config.Attachment_Name
+    attachment.CFrame = CFrame.new(_state.config.Offset_Position) 
         * CFrame.Angles(
-            math.rad(self.config.Offset_Rotation.X),
-            math.rad(self.config.Offset_Rotation.Y),
-            math.rad(self.config.Offset_Rotation.Z)
+            math.rad(_state.config.Offset_Rotation.X),
+            math.rad(_state.config.Offset_Rotation.Y),
+            math.rad(_state.config.Offset_Rotation.Z)
         )
     attachment.Parent = bodyPart
 
     -- 创建PointLight
     local pointLight = Instance.new("PointLight")
-    pointLight.Enabled = self.config.Enabled -- 初始状态由配置决定（默认false）
-    pointLight.Brightness = self.config.Brightness
-    pointLight.Range = self.config.Range
-    pointLight.Color = self.config.Color
-    pointLight.Shadows = self.config.Shadows
+    pointLight.Enabled = _state.config.Enabled -- 初始关闭
+    pointLight.Brightness = _state.config.Brightness
+    pointLight.Range = _state.config.Range
+    pointLight.Color = _state.config.Color
+    pointLight.Shadows = _state.config.Shadows
     pointLight.Parent = attachment
 
     -- 保存光源数据
-    self.lightData = {
+    _state.lightData = {
         Attachment = attachment,
         PointLight = pointLight,
     }
@@ -85,81 +103,70 @@ local function attachLightToCharacter(self, character)
 end
 
 -- 私有方法：等待角色加载并附加光源
-local function waitForCharacterAndAttachLight(self, player)
+local function _waitForCharacterAndAttachLight(player)
     local character = player.Character or player.CharacterAdded:Wait()
-    -- 等待核心部件加载
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5) -- 增加超时
+    -- 等待核心部件加载（5秒超时）
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
     if humanoidRootPart then
-        attachLightToCharacter(self, character)
+        _attachLightToCharacter(character)
     else
         warn("未能找到 HumanoidRootPart，无法附加光源（超时）。")
     end
 end
 
--- 构造函数：创建光源实例
+-- 模块方法：初始化光源（new方法，仅执行一次）
 function LocalPlayerLight.new(customConfig)
-    local self = setmetatable({}, LocalPlayerLight)
-    
-    -- 初始化核心属性
-    self.config = mergeConfig(customConfig)          -- 合并后的配置
-    self.lightData = nil                             -- 存储光源/附件实例
-    self.localPlayer = Players.LocalPlayer           -- 本地玩家
-    self.characterAddedConnection = nil              -- 保存事件连接（用于卸载）
-    self.isLoaded = true                             -- 标记是否已加载
-
-    -- 检查本地玩家是否存在
-    if not self.localPlayer then
-        warn("无法获取本地玩家，光源模块初始化失败！")
-        self.isLoaded = false
-        return self
+    if _state.isLoaded then
+        warn("光源模块已初始化，无需重复调用new方法！")
+        return LocalPlayerLight
     end
 
+    -- 初始化核心状态
+    _state.localPlayer = Players.LocalPlayer
+    if not _state.localPlayer then
+        warn("无法获取本地玩家，光源模块初始化失败！")
+        return LocalPlayerLight
+    end
+
+    _state.config = _mergeConfig(customConfig)
+    _state.isLoaded = true
+
     -- 初始化光源
-    waitForCharacterAndAttachLight(self, self.localPlayer)
+    _waitForCharacterAndAttachLight(_state.localPlayer)
 
     -- 监听角色重生事件（保存连接以便卸载）
-    self.characterAddedConnection = self.localPlayer.CharacterAdded:Connect(function(character)
+    _state.characterAddedConn = _state.localPlayer.CharacterAdded:Connect(function(character)
         task.wait() -- 等待角色完全加载
-        waitForCharacterAndAttachLight(self, self.localPlayer)
+        _waitForCharacterAndAttachLight(_state.localPlayer)
     end)
 
-    print("本地玩家光源实例已创建，配置如下：")
-    for k, v in pairs(self.config) do
+    -- 打印配置信息
+    print("本地玩家光源模块已初始化，配置如下：")
+    for k, v in pairs(_state.config) do
         print("  " .. k .. ": " .. tostring(v))
     end
 
-    return self
+    return LocalPlayerLight
 end
 
--- 清理光源和附件（私有方法）
-function LocalPlayerLight:cleanupLight()
-    if self.lightData then
-        -- 销毁光源
-        if self.lightData.PointLight and self.lightData.PointLight.Parent then
-            self.lightData.PointLight:Destroy()
-        end
-        -- 销毁附件
-        if self.lightData.Attachment and self.lightData.Attachment.Parent then
-            self.lightData.Attachment:Destroy()
-        end
-        self.lightData = nil
-    end
-end
-
--- 开关光源的属性（getter/setter）
+-- 模块属性：enable（开关光源）
 function LocalPlayerLight:__index(key)
     if key == "enable" then
         -- 获取当前光源启用状态
-        return self.lightData and self.lightData.PointLight and self.lightData.PointLight.Enabled or false
+        return _state.lightData and _state.lightData.PointLight and _state.lightData.PointLight.Enabled or false
     end
-    return LocalPlayerLight[key] -- 其他属性/方法走默认逻辑
+    return LocalPlayerLight[key] -- 其他方法/属性走默认逻辑
 end
 
 function LocalPlayerLight:__newindex(key, value)
     if key == "enable" then
         -- 设置光源启用状态
-        if self.lightData and self.lightData.PointLight then
-            self.lightData.PointLight.Enabled = not not value -- 强制转为布尔值
+        if not _state.isLoaded then
+            warn("光源模块未初始化，无法切换状态！")
+            return
+        end
+        if _state.lightData and _state.lightData.PointLight then
+            _state.lightData.PointLight.Enabled = not not value -- 强制转为布尔值
             print("光源状态已切换为：" .. tostring(value))
         else
             warn("光源尚未创建，无法切换状态！")
@@ -169,29 +176,32 @@ function LocalPlayerLight:__newindex(key, value)
     end
 end
 
--- 卸载整个模块：清理所有资源+断开所有事件
+-- 模块方法：卸载整个模块（核心需求）
 function LocalPlayerLight:unload()
-    if not self.isLoaded then
+    if not _state.isLoaded then
         warn("光源模块已卸载，无需重复操作！")
         return
     end
 
     -- 1. 清理光源和附件
-    self:cleanupLight()
+    _cleanupLight()
 
     -- 2. 断开角色重生事件连接
-    if self.characterAddedConnection then
-        self.characterAddedConnection:Disconnect()
-        self.characterAddedConnection = nil
+    if _state.characterAddedConn then
+        _state.characterAddedConn:Disconnect()
+        _state.characterAddedConn = nil
     end
 
-    -- 3. 标记为已卸载
-    self.isLoaded = false
-    self.config = nil
-    self.localPlayer = nil
+    -- 3. 重置模块状态
+    _state.isLoaded = false
+    _state.config = nil
+    _state.localPlayer = nil
 
     print("本地玩家光源模块已完全卸载！")
 end
 
--- 返回模块类
+-- 设置元表（让模块本身支持属性和方法调用）
+setmetatable(LocalPlayerLight, LocalPlayerLight)
+
+-- 返回模块（单例）
 return LocalPlayerLight
