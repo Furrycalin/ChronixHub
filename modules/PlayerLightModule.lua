@@ -1,9 +1,12 @@
--- PlayerLightModuleFromOriginal.lua
--- 基于原始可靠脚本封装的模块
+-- PlayerLightModuleFromOriginalFinalFix.lua
+-- 基于原始可靠脚本封装的模块 (最终修复版)
 
 local Players = game:GetService("Players")
 
 local PlayerLightModule = {}
+
+-- 存储所有活动的光源实例，用于全局卸载
+local ActiveLights = {}
 
 -- 配置表模板：定义光源的所有参数
 local DefaultLightConfig = {
@@ -37,6 +40,9 @@ local function createLightInstance(config)
     self.character = nil
     self.connection = nil
     self.isEnabled = false -- 内部状态标志
+
+    -- 将当前实例添加到活动列表中
+    table.insert(ActiveLights, self)
 
     -- 内部方法：创建光源结构
     local function _createLightStructure(char)
@@ -97,16 +103,27 @@ local function createLightInstance(config)
         if not localPlayer then
             Players.LocalPlayerAdded:Connect(function(p)
                 if p == Players.LocalPlayer then
+                    -- 玩家加入后，再连接重生监听器
+                    self:_attachRebirthListener(p)
+                    -- 然后开始等待当前角色或未来的角色
                     _waitForCharacterAndAttachLight(p)
                 end
             end)
             return
         end
+        -- 玩家已存在，直接连接重生监听器
+        self:_attachRebirthListener(localPlayer)
+        -- 然后开始等待当前角色或未来的角色
         _waitForCharacterAndAttachLight(localPlayer)
     end
 
     -- 监听角色重生事件
     self._attachRebirthListener = function(player)
+        -- 确保 player 不为 nil
+        if not player then
+            warn("警告：无法为 nil 玩家附加重生监听器。")
+            return
+        end
         if self.connection then self.connection:Disconnect() end
         self.connection = player.CharacterAdded:Connect(function(newChar)
             wait() -- 等待角色完全加载
@@ -146,6 +163,8 @@ local function createLightInstance(config)
         if self.pointLight then
             self.pointLight.Enabled = false
             print("光源 " .. tostring(self) .. " 已禁用。")
+        else
+            print("光源 " .. tostring(self) .. " 已设置为禁用状态 (等待角色加载)。")
         end
     end
 
@@ -165,19 +184,16 @@ local function createLightInstance(config)
             self.connection = nil
         end
         self.character = nil
-        print("光源实例 " .. tostring(self) .. " 已卸载。")
-    end
-
-    -- 初始化监听器
-    local localPlayer = Players.LocalPlayer
-    if localPlayer then
-        self:_attachRebirthListener(localPlayer)
-    else
-        Players.LocalPlayerAdded:Connect(function(player)
-            if player == Players.LocalPlayer then
-                self:_attachRebirthListener(player)
+        
+        -- 从全局活动列表中移除自己
+        for i, v in ipairs(ActiveLights) do
+            if v == self then
+                table.remove(ActiveLights, i)
+                break
             end
-        end)
+        end
+        
+        print("光源实例 " .. tostring(self) .. " 已卸载。")
     end
 
     -- 初始化光源结构 (但不启用)
@@ -194,9 +210,13 @@ end
 
 -- 全局卸载函数
 PlayerLightModule.unload = function()
-    print("PlayerLightModule 不支持全局卸载。请单独调用每个实例的 unload() 方法。")
-    -- 如果需要全局卸载，可以像之前的版本一样维护一个 ActiveLights 表。
-    -- 这里为了纯粹基于原始逻辑，简化处理。
+    print("正在卸载所有由 PlayerLightModule 创建的光源...")
+    -- 从后往前遍历，安全地移除所有实例
+    for i = #ActiveLights, 1, -1 do
+        local lightInstance = ActiveLights[i]
+        lightInstance.unload() -- 调用实例的unload方法
+    end
+    print("所有光源已卸载。")
 end
 
 return PlayerLightModule
