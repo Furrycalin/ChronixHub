@@ -1,268 +1,168 @@
 -- LocalPlayerLightAttachmentModule.lua
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-local LocalPlayerLightModule = {}
-LocalPlayerLightModule.__index = LocalPlayerLightModule
-LocalPlayerLightModule._instances = {}
--- 新增：标记模块是否已卸载（脚本销毁时置为true）
-LocalPlayerLightModule._isUnloaded = false
+-- 核心模块
+local PlayerLight = {}
+PlayerLight.__index = PlayerLight
 
+-- 存储所有实例
+local AllInstances = {}
+
+-- 默认配置
 local DEFAULT_CONFIG = {
     Brightness = 2,
     Range = 10,
-    Color = Color3.fromRGB(255, 255, 255),
+    Color = Color3.fromRGB(255,255,255),
     Shadows = false,
-    Attachment_Name = "PlayerLightAttachment",
-    Offset_Position = Vector3.new(0, 1.5, 0),
-    Offset_Rotation = Vector3.new(0, 0, 0),
-    AttachToBodyPart = "UpperTorso",
+    AttachmentName = "PlayerLight",
+    Offset = Vector3.new(0,1.5,0),
+    AttachTo = "UpperTorso"
 }
 
-function LocalPlayerLightModule.new(customConfig)
-    -- 防护：模块已卸载时，直接返回nil，避免创建新实例
-    if LocalPlayerLightModule._isUnloaded then
-        warn("LocalPlayerLightModule: 模块已卸载，无法创建新实例")
-        return nil
-    end
-
-    local config = {}
-    for k, v in pairs(DEFAULT_CONFIG) do
-        config[k] = v
-    end
+-- 构造函数：new(config)
+function PlayerLight.new(customConfig)
+    -- 合并配置
+    local config = table.clone(DEFAULT_CONFIG)
     if type(customConfig) == "table" then
-        for k, v in pairs(customConfig) do
+        for k,v in pairs(customConfig) do
             config[k] = v
         end
     end
-    config.Enabled = false
 
-    local self = setmetatable({}, LocalPlayerLightModule)
-    -- 新增：标记实例是否已卸载（避免重复卸载）
-    self._isInstanceUnloaded = false
+    -- 实例对象（所有属性初始化，避免nil）
+    local self = setmetatable({}, PlayerLight)
     self.config = config
-    self.PlayerLightData = nil
-    self._characterAddedConn = nil
-    self.localPlayer = Players.LocalPlayer
+    self.PlayerLightData = nil  -- 光源数据（初始化为nil）
+    self.CharacterAddedConn = nil -- 监听连接（初始化为nil）
 
-    if self.localPlayer and not LocalPlayerLightModule._isUnloaded then
-        self:_init()
-    else
-        -- 防护：模块已卸载时，直接清理
-        if LocalPlayerLightModule._isUnloaded then
-            self:unload()
-            return nil
-        end
-        Players.LocalPlayerAdded:Connect(function(player)
-            -- 防护：回调执行时检查模块/实例状态
-            if LocalPlayerLightModule._isUnloaded or self._isInstanceUnloaded then
-                return
-            end
-            self.localPlayer = player
-            self:_init()
-        end)
-    end
+    -- 初始化（绑定角色）
+    self:_bindToLocalPlayer()
 
-    table.insert(LocalPlayerLightModule._instances, self)
+    -- 加入全局列表
+    table.insert(AllInstances, self)
     return self
 end
 
--- 新增：通用防护函数（检查self和模块是否有效）
-local function isSelfValid(self)
-    return not (
-        LocalPlayerLightModule._isUnloaded 
-        or self._isInstanceUnloaded 
-        or type(self) ~= "table"
-    )
-end
+-- 内部：绑定到本地玩家
+function PlayerLight:_bindToLocalPlayer()
+    if not LocalPlayer then return end
 
-function LocalPlayerLightModule:_init()
-    -- 前置防护：self无效时直接退出
-    if not isSelfValid(self) then
-        return
-    end
-    self:_waitForCharacterAndAttachLight()
+    -- 监听角色加载/重生
+    local function onCharacterAdded(character)
+        -- 等待角色核心部件加载
+        local humanoid = character:WaitForChild("Humanoid", 5)
+        local bodyPart = character:WaitForChild(self.config.AttachTo, 5)
+        if not humanoid or not bodyPart then return end
 
-    if self.localPlayer and not LocalPlayerLightModule._isUnloaded then
-        self._characterAddedConn = self.localPlayer.CharacterAdded:Connect(function()
-            -- 防护：回调执行时检查状态
-            if not isSelfValid(self) then
-                return
-            end
-            task.wait()
-            self:_waitForCharacterAndAttachLight()
-        end)
-    end
-end
-
-function LocalPlayerLightModule:_waitForCharacterAndAttachLight()
-    -- 前置防护：self无效时直接退出（核心！解决154行报错）
-    if not isSelfValid(self) then
-        return
-    end
-
-    local character = self.localPlayer and self.localPlayer.Character or self.localPlayer.CharacterAdded:Wait()
-    -- 防护：character为空或模块已卸载时退出
-    if not character or LocalPlayerLightModule._isUnloaded then
-        return
-    end
-
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
-    if not humanoidRootPart then
-        warn("LocalPlayerLightModule: 超时未找到HumanoidRootPart，跳过光源创建")
-        return
-    end
-
-    -- 调用前再次检查self有效性（避免脚本卸载时执行到这里）
-    if isSelfValid(self) then
+        -- 先清理旧光源（加前置检查）
         self:_cleanupOldLight()
+
+        -- 创建Attachment和PointLight
+        local attachment = Instance.new("Attachment")
+        attachment.Name = self.config.AttachmentName
+        attachment.Position = self.config.Offset
+        attachment.Parent = bodyPart
+
+        local pointLight = Instance.new("PointLight")
+        pointLight.Brightness = self.config.Brightness
+        pointLight.Range = self.config.Range
+        pointLight.Color = self.config.Color
+        pointLight.Shadows = self.config.Shadows
+        pointLight.Enabled = false -- 默认禁用
+        pointLight.Parent = attachment
+
+        -- 赋值PlayerLightData（只有创建成功才赋值）
+        self.PlayerLightData = {
+            Attachment = attachment,
+            PointLight = pointLight
+        }
     end
 
-    local bodyPart = character:FindFirstChild(self.config.AttachToBodyPart)
-    if not bodyPart or not bodyPart:IsA("BasePart") then
-        warn(`LocalPlayerLightModule: 无法找到身体部位 {self.config.AttachToBodyPart}`)
-        return
+    -- 绑定角色加载事件
+    self.CharacterAddedConn = LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+    -- 立即执行一次（处理已加载的角色）
+    if LocalPlayer.Character then
+        task.spawn(onCharacterAdded, LocalPlayer.Character)
     end
-
-    -- 再次防护
-    if not isSelfValid(self) then
-        return
-    end
-
-    local attachment = Instance.new("Attachment")
-    attachment.Name = self.config.Attachment_Name
-    attachment.CFrame = CFrame.new(self.config.Offset_Position) 
-        * CFrame.Angles(
-            math.rad(self.config.Offset_Rotation.X),
-            math.rad(self.config.Offset_Rotation.Y),
-            math.rad(self.config.Offset_Rotation.Z)
-        )
-    attachment.Parent = bodyPart
-
-    local pointLight = Instance.new("PointLight")
-    pointLight.Enabled = self.config.Enabled
-    pointLight.Brightness = self.config.Brightness
-    pointLight.Range = self.config.Range
-    pointLight.Color = self.config.Color
-    pointLight.Shadows = self.config.Shadows
-    pointLight.Parent = attachment
-
-    self.PlayerLightData = {
-        Attachment = attachment,
-        PointLight = pointLight,
-    }
-
-    print(`LocalPlayerLightModule: 已为本地玩家创建光源实例（{self.config.Attachment_Name}）`)
 end
 
-function LocalPlayerLightModule:_cleanupOldLight()
-    -- 前置防护：self无效时直接退出
-    if not isSelfValid(self) then
-        return
-    end
+-- 内部：清理旧光源（核心防呆）
+function PlayerLight:_cleanupOldLight()
+    -- 第一步：检查PlayerLightData是否存在，不存在直接返回（杜绝空值）
+    if not self.PlayerLightData then return end
 
-    if not self.PlayerLightData then
-        return
-    end
-
-    if type(self.PlayerLightData.PointLight) == "userdata" and self.PlayerLightData.PointLight:IsA("PointLight") then
-        pcall(function()
-            self.PlayerLightData.PointLight:Destroy()
-        end)
-    end
-    self.PlayerLightData.PointLight = nil
-
-    if type(self.PlayerLightData.Attachment) == "userdata" and self.PlayerLightData.Attachment:IsA("Attachment") then
-        pcall(function()
-            self.PlayerLightData.Attachment:Destroy()
-        end)
-    end
-    self.PlayerLightData.Attachment = nil
-
+    -- 安全销毁（用pcall防重复销毁）
+    pcall(function() self.PlayerLightData.PointLight:Destroy() end)
+    pcall(function() self.PlayerLightData.Attachment:Destroy() end)
+    
+    -- 置空（关键）
     self.PlayerLightData = nil
 end
 
-function LocalPlayerLightModule:enable()
-    if not isSelfValid(self) then
-        warn("LocalPlayerLightModule: 实例已卸载，无法启用光源")
+-- 公共方法：开启光源（100%防空值）
+function PlayerLight:enable()
+    -- 第一步：检查PlayerLightData是否存在
+    if not self.PlayerLightData then
+        warn("光源尚未创建，无法开启")
         return
     end
-    if self.PlayerLightData and type(self.PlayerLightData.PointLight) == "userdata" and self.PlayerLightData.PointLight:IsA("PointLight") then
-        self.PlayerLightData.PointLight.Enabled = true
-        print(`LocalPlayerLightModule: 光源 {self.config.Attachment_Name} 已启用`)
-    else
-        warn("LocalPlayerLightModule: 光源尚未创建/已被销毁，无法启用")
+    -- 第二步：检查PointLight是否存在
+    if not self.PlayerLightData.PointLight then
+        warn("光源组件丢失，无法开启")
+        return
     end
+    -- 执行开启
+    self.PlayerLightData.PointLight.Enabled = true
+    print("光源已开启")
 end
 
-function LocalPlayerLightModule:disable()
-    if not isSelfValid(self) then
-        warn("LocalPlayerLightModule: 实例已卸载，无法禁用光源")
+-- 公共方法：关闭光源（100%防空值）
+function PlayerLight:disable()
+    if not self.PlayerLightData then
+        warn("光源尚未创建，无法关闭")
         return
     end
-    if self.PlayerLightData and type(self.PlayerLightData.PointLight) == "userdata" and self.PlayerLightData.PointLight:IsA("PointLight") then
-        self.PlayerLightData.PointLight.Enabled = false
-        print(`LocalPlayerLightModule: 光源 {self.config.Attachment_Name} 已禁用`)
-    else
-        warn("LocalPlayerLightModule: 光源尚未创建/已被销毁，无法禁用")
+    if not self.PlayerLightData.PointLight then
+        warn("光源组件丢失，无法关闭")
+        return
     end
+    self.PlayerLightData.PointLight.Enabled = false
+    print("光源已关闭")
 end
 
-function LocalPlayerLightModule:unload()
-    -- 防护：避免重复卸载
-    if self._isInstanceUnloaded then
-        return
-    end
-    -- 标记实例已卸载（核心！阻止后续所有操作）
-    self._isInstanceUnloaded = true
+-- 公共方法：卸载当前光源（100%防空值）
+function PlayerLight:unload()
+    -- 1. 清理光源（即使PlayerLightData为nil，_cleanupOldLight也会直接返回）
+    self:_cleanupOldLight()
 
-    -- 调用清理前检查self
-    if isSelfValid(self) then
-        self:_cleanupOldLight()
+    -- 2. 断开监听（检查连接是否存在）
+    if self.CharacterAddedConn then
+        pcall(function() self.CharacterAddedConn:Disconnect() end)
+        self.CharacterAddedConn = nil
     end
 
-    if type(self._characterAddedConn) == "userdata" and self._characterAddedConn.Connected then
-        pcall(function()
-            self._characterAddedConn:Disconnect()
-        end)
-    end
-    self._characterAddedConn = nil
-
-    if LocalPlayerLightModule._instances and #LocalPlayerLightModule._instances > 0 then
-        for i = #LocalPlayerLightModule._instances, 1, -1 do
-            local instance = LocalPlayerLightModule._instances[i]
-            if instance == self then
-                table.remove(LocalPlayerLightModule._instances, i)
-                break
-            end
+    -- 3. 从全局列表移除
+    for i = #AllInstances, 1, -1 do
+        if AllInstances[i] == self then
+            table.remove(AllInstances, i)
+            break
         end
     end
 
-    print(`LocalPlayerLightModule: 光源实例 {self.config.Attachment_Name} 已卸载（无空值错误）`)
+    print("光源实例已卸载")
 end
 
-function LocalPlayerLightModule.unloadAll()
-    -- 标记模块已卸载（核心！阻止创建新实例）
-    LocalPlayerLightModule._isUnloaded = true
-
-    if LocalPlayerLightModule._instances and #LocalPlayerLightModule._instances > 0 then
-        for _, instance in ipairs(LocalPlayerLightModule._instances) do
-            if instance and type(instance.unload) == "function" and not instance._isInstanceUnloaded then
-                instance:unload()
-            end
+-- 模块全局方法：卸载所有光源
+function PlayerLight.unloadAll()
+    for _, instance in ipairs(AllInstances) do
+        if instance and type(instance.unload) == "function" then
+            instance:unload()
         end
     end
-    LocalPlayerLightModule._instances = {}
-    print("LocalPlayerLightModule: 所有光源实例已全部卸载")
+    AllInstances = {}
+    print("所有光源已卸载")
 end
 
--- 新增：监听脚本销毁事件（Roblox专属，脚本被删除时自动调用unloadAll）
-local function onScriptDestroyed()
-    LocalPlayerLightModule.unloadAll()
-end
--- 假设脚本是ModuleScript，绑定到自身的Destroying事件
-if script and script:IsA("ModuleScript") then
-    script.Destroying:Connect(onScriptDestroyed)
-end
-
-return LocalPlayerLightModule
+-- 返回模块
+return PlayerLight
