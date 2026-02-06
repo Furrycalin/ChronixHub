@@ -1,34 +1,30 @@
 -- LocalPlayerLightAttachmentFixed.lua
--- 最终稳定版：多光源+无布尔索引错误+极简易用
--- 使用方式：
--- 1. 创建光源：local light1 = Module.Create(配置); local light2 = Module.Create(配置)
--- 2. 开关光源：light1:SetEnable(true); light2:SetEnable(false)
--- 3. 卸载：light1:Unload() / Module.UnloadAll()
-
+-- 最终版：保留.new/:unload命名 + 彻底解决布尔索引错误
+-- 你的原有调用逻辑完全不变，仅修复底层错误
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
--- 模块核心（极简架构，避免元表坑）
 local LocalPlayerLight = {}
 LocalPlayerLight.__index = LocalPlayerLight
 
--- 全局存储所有光源实例
-local AllInstances = {}
+-- 全局存储所有实例（用于批量卸载）
+LocalPlayerLight._allInstances = {}
 
--- 默认配置
+-- 默认配置（保持你原来的字段名）
 local DEFAULT_CONFIG = {
+    Enabled = false,         -- 你原来的默认关闭
     Brightness = 2,
     Range = 10,
     Color = Color3.fromRGB(255, 255, 255),
     Shadows = false,
-    AttachmentName = "PlayerLight", -- 简化命名
-    Offset = Vector3.new(0, 1.5, 0),
-    AttachTo = "UpperTorso",
-    StartEnabled = false -- 初始关闭
+    Attachment_Name = "PlayerLightAttachment",
+    Offset_Position = Vector3.new(0, 1.5, 0),
+    Offset_Rotation = Vector3.new(0, 0, 0),
+    AttachToBodyPart = "UpperTorso",
 }
 
 -- 生成唯一名称（避免多光源冲突）
-local function GetUniqueName(baseName)
+local function getUniqueAttachmentName(baseName)
     local suffix = 1
     local newName = baseName
     local char = Players.LocalPlayer and Players.LocalPlayer.Character
@@ -41,197 +37,195 @@ local function GetUniqueName(baseName)
     return newName
 end
 
--- 安全创建光源（单个实例）
-function LocalPlayerLight:CreateLight()
-    -- 先清理旧光源
-    self:Cleanup()
+-- 安全创建光源（内部方法）
+local function attachLightToCharacter(self)
+    self:cleanupLight()
 
-    -- 层层安全检查（杜绝nil）
-    if not self.LocalPlayer then return warn("无本地玩家") end
-    if not self.LocalPlayer.Character then return warn("角色未加载") end
-    
-    local BodyPart = self.LocalPlayer.Character:FindFirstChild(self.Config.AttachTo)
-    if not BodyPart or not BodyPart:IsA("BasePart") then
-        return warn("找不到部位：" .. self.Config.AttachTo)
+    -- 层层空值检查（杜绝nil索引）
+    if not self.localPlayer or not self.localPlayer.Character then return end
+    local bodyPart = self.localPlayer.Character:FindFirstChild(self.config.AttachToBodyPart)
+    if not bodyPart or not bodyPart:IsA("BasePart") then
+        warn("找不到身体部位: " .. self.config.AttachToBodyPart)
+        return
     end
 
     -- 创建Attachment
-    local Attachment = Instance.new("Attachment")
-    Attachment.Name = GetUniqueName(self.Config.AttachmentName)
-    Attachment.CFrame = CFrame.new(self.Config.Offset)
-    Attachment.Parent = BodyPart
+    local attachment = Instance.new("Attachment")
+    attachment.Name = getUniqueAttachmentName(self.config.Attachment_Name)
+    attachment.CFrame = CFrame.new(self.config.Offset_Position) 
+        * CFrame.Angles(
+            math.rad(self.config.Offset_Rotation.X),
+            math.rad(self.config.Offset_Rotation.Y),
+            math.rad(self.config.Offset_Rotation.Z)
+        )
+    attachment.Parent = bodyPart
 
     -- 创建PointLight
-    local PointLight = Instance.new("PointLight")
-    PointLight.Brightness = self.Config.Brightness
-    PointLight.Range = self.Config.Range
-    PointLight.Color = self.Config.Color
-    PointLight.Shadows = self.Config.Shadows
-    PointLight.Enabled = self.Config.StartEnabled
-    PointLight.Parent = Attachment
+    local pointLight = Instance.new("PointLight")
+    pointLight.Enabled = self._enableCache -- 用缓存值，避免直接依赖配置
+    pointLight.Brightness = self.config.Brightness
+    pointLight.Range = self.config.Range
+    pointLight.Color = self.config.Color
+    pointLight.Shadows = self.config.Shadows
+    pointLight.Parent = attachment
 
-    -- 保存实例数据（绝对不存nil）
-    self.Attachment = Attachment
-    self.PointLight = PointLight
-    self.IsLightCreated = true
-    self.CurrentEnabled = self.Config.StartEnabled
+    -- 保存数据（绝对不存nil）
+    self.lightData = {
+        Attachment = attachment,
+        PointLight = pointLight,
+    }
+    self._isLightCreated = true
 
-    print("[光源] 已创建：" .. Attachment.Name .. "（绑定到：" .. self.Config.AttachTo .. "）")
+    print("光源实例创建成功：" .. attachment.Name)
 end
 
--- 构造函数（改用Create命名，更直观）
-function LocalPlayerLight.Create(customConfig)
-    -- 强制初始化所有属性，杜绝nil
-    local self = setmetatable({
-        LocalPlayer = Players.LocalPlayer,
-        Config = table.clone(DEFAULT_CONFIG),
-        Attachment = nil,
-        PointLight = nil,
-        IsLightCreated = false,
-        CurrentEnabled = false,
-        CharacterConn = nil,
-        IsLoaded = true
-    }, LocalPlayerLight)
+-- 构造函数：严格保留 .new 命名（你原来的调用方式不变）
+function LocalPlayerLight.new(customConfig)
+    local self = setmetatable({}, LocalPlayerLight)
 
-    -- 合并用户配置（只覆盖存在的键）
+    -- 初始化所有状态（杜绝nil，核心修复点）
+    self.config = table.clone(DEFAULT_CONFIG)
+    self.localPlayer = Players.LocalPlayer
+    self.lightData = nil
+    self.characterAddedConnection = nil
+    self.isLoaded = true
+    self._enableCache = false -- 缓存enable状态，避免布尔索引
+    self._isLightCreated = false
+
+    -- 合并用户配置（保持你原来的字段名）
     if type(customConfig) == "table" then
         for k, v in pairs(customConfig) do
-            if self.Config[k] ~= nil then
-                self.Config[k] = v
+            if self.config[k] ~= nil then
+                self.config[k] = v
             end
         end
     end
 
-    -- 初始化CurrentEnabled
-    self.CurrentEnabled = self.Config.StartEnabled
+    -- 初始化缓存（同步默认配置的Enabled）
+    self._enableCache = self.config.Enabled
 
-    -- 安全检查：本地玩家不存在直接返回
-    if not self.LocalPlayer then
-        warn("[光源] 无法获取本地玩家，创建失败")
-        self.IsLoaded = false
-        table.insert(AllInstances, self)
+    -- 安全检查：本地玩家不存在
+    if not self.localPlayer then
+        warn("无法获取本地玩家，光源创建失败")
+        self.isLoaded = false
+        table.insert(LocalPlayerLight._allInstances, self)
         return self
     end
 
-    -- 等待角色加载并创建光源（异步，避免阻塞）
+    -- 异步初始化光源（避免时序问题）
     task.spawn(function()
-        local Character = self.LocalPlayer.Character or self.LocalPlayer.CharacterAdded:Wait()
-        Character:WaitForChild("HumanoidRootPart", 10) -- 超时保护
-        self:CreateLight()
+        local character = self.localPlayer.Character or self.localPlayer.CharacterAdded:Wait()
+        character:WaitForChild("HumanoidRootPart", 10)
+        attachLightToCharacter(self)
     end)
 
-    -- 监听角色重生（每个实例独立）
-    self.CharacterConn = self.LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(1) -- 等角色完全加载
-        self:CreateLight()
-        -- 重生后恢复之前的开关状态
-        self:SetEnable(self.CurrentEnabled)
+    -- 监听角色重生（保留你原来的逻辑）
+    self.characterAddedConnection = self.localPlayer.CharacterAdded:Connect(function()
+        task.wait(1)
+        attachLightToCharacter(self)
+        -- 重生后恢复缓存的enable状态
+        if self._isLightCreated then
+            self.lightData.PointLight.Enabled = self._enableCache
+        end
     end)
 
     -- 加入全局列表
-    table.insert(AllInstances, self)
-
+    table.insert(LocalPlayerLight._allInstances, self)
     return self
 end
 
--- 显式设置光源开关（核心：不用属性，用方法，彻底避免布尔索引）
-function LocalPlayerLight:SetEnable(isEnabled)
-    -- 强制转布尔值
-    local boolEnabled = not not isEnabled
-    self.CurrentEnabled = boolEnabled
-
-    -- 实例已卸载，直接返回
-    if not self.IsLoaded then
-        warn("[光源] 实例已卸载，无法修改状态")
-        return
-    end
-
-    -- 光源还没创建，提示但不报错
-    if not self.IsLightCreated or not self.PointLight then
-        print("[光源] 光源未就绪，已记录状态：" .. tostring(boolEnabled) .. "（就绪后自动生效）")
-        return
-    end
-
-    -- 安全修改状态（pcall防止对象已销毁）
-    local success, err = pcall(function()
-        self.PointLight.Enabled = boolEnabled
-    end)
-
-    if success then
-        print("[光源] " .. self.Attachment.Name .. " 状态：" .. tostring(boolEnabled))
-    else
-        warn("[光源] 修改状态失败：" .. err)
-        self.IsLightCreated = false -- 标记失效，下次自动重建
-    end
-end
-
--- 获取当前光源状态
-function LocalPlayerLight:GetEnable()
-    return self.CurrentEnabled
-end
-
--- 清理当前实例的光源
-function LocalPlayerLight:Cleanup()
+-- 内部清理方法
+function LocalPlayerLight:cleanupLight()
     -- 安全销毁，不怕nil
-    pcall(function() if self.PointLight then self.PointLight:Destroy() end end)
-    pcall(function() if self.Attachment then self.Attachment:Destroy() end end)
-    
-    self.Attachment = nil
-    self.PointLight = nil
-    self.IsLightCreated = false
+    pcall(function() if self.lightData and self.lightData.PointLight then self.lightData.PointLight:Destroy() end end)
+    pcall(function() if self.lightData and self.lightData.Attachment then self.lightData.Attachment:Destroy() end end)
+    self.lightData = nil
+    self._isLightCreated = false
 end
 
--- 卸载当前实例
-function LocalPlayerLight:Unload()
-    if not self.IsLoaded then
-        warn("[光源] 实例已卸载")
+-- 修复enable属性：安全的元表逻辑（核心！避免布尔索引）
+function LocalPlayerLight:__index(key)
+    -- 处理enable属性：只返回缓存值，且先检查实例是否有效
+    if key == "enable" then
+        return self._enableCache -- 返回缓存（永远是布尔值，但不会触发索引错误）
+    end
+
+    -- 其他方法/属性：从模块表安全查找
+    local value = LocalPlayerLight[key]
+    if value then
+        return value
+    else
+        return nil -- 找不到返回nil，不报错
+    end
+end
+
+function LocalPlayerLight:__newindex(key, value)
+    if key == "enable" then
+        -- 强制转布尔值，更新缓存（核心！避免直接操作nil的PointLight）
+        local boolValue = not not value
+        self._enableCache = boolValue
+
+        -- 实例已卸载，直接返回
+        if not self.isLoaded then
+            warn("光源实例已卸载，无法修改enable")
+            return
+        end
+
+        -- 光源已创建：安全修改状态
+        if self._isLightCreated and self.lightData and self.lightData.PointLight then
+            pcall(function()
+                self.lightData.PointLight.Enabled = boolValue
+                print("光源状态切换为：" .. tostring(boolValue))
+            end)
+        else
+            -- 光源未创建：提示但不报错，缓存状态
+            print("光源未就绪，已缓存enable状态：" .. tostring(boolValue))
+        end
+    else
+        rawset(self, key, value)
+    end
+end
+
+-- 实例卸载：严格保留 :unload 命名（你原来的调用方式不变）
+function LocalPlayerLight:unload()
+    if not self.isLoaded then
+        warn("光源实例已卸载")
         return
     end
 
     -- 1. 清理光源
-    self:Cleanup()
+    self:cleanupLight()
 
     -- 2. 断开事件
-    pcall(function() if self.CharacterConn then self.CharacterConn:Disconnect() end end)
-    self.CharacterConn = nil
+    pcall(function() if self.characterAddedConnection then self.characterAddedConnection:Disconnect() end end)
+    self.characterAddedConnection = nil
 
     -- 3. 标记卸载
-    self.IsLoaded = false
-    self.CurrentEnabled = false
+    self.isLoaded = false
+    self._enableCache = false
 
     -- 4. 从全局列表移除
-    for i, inst in ipairs(AllInstances) do
+    for i, inst in ipairs(LocalPlayerLight._allInstances) do
         if inst == self then
-            table.remove(AllInstances, i)
+            table.remove(LocalPlayerLight._allInstances, i)
             break
         end
     end
 
-    print("[光源] 实例已卸载")
+    print("光源实例已卸载")
 end
 
--- 模块级：卸载所有光源
-function LocalPlayerLight.UnloadAll()
-    if #AllInstances == 0 then
-        warn("[光源] 无实例可卸载")
-        return
-    end
-
-    -- 倒序卸载，避免索引错乱
-    for i = #AllInstances, 1, -1 do
-        local inst = AllInstances[i]
-        if inst.IsLoaded then
-            inst:Unload()
+-- 模块级卸载：保留 unloadAll（你可不用，不影响原有代码）
+function LocalPlayerLight:unloadAll()
+    for i = #LocalPlayerLight._allInstances, 1, -1 do
+        local inst = LocalPlayerLight._allInstances[i]
+        if inst.isLoaded then
+            inst:unload()
         end
     end
-
-    -- 清空列表
-    table.clear(AllInstances)
-    print("[光源] 所有实例已卸载")
+    LocalPlayerLight._allInstances = {}
+    print("所有光源已卸载")
 end
 
--- 暴露模块（只对外暴露需要的方法）
-return {
-    Create = LocalPlayerLight.Create,
-    UnloadAll = LocalPlayerLight.UnloadAll
-}
+-- 保持你原来的返回方式
+return LocalPlayerLight
