@@ -21,7 +21,7 @@ local DEFAULT_CONFIG = {
 }
 
 -- 构造函数：new(config)
-function PlayerLight.new(customConfig)
+local function PlayerLight.new(customConfig)
     -- 合并配置
     local config = table.clone(DEFAULT_CONFIG)
     if type(customConfig) == "table" then
@@ -33,7 +33,7 @@ function PlayerLight.new(customConfig)
     -- 实例对象（所有属性初始化，避免nil）
     local self = setmetatable({}, PlayerLight)
     self.config = config
-    self.PlayerLightData = nil  -- 光源数据（初始化为nil）
+    local PlayerLightData = nil  -- 光源数据（初始化为nil）
     self.CharacterAddedConn = nil -- 监听连接（初始化为nil）
 
     -- 初始化（绑定角色）
@@ -45,7 +45,7 @@ function PlayerLight.new(customConfig)
 end
 
 -- 内部：绑定到本地玩家
-function PlayerLight:_bindToLocalPlayer()
+local function PlayerLight:_bindToLocalPlayer()
     if not LocalPlayer then return end
 
     -- 监听角色加载/重生
@@ -73,7 +73,7 @@ function PlayerLight:_bindToLocalPlayer()
         pointLight.Parent = attachment
 
         -- 赋值PlayerLightData（只有创建成功才赋值）
-        self.PlayerLightData = {
+        local PlayerLightData = {
             Attachment = attachment,
             PointLight = pointLight
         }
@@ -88,53 +88,53 @@ function PlayerLight:_bindToLocalPlayer()
 end
 
 -- 内部：清理旧光源（核心防呆）
-function PlayerLight:_cleanupOldLight()
+local function PlayerLight:_cleanupOldLight()
     -- 第一步：检查PlayerLightData是否存在，不存在直接返回（杜绝空值）
-    if not self.PlayerLightData then return end
+    if not PlayerLightData then return end
 
     -- 安全销毁（用pcall防重复销毁）
-    pcall(function() self.PlayerLightData.PointLight:Destroy() end)
-    pcall(function() self.PlayerLightData.Attachment:Destroy() end)
+    pcall(function() PlayerLightData.PointLight:Destroy() end)
+    pcall(function() PlayerLightData.Attachment:Destroy() end)
     
     -- 置空（关键）
-    self.PlayerLightData = nil
+    PlayerLightData = nil
 end
 
 -- 公共方法：开启光源（100%防空值）
-function PlayerLight:enable()
+local function PlayerLight:enable()
     -- 第一步：检查PlayerLightData是否存在
-    if not self.PlayerLightData then
+    if not PlayerLightData then
         warn("光源尚未创建，无法开启")
         return
     end
     -- 第二步：检查PointLight是否存在
-    if not self.PlayerLightData.PointLight then
+    if not PlayerLightData.PointLight then
         warn("光源组件丢失，无法开启")
         return
     end
     -- 执行开启
-    self.PlayerLightData.PointLight.Enabled = true
+    PlayerLightData.PointLight.Enabled = true
     print("光源已开启")
 end
 
 -- 公共方法：关闭光源（100%防空值）
-function PlayerLight:disable()
-    if not self.PlayerLightData then
+local function PlayerLight:disable()
+    if not PlayerLightData then
         warn("光源尚未创建，无法关闭")
         return
     end
-    if not self.PlayerLightData.PointLight then
+    if not PlayerLightData.PointLight then
         warn("光源组件丢失，无法关闭")
         return
     end
-    self.PlayerLightData.PointLight.Enabled = false
+    PlayerLightData.PointLight.Enabled = false
     print("光源已关闭")
 end
 
 -- 公共方法：卸载当前光源（100%防空值）
-function PlayerLight:unload()
+local function PlayerLight:unload()
     -- 1. 清理光源（即使PlayerLightData为nil，_cleanupOldLight也会直接返回）
-    self:_cleanupOldLight()
+    _cleanupOldLight()
 
     -- 2. 断开监听（检查连接是否存在）
     if self.CharacterAddedConn then
@@ -154,7 +154,7 @@ function PlayerLight:unload()
 end
 
 -- 模块全局方法：卸载所有光源
-function PlayerLight.unloadAll()
+local function PlayerLight.unloadAll()
     for _, instance in ipairs(AllInstances) do
         if instance and type(instance.unload) == "function" then
             instance:unload()
