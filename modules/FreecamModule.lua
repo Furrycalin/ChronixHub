@@ -206,7 +206,6 @@ local function internalEnable()
     
     freecamConnection = RunService.RenderStepped:Connect(updateFreecam)
     
-    print("自由相机已启用")
     return true
 end
 
@@ -227,7 +226,6 @@ local function internalDisable()
     
     moveVector = Vector3.new()
     
-    print("自由相机已禁用")
     return true
 end
 
@@ -239,13 +237,11 @@ local function setModuleEnabled(value)
     moduleEnabled = value
     
     if value then
-        print("FreeCam 模块已启用")
     else
         -- 禁用模块时，如果自由相机正在运行，先关闭它
         if freecamEnabled then
             internalDisable()
         end
-        print("FreeCam 模块已禁用（快捷键失效）")
     end
 end
 
@@ -303,7 +299,6 @@ function FreeCam.setKeybind(newKeybind)
     local oldKeybind = currentKeybind
     currentKeybind = newKeybind
     
-    print(string.format("快捷键已更改: %s → %s", tostring(oldKeybind), tostring(newKeybind)))
     return true
 end
 
@@ -352,7 +347,6 @@ function FreeCam.unload()
     -- 恢复鼠标行为
     UserInputService.MouseBehavior = Enum.MouseBehavior.Default
     
-    print("FreeCam 模块已卸载")
     return true
 end
 
@@ -369,22 +363,5 @@ table.insert(eventConnections, LocalPlayer.CharacterRemoving:Connect(onCharacter
 FreeCam.version = "1.3"
 FreeCam.author = "FreeCam Module"
 FreeCam.description = "使用 .freecamenable 控制模块总开关，.enable 控制自由相机开关"
-
-print("FreeCam 模块已加载")
-print("版本: " .. FreeCam.version)
-print("初始状态: 模块启用中")
-print("当前快捷键: " .. tostring(currentKeybind))
-print("\n使用方式:")
-print("  FreeCam.freecamenable = true/false  -- 模块总开关")
-print("  FreeCam.enable = true/false         -- 自由相机开关")
-print("  按快捷键切换状态                   -- 当前: " .. tostring(currentKeybind))
-print("  FreeCam.getKeybind()                -- 获取当前快捷键")
-print("  FreeCam.setKeybind()                -- 设置新快捷键")
-print("  FreeCam.getSpeed()                  -- 获取当前速度")
-print("  FreeCam.unload()                    -- 完全卸载模块")
-print("\n状态层级:")
-print("  1. freecamenable = false → 模块完全禁用")
-print("  2. freecamenable = true  → 模块启用")
-print("  3. enable = true         → 自由相机运行")
 
 return FreeCam
