@@ -206,7 +206,7 @@ local function createHighlighterInstance(modelName, matchMode, colorPresetKey)
     return self
 end
 
-highlighter.qwe = createHighlighterInstance
+highlighter.new = createHighlighterInstance
 highlighter.unload = function()
     for i = #activeHighlighters, 1, -1 do
         local h = activeHighlighters[i]
