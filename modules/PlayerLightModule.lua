@@ -1,14 +1,17 @@
--- PlayerLightModule.lua
--- 一个用于为本地玩家创建和管理绑定光源的模块
+-- PlayerLightModuleFinal.lua
+-- 一个用于为本地玩家创建和管理绑定光源的模块 (带启用/禁用和全局卸载功能)
 
 local Players = game:GetService("Players")
 
 local PlayerLightModule = {}
 
+-- 存储所有活动的光源实例，用于全局卸载
+local ActiveLights = {}
+
 -- 配置表模板：定义光源的所有参数
 local DefaultLightConfig = {
     -- PointLight 属性
-    Enabled = true,
+    Enabled = true, -- 这个是PointLight组件本身的Enabled状态
     Brightness = 2,
     Range = 10,
     Color = Color3.fromRGB(255, 255, 255),
@@ -36,9 +39,14 @@ local function createLightInstance(config)
     self.pointLight = nil
     self.character = nil
     self.connection = nil
+    self.isEnabled = false -- 内部状态标志，记录模块层面是否启用
 
-    -- 内部方法：应用光源到角色
-    local function _applyLight(char)
+    -- 将当前实例添加到活动列表中
+    table.insert(ActiveLights, self)
+
+    -- 内部方法：创建光源结构
+    local function _createLightStructure(char)
+        -- 总是先销毁旧的结构，以应对角色重生等情况
         if self.attachment then self.attachment:Destroy() end
         if self.pointLight then self.pointLight:Destroy() end
 
@@ -58,7 +66,8 @@ local function createLightInstance(config)
         self.attachment.Parent = bodyPart
 
         self.pointLight = Instance.new("PointLight")
-        self.pointLight.Enabled = self.config.Enabled
+        -- 初始状态设置为禁用，等待enable()调用
+        self.pointLight.Enabled = false 
         self.pointLight.Brightness = self.config.Brightness
         self.pointLight.Range = self.config.Range
         self.pointLight.Color = self.config.Color
@@ -66,8 +75,13 @@ local function createLightInstance(config)
         self.pointLight.Parent = self.attachment
     end
 
-    -- 公共方法：初始化并应用光源
-    self.spawn = function()
+    -- 内部方法：应用光源到角色 (创建结构)
+    local function _applyLight(char)
+        _createLightStructure(char)
+    end
+
+    -- 公共方法：初始化（但不启用）
+    self.init = function()
         local localPlayer = Players.LocalPlayer
         if not localPlayer then
             Players.LocalPlayerAdded:Connect(function(player)
@@ -103,8 +117,38 @@ local function createLightInstance(config)
         end)
     end
 
-    -- 公共方法：卸载光源
+    -- 公共方法：启用光源
+    self.enable = function()
+        if self.isEnabled then
+            return
+        end
+
+        if self.pointLight then
+            self.pointLight.Enabled = true
+            self.isEnabled = true
+        else
+            -- 如果角色尚未加载，结构未创建，则设置标志，等结构创建后再启用
+            self.isEnabled = true
+        end
+    end
+
+    -- 公共方法：禁用光源
+    self.disable = function()
+        if not self.isEnabled then
+            return
+        end
+
+        if self.pointLight then
+            self.pointLight.Enabled = false
+            self.isEnabled = false
+        else
+            self.isEnabled = false
+        end
+    end
+
+    -- 公共方法：卸载光源 (从全局列表中移除自身)
     self.unload = function()
+        self:disable() -- 先确保禁用
         if self.attachment then
             self.attachment:Destroy()
             self.attachment = nil
@@ -118,11 +162,20 @@ local function createLightInstance(config)
             self.connection = nil
         end
         self.character = nil
-        print("光源实例已卸载。")
+        
+        -- 从全局活动列表中移除自己
+        for i, v in ipairs(ActiveLights) do
+            if v == self then
+                table.remove(ActiveLights, i)
+                break
+            end
+        end
+        
+        print("光源实例 " .. tostring(self) .. " 已卸载。")
     end
 
-    -- 初始化光源
-    self:spawn()
+    -- 初始化光源结构 (但不启用)
+    self:init()
 
     return self
 end
@@ -132,6 +185,15 @@ PlayerLightModule.new = function(config)
     -- 确保传入的是一个表，即使是空的
     config = config or {}
     return createLightInstance(config)
+end
+
+-- 模块的全局卸载函数，卸载所有由该模块创建的实例
+PlayerLightModule.unload = function()
+    -- 从后往前遍历，安全地移除所有实例
+    for i = #ActiveLights, 1, -1 do
+        local lightInstance = ActiveLights[i]
+        lightInstance.unload() -- 调用实例的unload方法
+    end
 end
 
 return PlayerLightModule
