@@ -1,5 +1,5 @@
--- PlayerLightModuleFinal.lua
--- 一个用于为本地玩家创建和管理绑定光源的模块 (带启用/禁用和全局卸载功能)
+-- PlayerLightModuleFinalFixed.lua
+-- 一个用于为本地玩家创建和管理绑定光源的模块 (带启用/禁用和全局卸载功能 - 已修复)
 
 local Players = game:GetService("Players")
 
@@ -84,6 +84,7 @@ local function createLightInstance(config)
     self.init = function()
         local localPlayer = Players.LocalPlayer
         if not localPlayer then
+            -- 如果在服务器端运行，等待本地玩家出现
             Players.LocalPlayerAdded:Connect(function(player)
                 if player == Players.LocalPlayer then
                     self:_attachToCharacter(player)
@@ -96,16 +97,21 @@ local function createLightInstance(config)
 
     -- 内部辅助方法：处理角色加载和重生
     self._attachToCharacter = function(player)
-        local char = player.Character or player.CharacterAdded:Wait()
+        -- 1. 获取角色：如果角色已存在就直接用，否则等待它加载
+        local char = player.Character
+        if not char then
+            -- 等待 CharacterAdded 信号触发
+            char = player.CharacterAdded:Wait()
+        end
         self.character = char
         
-        -- 等待基础部件加载
+        -- 2. 等待角色的基础部件加载完成，然后应用光源
         local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
         if humanoidRootPart then
             _applyLight(char)
         end
 
-        -- 监听角色重生
+        -- 3. 监听角色重生
         if self.connection then self.connection:Disconnect() end
         self.connection = player.CharacterAdded:Connect(function(newChar)
             wait()
@@ -120,29 +126,35 @@ local function createLightInstance(config)
     -- 公共方法：启用光源
     self.enable = function()
         if self.isEnabled then
+            print("光源 " .. tostring(self) .. " 已经是启用状态。")
             return
         end
 
         if self.pointLight then
             self.pointLight.Enabled = true
             self.isEnabled = true
+            print("光源 " .. tostring(self) .. " 已启用。")
         else
             -- 如果角色尚未加载，结构未创建，则设置标志，等结构创建后再启用
             self.isEnabled = true
+            print("准备启用光源 " .. tostring(self) .. " (等待角色加载)。")
         end
     end
 
     -- 公共方法：禁用光源
     self.disable = function()
         if not self.isEnabled then
+            print("光源 " .. tostring(self) .. " 已经是禁用状态。")
             return
         end
 
         if self.pointLight then
             self.pointLight.Enabled = false
             self.isEnabled = false
+            print("光源 " .. tostring(self) .. " 已禁用。")
         else
             self.isEnabled = false
+            print("光源 " .. tostring(self) .. " 已设置为禁用状态 (等待角色加载)。")
         end
     end
 
@@ -189,11 +201,13 @@ end
 
 -- 模块的全局卸载函数，卸载所有由该模块创建的实例
 PlayerLightModule.unload = function()
+    print("正在卸载所有由 PlayerLightModule 创建的光源...")
     -- 从后往前遍历，安全地移除所有实例
     for i = #ActiveLights, 1, -1 do
         local lightInstance = ActiveLights[i]
         lightInstance.unload() -- 调用实例的unload方法
     end
+    print("所有光源已卸载。")
 end
 
 return PlayerLightModule
