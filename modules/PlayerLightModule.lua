@@ -81,9 +81,8 @@ function LocalPlayerLightModule:_waitForCharacterAndAttachLight()
     -- 等待核心部件加载
     local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
     if not humanoidRootPart then
-        warn("LocalPlayerLightModule: 未能找到HumanoidRootPart，无法创建光源")
+        warn(string.format("LocalPlayerLightModule: 未能找到HumanoidRootPart，无法创建光源 (%s)", self.config.AttachToBodyPart))
         -- 如果核心部件找不到，不应继续执行，因为角色可能还未完全加载或结构异常
-        -- 此处可以考虑更复杂的重试逻辑，但简单起见，直接返回
         return 
     end
 
