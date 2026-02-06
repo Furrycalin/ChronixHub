@@ -124,36 +124,46 @@ function LocalPlayerLightModule:_waitForCharacterAndAttachLight()
     print(`LocalPlayerLightModule: 已为本地玩家创建光源实例（{self.config.Attachment_Name}）`)
 end
 
--- 内部方法：清理旧的光源和附件
+-- 修复后的内部方法：清理旧的光源和附件（防空值索引）
 function LocalPlayerLightModule:_cleanupOldLight()
+    -- 第一层检查：PlayerLightData 是否存在
     if self.PlayerLightData then
+        -- 第二层检查：PointLight 是否存在，再调用 Destroy
         if self.PlayerLightData.PointLight then
-            self.PlayerLightData.PointLight:Destroy()
+            pcall(function() -- 加 pcall 防止销毁已被移除的实例时报错
+                self.PlayerLightData.PointLight:Destroy()
+            end)
+            self.PlayerLightData.PointLight = nil -- 销毁后置空，避免重复引用
         end
+        -- 第二层检查：Attachment 是否存在，再调用 Destroy
         if self.PlayerLightData.Attachment then
-            self.PlayerLightData.Attachment:Destroy()
+            pcall(function()
+                self.PlayerLightData.Attachment:Destroy()
+            end)
+            self.PlayerLightData.Attachment = nil
         end
-        self.PlayerLightData = nil
+        self.PlayerLightData = nil -- 清空整个对象
     end
 end
 
--- 公共方法：启用光源
+-- 优化后的启用方法
 function LocalPlayerLightModule:enable()
-    if self.PlayerLightData and self.PlayerLightData.PointLight then
+    -- 层层检查：PlayerLightData → PointLight → 是否是实例
+    if self.PlayerLightData and self.PlayerLightData.PointLight and self.PlayerLightData.PointLight:IsA("PointLight") then
         self.PlayerLightData.PointLight.Enabled = true
         print(`LocalPlayerLightModule: 光源 {self.config.Attachment_Name} 已启用`)
     else
-        warn("LocalPlayerLightModule: 光源尚未创建，无法启用")
+        warn("LocalPlayerLightModule: 光源尚未创建/已被销毁，无法启用")
     end
 end
 
--- 公共方法：禁用光源
+-- 优化后的禁用方法
 function LocalPlayerLightModule:disable()
-    if self.PlayerLightData and self.PlayerLightData.PointLight then
+    if self.PlayerLightData and self.PlayerLightData.PointLight and self.PlayerLightData.PointLight:IsA("PointLight") then
         self.PlayerLightData.PointLight.Enabled = false
         print(`LocalPlayerLightModule: 光源 {self.config.Attachment_Name} 已禁用`)
     else
-        warn("LocalPlayerLightModule: 光源尚未创建，无法禁用")
+        warn("LocalPlayerLightModule: 光源尚未创建/已被销毁，无法禁用")
     end
 end
 
