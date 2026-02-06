@@ -76,7 +76,6 @@ local function attachLightToCharacter(self)
     }
     self._isLightCreated = true
 
-    print("光源实例创建成功：" .. attachment.Name)
 end
 
 -- 构造函数：严格保留 .new 命名（你原来的调用方式不变）
@@ -175,11 +174,9 @@ function LocalPlayerLight:__newindex(key, value)
         if self._isLightCreated and self.lightData and self.lightData.PointLight then
             pcall(function()
                 self.lightData.PointLight.Enabled = boolValue
-                print("光源状态切换为：" .. tostring(boolValue))
             end)
         else
             -- 光源未创建：提示但不报错，缓存状态
-            print("光源未就绪，已缓存enable状态：" .. tostring(boolValue))
         end
     else
         rawset(self, key, value)
@@ -189,7 +186,6 @@ end
 -- 实例卸载：严格保留 :unload 命名（你原来的调用方式不变）
 function LocalPlayerLight:unload()
     if not self.isLoaded then
-        warn("光源实例已卸载")
         return
     end
 
@@ -211,8 +207,6 @@ function LocalPlayerLight:unload()
             break
         end
     end
-
-    print("光源实例已卸载")
 end
 
 -- 模块级卸载：保留 unloadAll（你可不用，不影响原有代码）
@@ -224,7 +218,6 @@ function LocalPlayerLight:unloadAll()
         end
     end
     LocalPlayerLight._allInstances = {}
-    print("所有光源已卸载")
 end
 
 -- 保持你原来的返回方式
