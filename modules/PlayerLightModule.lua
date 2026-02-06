@@ -1,208 +1,209 @@
--- LocalPlayerLightAttachmentModule.lua
--- 模块化封装的本地玩家绑定光源（支持多实例、启停、卸载）
+-- LocalPlayerLight.lua （重写后极简版）
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService") -- 虽然此代码未直接使用RunService，但保留服务获取是良好实践
+local localPlayer = Players.LocalPlayer
 
--- 核心模块对象
-local LocalPlayerLightModule = {}
-LocalPlayerLightModule.__index = LocalPlayerLightModule
+-- 模块核心（极简，无复杂嵌套）
+local LightModule = {}
+LightModule.__index = LightModule -- 必加：让实例能访问模块方法
 
--- 存储所有创建的光源实例（用于全局卸载）
-LocalPlayerLightModule._instances = {}
+-- 存储所有实例（用于全局卸载）
+local allLights = {}
 
--- 默认配置表（可被new方法传入的参数覆盖）
-local DEFAULT_CONFIG = {
-    -- PointLight 属性
-    Brightness = 2,          -- 亮度
-    Range = 10,              -- 光照范围
-    Color = Color3.fromRGB(255, 255, 255), -- 光源颜色
-    Shadows = false,         -- 是否产生阴影
-    
-    -- 附加 Attachment 的属性
-    Attachment_Name = "PlayerLightAttachment", -- Attachment 名称
-    Offset_Position = Vector3.new(0, 1.5, 0),  -- 位置偏移（相对于绑定部位）
-    Offset_Rotation = Vector3.new(0, 0, 0),    -- 旋转偏移（度）
-    AttachToBodyPart = "UpperTorso",           -- 绑定的身体部位
-}
-
--- 构造函数：创建新的光源实例（外部调用 LightModule.new(config)）
-function LocalPlayerLightModule.new(customConfig)
-    -- 合并自定义配置与默认配置（自定义配置优先级更高）
-    local config = {}
-    for k, v in pairs(DEFAULT_CONFIG) do
-        config[k] = v
+-- ==============================================
+-- 构造函数：创建光源实例（外部调用：LightModule.new(配置)）
+-- ==============================================
+function LightModule.new(customConfig)
+    -- 1. 基础防护：本地玩家不存在直接返回
+    if not localPlayer then
+        warn("[LightModule] 本地玩家不存在，创建失败")
+        return nil
     end
+
+    -- 2. 默认配置（极简）
+    local config = {
+        brightness = 2,
+        range = 10,
+        color = Color3.new(1,1,1),
+        shadows = false,
+        offset = Vector3.new(0,1.5,0),
+        bind_part = "UpperTorso",
+        attach_name = "PlayerLight"
+    }
+
+    -- 3. 合并自定义配置（选填，不填用默认）
     if type(customConfig) == "table" then
-        for k, v in pairs(customConfig) do
-            config[k] = v
+        config.brightness = customConfig.brightness or config.brightness
+        config.range = customConfig.range or config.range
+        config.color = customConfig.color or config.color
+        config.shadows = customConfig.shadows or config.shadows
+        config.offset = customConfig.offset or config.offset
+        config.bind_part = customConfig.bind_part or config.bind_part
+        config.attach_name = customConfig.attach_name or config.attach_name
+    end
+
+    -- 4. 实例对象（所有属性明确初始化，杜绝"找不到变量"）
+    local lightObj = {
+        config = config,        -- 配置表
+        light_data = nil,       -- 存储光源/附件（初始nil）
+        char_conn = nil         -- 角色监听连接（初始nil）
+    }
+    setmetatable(lightObj, LightModule) -- 绑定元表，关键！
+
+    -- 5. 绑定角色（核心逻辑）
+    lightObj:_bind_character()
+
+    -- 6. 加入全局列表
+    table.insert(allLights, lightObj)
+
+    return lightObj
+end
+
+-- ==============================================
+-- 内部方法：绑定角色（私有，只在创建实例时调用）
+-- ==============================================
+function LightModule:_bind_character()
+    local self = self -- 明确self，避免作用域问题
+
+    -- 监听角色加载/重生
+    local function on_char_added(character)
+        -- 等待绑定部位加载（超时5秒）
+        local bindPart = character:WaitForChild(self.config.bind_part, 5)
+        if not bindPart then
+            warn("[LightModule] 未找到绑定部位："..self.config.bind_part)
+            return
         end
+
+        -- 先清理旧光源（防重复）
+        self:cleanup()
+
+        -- 创建附件
+        local attach = Instance.new("Attachment")
+        attach.Name = self.config.attach_name
+        attach.Position = self.config.offset
+        attach.Parent = bindPart
+
+        -- 创建点光源（默认禁用）
+        local pointLight = Instance.new("PointLight")
+        pointLight.Brightness = self.config.brightness
+        pointLight.Range = self.config.range
+        pointLight.Color = self.config.color
+        pointLight.Shadows = self.config.shadows
+        pointLight.Enabled = false -- 默认关闭
+        pointLight.Parent = attach
+
+        -- 赋值light_data（只有创建成功才赋值）
+        self.light_data = {
+            attach = attach,
+            light = pointLight
+        }
+        print("[LightModule] 光源创建成功")
     end
-    -- 强制默认禁用（满足“创建时默认不生效”的需求）
-    config.Enabled = false
 
-    -- 创建实例对象
-    local self = setmetatable({}, LocalPlayerLightModule)
-    self.config = config                -- 实例专属配置
-    self.PlayerLightData = nil          -- 存储光源和附件的引用
-    self._characterAddedConn = nil      -- 角色重生监听连接（用于卸载）
-    self.localPlayer = Players.LocalPlayer -- 绑定本地玩家
-
-    -- 初始化光源逻辑
-    if self.localPlayer then
-        self:_init()
-    else
-        -- 极端情况：LocalPlayer尚未加载时等待
-        Players.LocalPlayerAdded:Connect(function(player)
-            self.localPlayer = player
-            self:_init()
-        end)
+    -- 绑定监听（存储连接）
+    self.char_conn = localPlayer.CharacterAdded:Connect(on_char_added)
+    -- 立即执行一次（处理已加载的角色）
+    if localPlayer.Character then
+        task.spawn(on_char_added, localPlayer.Character)
     end
-
-    -- 将实例加入全局列表，方便全局卸载
-    table.insert(LocalPlayerLightModule._instances, self)
-    return self
 end
 
--- 内部初始化方法（创建光源、绑定监听）
-function LocalPlayerLightModule:_init()
-    -- 等待角色加载并创建光源
-    self:_waitForCharacterAndAttachLight()
-
-    -- 监听角色重生事件（角色死亡/重生后重新创建光源）
-    self._characterAddedConn = self.localPlayer.CharacterAdded:Connect(function()
-        task.wait() -- 等待角色完全加载
-        self:_waitForCharacterAndAttachLight()
-    end)
+-- ==============================================
+-- 公共方法：开启光源（外部调用：实例:enable()）
+-- ==============================================
+function LightModule:enable()
+    -- 第一步：检查light_data是否存在（核心防呆）
+    if not self.light_data then
+        warn("[LightModule] 光源未创建，无法开启")
+        return
+    end
+    -- 第二步：检查光源是否有效
+    if not self.light_data.light or not self.light_data.light:IsA("PointLight") then
+        warn("[LightModule] 光源组件丢失，无法开启")
+        return
+    end
+    -- 开启光源
+    self.light_data.light.Enabled = true
+    print("[LightModule] 光源已开启")
 end
 
--- 内部方法：等待角色加载并附加光源
-function LocalPlayerLightModule:_waitForCharacterAndAttachLight()
-    local character = self.localPlayer.Character or self.localPlayer.CharacterAdded:Wait()
-    -- 等待核心部件加载
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
-    if not humanoidRootPart then
-        warn(string.format("LocalPlayerLightModule: 未能找到HumanoidRootPart，无法创建光源 (%s)", self.config.AttachToBodyPart))
-        -- 如果核心部件找不到，不应继续执行，因为角色可能还未完全加载或结构异常
-        return 
+-- ==============================================
+-- 公共方法：关闭光源（外部调用：实例:disable()）
+-- ==============================================
+function LightModule:disable()
+    if not self.light_data then
+        warn("[LightModule] 光源未创建，无法关闭")
+        return
     end
+    if not self.light_data.light or not self.light_data.light:IsA("PointLight") then
+        warn("[LightModule] 光源组件丢失，无法关闭")
+        return
+    end
+    self.light_data.light.Enabled = false
+    print("[LightModule] 光源已关闭")
+end
 
-    -- 先清理旧光源（防止重复创建）
-    self:_cleanupOldLight()
-
-    -- 找到绑定的身体部位
-    local bodyPart = character:FindFirstChild(self.config.AttachToBodyPart)
-    if not bodyPart or not bodyPart:IsA("BasePart") then
-        warn(string.format("LocalPlayerLightModule: 无法找到身体部位 %s", self.config.AttachToBodyPart))
-        -- 如果目标身体部位找不到，也不应继续执行
+-- ==============================================
+-- 公共方法：清理光源（外部/内部调用：实例:cleanup()）
+-- ==============================================
+function LightModule:cleanup()
+    -- 检查light_data是否存在，不存在直接返回（杜绝空值）
+    if not self.light_data then
         return
     end
 
-    -- 1. 创建Attachment（光源载体）
-    local attachment = Instance.new("Attachment")
-    attachment.Name = self.config.Attachment_Name
-    attachment.CFrame = CFrame.new(self.config.Offset_Position) 
-        * CFrame.Angles(
-            math.rad(self.config.Offset_Rotation.X),
-            math.rad(self.config.Offset_Rotation.Y),
-            math.rad(self.config.Offset_Rotation.Z)
-        )
-    attachment.Parent = bodyPart
+    -- 安全销毁光源
+    if self.light_data.light then
+        pcall(function() self.light_data.light:Destroy() end)
+        self.light_data.light = nil
+    end
 
-    -- 2. 创建PointLight并应用配置（默认禁用）
-    local pointLight = Instance.new("PointLight")
-    pointLight.Enabled = self.config.Enabled  -- 初始为false（禁用）
-    pointLight.Brightness = self.config.Brightness
-    pointLight.Range = self.config.Range
-    pointLight.Color = self.config.Color
-    pointLight.Shadows = self.config.Shadows
-    pointLight.Parent = attachment
+    -- 安全销毁附件
+    if self.light_data.attach then
+        pcall(function() self.light_data.attach:Destroy() end)
+        self.light_data.attach = nil
+    end
 
-    -- 只有在所有创建操作都成功后，才存储引用
-    -- 这确保了 PlayerLightData 不会是 nil，且其成员也是有效的实例
-    self.PlayerLightData = {
-        Attachment = attachment,
-        PointLight = pointLight,
-    }
-
-    print(string.format("LocalPlayerLightModule: 已为本地玩家创建光源实例（%s）", self.config.Attachment_Name))
+    -- 置空light_data
+    self.light_data = nil
+    print("[LightModule] 光源已清理")
 end
 
--- 内部方法：清理旧的光源和附件
-function LocalPlayerLightModule:_cleanupOldLight()
-    -- 添加一个检查，确保 PlayerLightData 不为 nil 且其成员存在
-    if self.PlayerLightData then
-        if self.PlayerLightData.PointLight then
-            self.PlayerLightData.PointLight:Destroy()
-            self.PlayerLightData.PointLight = nil -- 销毁后置为nil
-        end
-        if self.PlayerLightData.Attachment then
-            self.PlayerLightData.Attachment:Destroy()
-            self.PlayerLightData.Attachment = nil -- 销毁后置为nil
-        end
-        -- 将 PlayerLightData 本身也置为 nil
-        self.PlayerLightData = nil
-    end
-    -- 如果 PlayerLightData 本身就是 nil，则无需任何操作
-end
+-- ==============================================
+-- 公共方法：卸载实例（外部调用：实例:unload()）
+-- ==============================================
+function LightModule:unload()
+    -- 1. 清理光源（即使light_data为nil，cleanup也会直接返回）
+    self:cleanup()
 
--- 公共方法：启用光源
-function LocalPlayerLightModule:enable()
-    -- 在访问前进行检查
-    if self.PlayerLightData and self.PlayerLightData.PointLight then
-        self.PlayerLightData.PointLight.Enabled = true
-        print(string.format("LocalPlayerLightModule: 光源 %s 已启用", self.config.Attachment_Name))
-    else
-        warn(string.format("LocalPlayerLightModule: 光源尚未创建或已卸载，无法启用 (%s)", self.config.Attachment_Name))
+    -- 2. 断开监听（检查连接是否存在）
+    if self.char_conn then
+        pcall(function() self.char_conn:Disconnect() end)
+        self.char_conn = nil
     end
-end
 
--- 公共方法：禁用光源
-function LocalPlayerLightModule:disable()
-    -- 在访问前进行检查
-    if self.PlayerLightData and self.PlayerLightData.PointLight then
-        self.PlayerLightData.PointLight.Enabled = false
-        print(string.format("LocalPlayerLightModule: 光源 %s 已禁用", self.config.Attachment_Name))
-    else
-        warn(string.format("LocalPlayerLightModule: 光源尚未创建或已卸载，无法禁用 (%s)", self.config.Attachment_Name))
-    end
-end
-
--- 公共方法：卸载当前光源实例（销毁光源、断开监听）
-function LocalPlayerLightModule:unload()
-    -- 清理光源和附件
-    -- _cleanupOldLight 内部已有安全检查
-    self:_cleanupOldLight()
-    
-    -- 断开角色重生监听
-    if self._characterAddedConn then
-        self._characterAddedConn:Disconnect()
-        self._characterAddedConn = nil
-    end
-    
-    -- 从全局实例列表移除
-    for i, instance in ipairs(LocalPlayerLightModule._instances) do
-        if instance == self then
-            table.remove(LocalPlayerLightModule._instances, i)
+    -- 3. 从全局列表移除
+    for i = #allLights, 1, -1 do
+        if allLights[i] == self then
+            table.remove(allLights, i)
             break
         end
     end
-    print(string.format("LocalPlayerLightModule: 光源实例 %s 已卸载", self.config.Attachment_Name))
+
+    print("[LightModule] 光源实例已卸载")
 end
 
--- 模块全局方法：卸载所有光源实例（整个脚本级别的卸载）
-function LocalPlayerLightModule.unloadAll()
-    -- 遍历所有实例并调用各自的unload
-    -- 注意：在遍历过程中修改原表可能会有风险，建议反向遍历或先复制一份键值
-    -- 这里采用反向遍历，因为unload方法会修改_instances表
-    for i = #LocalPlayerLightModule._instances, 1, -1 do
-        local instance = LocalPlayerLightModule._instances[i]
-        -- 调用实例的unload方法，该方法内部会负责将其从_instances中移除
-        instance:unload()
+-- ==============================================
+-- 全局方法：卸载所有实例（外部调用：LightModule.unload_all()）
+-- ==============================================
+function LightModule.unload_all()
+    for _, light in ipairs(allLights) do
+        if light and type(light.unload) == "function" then
+            light:unload()
+        end
     end
-    -- 清空实例列表（虽然上面的循环应该已经清空了，但再次确认）
-    LocalPlayerLightModule._instances = {}
-    print("LocalPlayerLightModule: 所有光源实例已全部卸载")
+    allLights = {}
+    print("[LightModule] 所有光源已卸载")
 end
 
--- 返回模块对象（供外部调用）
-return LocalPlayerLightModule
+-- 返回模块
+return LightModule
