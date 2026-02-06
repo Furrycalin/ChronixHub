@@ -1,5 +1,5 @@
--- FreeCam 模块 v1.3
--- 使用 .freecamenable 控制模块总开关，.enable 控制自由相机开关
+-- FreeCam 模块 v1.3.1
+-- 优化函数定义顺序，解决调用问题
 
 local FreeCam = {}
 
@@ -14,7 +14,7 @@ local Camera = workspace.CurrentCamera
 
 -- 状态变量
 local freecamEnabled = false      -- 自由相机是否启用
-local moduleEnabled = true        -- 模块总开关（新增）
+local moduleEnabled = true        -- 模块总开关
 local cameraRotation = Vector2.new()
 local freecamConnection = nil
 local charLock = nil
@@ -32,12 +32,14 @@ local cameraSpeed = DEFAULT_SPEED
 local lookSensitivity = 50
 local WHEEL_SENSITIVITY = 0.1
 
--- ========== 私有方法 ==========
+-- ========== 辅助函数 ==========
 
 local function getRootPart()
     local char = LocalPlayer.Character
     return char and char:FindFirstChild("HumanoidRootPart") or nil
 end
+
+-- ========== 角色锁定函数 ==========
 
 local function lockCharacter()
     local root = getRootPart()
@@ -59,6 +61,8 @@ local function unlockCharacter()
     end
 end
 
+-- ========== 速度调整函数 ==========
+
 local function adjustSpeedWithMouseWheel(delta)
     if not freecamEnabled then return end
     
@@ -70,6 +74,8 @@ local function adjustSpeedWithMouseWheel(delta)
     
     cameraSpeed = math.max(0, cameraSpeed)
 end
+
+-- ========== 自由相机更新函数 ==========
 
 local function updateFreecam(dt)
     if not freecamEnabled then return end
@@ -106,6 +112,65 @@ local function updateFreecam(dt)
     
     Camera.CFrame = CFrame.new(position) * rotation
 end
+
+-- ========== 内部启用/禁用函数 ==========
+
+local function internalEnable()
+    if freecamEnabled then return end
+    
+    freecamEnabled = true
+    cameraSpeed = DEFAULT_SPEED
+    
+    lockCharacter()
+    
+    local _, yaw, pitch = Camera.CFrame:ToEulerAnglesYXZ()
+    cameraRotation = Vector2.new(pitch, yaw)
+    
+    Camera.CameraType = Enum.CameraType.Scriptable
+    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+    
+    freecamConnection = RunService.RenderStepped:Connect(updateFreecam)
+    
+    return true
+end
+
+local function internalDisable()
+    if not freecamEnabled then return end
+    
+    freecamEnabled = false
+    
+    if freecamConnection then
+        freecamConnection:Disconnect()
+        freecamConnection = nil
+    end
+    
+    unlockCharacter()
+    
+    Camera.CameraType = Enum.CameraType.Custom
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+    
+    moveVector = Vector3.new()
+    
+    return true
+end
+
+-- ========== 模块启用状态函数 ==========
+
+local function setModuleEnabled(value)
+    if moduleEnabled == value then return end
+    
+    moduleEnabled = value
+    
+    if value then
+    else
+        -- 禁用模块时，如果自由相机正在运行，先关闭它
+        if freecamEnabled then
+            internalDisable()
+        end
+    end
+end
+
+-- ========== 事件处理函数 ==========
 
 local function onKeyPress(input, gameProcessed)
     -- 模块未启用时忽略所有输入
@@ -185,63 +250,6 @@ local function onCharacterRemoving()
         internalDisable()  -- 角色移除时自动关闭自由相机
     else
         unlockCharacter()
-    end
-end
-
--- ========== 内部启用/禁用函数 ==========
-
-local function internalEnable()
-    if freecamEnabled then return end
-    
-    freecamEnabled = true
-    cameraSpeed = DEFAULT_SPEED
-    
-    lockCharacter()
-    
-    local _, yaw, pitch = Camera.CFrame:ToEulerAnglesYXZ()
-    cameraRotation = Vector2.new(pitch, yaw)
-    
-    Camera.CameraType = Enum.CameraType.Scriptable
-    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-    
-    freecamConnection = RunService.RenderStepped:Connect(updateFreecam)
-    
-    return true
-end
-
-local function internalDisable()
-    if not freecamEnabled then return end
-    
-    freecamEnabled = false
-    
-    if freecamConnection then
-        freecamConnection:Disconnect()
-        freecamConnection = nil
-    end
-    
-    unlockCharacter()
-    
-    Camera.CameraType = Enum.CameraType.Custom
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-    
-    moveVector = Vector3.new()
-    
-    return true
-end
-
--- ========== 设置模块启用状态（新增） ==========
-
-local function setModuleEnabled(value)
-    if moduleEnabled == value then return end
-    
-    moduleEnabled = value
-    
-    if value then
-    else
-        -- 禁用模块时，如果自由相机正在运行，先关闭它
-        if freecamEnabled then
-            internalDisable()
-        end
     end
 end
 
@@ -360,8 +368,8 @@ table.insert(eventConnections, LocalPlayer.CharacterAdded:Connect(onCharacterAdd
 table.insert(eventConnections, LocalPlayer.CharacterRemoving:Connect(onCharacterRemoving))
 
 -- 模块信息
-FreeCam.version = "1.3"
+FreeCam.version = "1.3.1"
 FreeCam.author = "FreeCam Module"
-FreeCam.description = "使用 .freecamenable 控制模块总开关，.enable 控制自由相机开关"
+FreeCam.description = "优化函数定义顺序，解决调用顺序问题"
 
 return FreeCam
