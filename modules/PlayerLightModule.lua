@@ -1,5 +1,5 @@
--- PlayerLightModuleLocal.lua
--- 一个用于为本地玩家创建和管理绑定光源的模块 (本地加载版 - 无需等待)
+-- PlayerLightModuleLocalFixed.lua
+-- 一个用于为本地玩家创建和管理绑定光源的模块 (本地加载版 - 修复 WaitForChild 问题)
 
 local Players = game:GetService("Players")
 
@@ -80,6 +80,21 @@ local function createLightInstance(config)
         _createLightStructure(char)
     end
 
+    -- 内部方法：安全等待子部件加载
+    local function waitForBodyPart(model, partName, timeoutSeconds)
+        timeoutSeconds = timeoutSeconds or 10 -- 默认10秒超时
+        local startTime = tick()
+        while tick() - startTime < timeoutSeconds do
+            local part = model:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                return part
+            end
+            wait(0.1) -- 短暂等待，避免过度占用CPU
+        end
+        warn(string.format("警告：在 %.2f 秒内未能找到角色的 %s 部件。", timeoutSeconds, partName))
+        return nil
+    end
+
     -- 公共方法：初始化（但不启用）
     self.init = function()
         local localPlayer = Players.LocalPlayer
@@ -100,10 +115,13 @@ local function createLightInstance(config)
     self._attachToCharacter = function(player, char)
         self.character = char
         
-        -- 等待角色的基础部件加载完成，然后应用光源
-        local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+        -- 使用自定义的安全等待方法来获取 HumanoidRootPart
+        local humanoidRootPart = waitForBodyPart(char, "HumanoidRootPart", 5) -- 设置5秒超时
         if humanoidRootPart then
             _applyLight(char)
+        else
+            warn("未能获取 HumanoidRootPart，无法附加光源。")
+            return
         end
 
         -- 监听角色重生
@@ -114,36 +132,48 @@ local function createLightInstance(config)
             if not self.attachment and not self.pointLight then return end
             
             self.character = newChar
-            _applyLight(newChar)
+            -- 对于重生的角色，也需要等待部件加载
+            local newHumanoidRootPart = waitForBodyPart(newChar, "HumanoidRootPart", 5)
+            if newHumanoidRootPart then
+                 _applyLight(newChar)
+            else
+                 warn("角色重生后未能获取 HumanoidRootPart，光源未附加到新角色。")
+            end
         end)
     end
 
     -- 公共方法：启用光源
     self.enable = function()
         if self.isEnabled then
+            print("光源 " .. tostring(self) .. " 已经是启用状态。")
             return
         end
 
         if self.pointLight then
             self.pointLight.Enabled = true
             self.isEnabled = true
+            print("光源 " .. tostring(self) .. " 已启用。")
         else
-            -- 如果角色尚未加载，结构未创建，则设置标志，等结构创建后再启用
+            -- 如果角色尚未加载或部件未找到，结构未创建，则设置标志
             self.isEnabled = true
+            print("准备启用光源 " .. tostring(self) .. " (等待角色部件加载)。")
         end
     end
 
     -- 公共方法：禁用光源
     self.disable = function()
         if not self.isEnabled then
+            print("光源 " .. tostring(self) .. " 已经是禁用状态。")
             return
         end
 
         if self.pointLight then
             self.pointLight.Enabled = false
             self.isEnabled = false
+            print("光源 " .. tostring(self) .. " 已禁用。")
         else
             self.isEnabled = false
+            print("光源 " .. tostring(self) .. " 已设置为禁用状态 (等待角色部件加载)。")
         end
     end
 
@@ -171,6 +201,8 @@ local function createLightInstance(config)
                 break
             end
         end
+        
+        print("光源实例 " .. tostring(self) .. " 已卸载。")
     end
 
     -- 初始化光源结构 (但不启用)
@@ -188,11 +220,13 @@ end
 
 -- 模块的全局卸载函数，卸载所有由该模块创建的实例
 PlayerLightModule.unload = function()
+    print("正在卸载所有由 PlayerLightModule 创建的光源...")
     -- 从后往前遍历，安全地移除所有实例
     for i = #ActiveLights, 1, -1 do
         local lightInstance = ActiveLights[i]
         lightInstance.unload() -- 调用实例的unload方法
     end
+    print("所有光源已卸载。")
 end
 
 return PlayerLightModule
