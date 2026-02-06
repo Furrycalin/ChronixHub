@@ -7,13 +7,9 @@ local RunService = game:GetService("RunService")
 
 -- 预定义的颜色方案
 local colorPresets = {
-    player = {
+    item = {
         outlineColor = Color3.fromRGB(0, 170, 255), -- 蓝色轮廓
         fillColor = Color3.fromRGB(0, 170, 255)    -- 蓝色填充 (通常设为透明或半透)
-    },
-    item = {
-        outlineColor = Color3.fromRGB(0, 255, 127), -- 绿色轮廓
-        fillColor = Color3.fromRGB(0, 255, 127)    -- 绿色填充
     }
 }
 
