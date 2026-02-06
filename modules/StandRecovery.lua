@@ -324,8 +324,6 @@ function StandRecovery:unload()
         return
     end
 
-    print("[站立恢复模块] 开始执行卸载流程...")
-
     -- 步骤1：标记为已卸载，禁止所有方法后续执行
     self.isUnloaded = true
     self.isDetectionEnabled = false
