@@ -41,7 +41,6 @@ function StandRecovery:init()
     -- 启动主循环（封装为方法）
     self:startMainLoop()
 
-    print("[站立恢复模块] 初始化完成，检测功能默认关闭（调用 :enableDetection() 开启）")
 end
 
 -- 3. 核心方法：绑定角色及核心组件（稳健化枚举判断，解决循环报错）
@@ -64,7 +63,6 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
 
     -- 更新角色引用
     self.character = newCharacter
-    print(string.format("[站立恢复模块] 已绑定角色：%s", self.character.Name))
 
     -- 等待并获取 Humanoid
     local success1, tempHumanoid = pcall(function()
@@ -89,7 +87,6 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     else
         self.humanoid = tempHumanoid
         self.humanoid.AutoRotate = true
-        print("[站立恢复模块] Humanoid 组件绑定成功")
 
         -- 重置跳跃标记
         self.isNormalJumpProcess = false
@@ -150,7 +147,6 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
         self.humanoidRootPart = nil
     else
         self.humanoidRootPart = tempRootPart
-        print("[站立恢复模块] HumanoidRootPart 组件绑定成功")
     end
 end
 
@@ -337,7 +333,6 @@ function StandRecovery:unload()
 
     -- 步骤2：终止主检测循环
     self.isLoopRunning = false
-    print("[站立恢复模块] 主检测循环已终止")
 
     -- 步骤3：断开所有监听（pcall包裹，确保断开成功）
     if self.characterAddedConnection and self.characterAddedConnection.Connected then
@@ -348,7 +343,6 @@ function StandRecovery:unload()
         pcall(function() self.humanoidStateChangedConn:Disconnect() end)
         self.humanoidStateChangedConn = nil
     end
-    print("[站立恢复模块] 所有监听已断开")
 
     -- 步骤4：清空所有核心引用（释放内存）
     self.character = nil
@@ -356,7 +350,6 @@ function StandRecovery:unload()
     self.humanoidRootPart = nil
     self.localPlayer = nil
     self.Players = nil
-    print("[站立恢复模块] 所有核心引用已清空")
 
     -- 步骤5：（可选）销毁当前脚本实例（彻底移除脚本，注释可开启）
     -- pcall(function()
@@ -364,7 +357,6 @@ function StandRecovery:unload()
     --     print("[站立恢复模块] 脚本实例已销毁")
     -- end)
 
-    print("[站立恢复模块] 卸载流程完成，模块所有功能已失效")
 end
 
 -- 10. 私有方法：启动主检测循环（保持不变）
