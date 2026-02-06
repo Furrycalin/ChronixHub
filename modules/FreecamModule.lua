@@ -14,7 +14,7 @@ local Camera = workspace.CurrentCamera
 
 -- 状态变量
 local freecamEnabled = false      -- 自由相机是否启用
-local moduleEnabled = true        -- 模块总开关
+local moduleEnabled = false        -- 模块总开关
 local cameraRotation = Vector2.new()
 local freecamConnection = nil
 local charLock = nil
