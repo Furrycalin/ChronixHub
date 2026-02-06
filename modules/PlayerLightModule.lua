@@ -99,7 +99,6 @@ local function _attachLightToCharacter(character)
         PointLight = pointLight,
     }
 
-    print("已为本地玩家角色添加光源。")
 end
 
 -- 私有方法：等待角色加载并附加光源
@@ -140,12 +139,6 @@ function LocalPlayerLight.new(customConfig)
         _waitForCharacterAndAttachLight(_state.localPlayer)
     end)
 
-    -- 打印配置信息
-    print("本地玩家光源模块已初始化，配置如下：")
-    for k, v in pairs(_state.config) do
-        print("  " .. k .. ": " .. tostring(v))
-    end
-
     return LocalPlayerLight
 end
 
@@ -167,7 +160,6 @@ function LocalPlayerLight:__newindex(key, value)
         end
         if _state.lightData and _state.lightData.PointLight then
             _state.lightData.PointLight.Enabled = not not value -- 强制转为布尔值
-            print("光源状态已切换为：" .. tostring(value))
         else
             warn("光源尚未创建，无法切换状态！")
         end
@@ -196,8 +188,6 @@ function LocalPlayerLight:unload()
     _state.isLoaded = false
     _state.config = nil
     _state.localPlayer = nil
-
-    print("本地玩家光源模块已完全卸载！")
 end
 
 -- 设置元表（让模块本身支持属性和方法调用）
