@@ -1,5 +1,5 @@
--- FreeCam 模块 v1.0
--- 提供 enable(), disable(), unload() 三个公共方法
+-- FreeCam 模块 v1.2
+-- 使用 .enable 属性控制启用状态，支持快捷键自定义和滚轮调速
 
 local FreeCam = {}
 
@@ -18,6 +18,9 @@ local cameraRotation = Vector2.new()
 local freecamConnection = nil
 local charLock = nil
 local moveVector = Vector3.new()
+
+-- 快捷键配置
+local currentKeybind = Enum.KeyCode.F
 
 -- 事件连接存储
 local eventConnections = {}
@@ -106,13 +109,9 @@ end
 local function onKeyPress(input, gameProcessed)
     if gameProcessed or UserInputService:GetFocusedTextBox() then return end
     
-    -- F键切换自由相机
-    if input.KeyCode == Enum.KeyCode.F then
-        if freecamEnabled then
-            FreeCam.disable()
-        else
-            FreeCam.enable()
-        end
+    -- 使用当前设置的快捷键切换自由相机状态
+    if input.KeyCode == currentKeybind then
+        FreeCam.enable = not FreeCam.enable  -- 切换状态
         return
     end
     
@@ -157,7 +156,7 @@ local function onCharacterAdded(character)
     task.wait(0.5)
     
     if freecamEnabled then
-        FreeCam.disable()
+        FreeCam.enable = false  -- 角色重生时自动关闭自由相机
     else
         unlockCharacter()
     end
@@ -171,16 +170,15 @@ end
 
 local function onCharacterRemoving()
     if freecamEnabled then
-        FreeCam.disable()
+        FreeCam.enable = false  -- 角色移除时自动关闭自由相机
     else
         unlockCharacter()
     end
 end
 
--- ========== 公共方法 ==========
+-- ========== 内部启用/禁用函数 ==========
 
--- 启用自由相机
-function FreeCam.enable()
+local function internalEnable()
     if freecamEnabled then return end
     
     freecamEnabled = true
@@ -199,8 +197,7 @@ function FreeCam.enable()
     return true
 end
 
--- 禁用自由相机
-function FreeCam.disable()
+local function internalDisable()
     if not freecamEnabled then return end
     
     freecamEnabled = false
@@ -220,10 +217,52 @@ function FreeCam.disable()
     return true
 end
 
+-- ========== 公共方法和属性 ==========
+
+-- 设置元表以实现 .enable 属性
+setmetatable(FreeCam, {
+    __newindex = function(self, key, value)
+        if key == "enable" then
+            if value then
+                internalEnable()
+            else
+                internalDisable()
+            end
+        else
+            rawset(self, key, value)
+        end
+    end,
+    
+    __index = function(self, key)
+        if key == "enable" then
+            return freecamEnabled
+        end
+        return rawget(self, key)
+    end
+})
+
+-- 获取当前快捷键
+function FreeCam.getKeybind()
+    return currentKeybind
+end
+
+-- 设置新快捷键
+function FreeCam.setKeybind(newKeybind)
+    if not newKeybind or typeof(newKeybind) ~= "EnumItem" or newKeybind.EnumType ~= Enum.KeyCode then
+        warn("无效的快捷键设置，请传入有效的 Enum.KeyCode 值")
+        return false
+    end
+    
+    local oldKeybind = currentKeybind
+    currentKeybind = newKeybind
+    
+    return true
+end
+
 -- 完全卸载模块
 function FreeCam.unload()
-    -- 先禁用自由相机
-    FreeCam.disable()
+    -- 关闭自由相机
+    internalDisable()
     
     -- 断开所有事件连接
     for _, connection in pairs(eventConnections) do
@@ -242,6 +281,9 @@ function FreeCam.unload()
     moveVector = Vector3.new()
     cameraSpeed = DEFAULT_SPEED
     
+    -- 恢复默认快捷键
+    currentKeybind = Enum.KeyCode.F
+    
     -- 确保相机控制权交还引擎
     if Camera then
         Camera.CameraType = Enum.CameraType.Custom
@@ -256,9 +298,12 @@ function FreeCam.unload()
     -- 恢复鼠标行为
     UserInputService.MouseBehavior = Enum.MouseBehavior.Default
     
-    print("FreeCam 模块已卸载")
-    
     return true
+end
+
+-- 添加一个只读的只读属性，用于获取当前速度（可选功能）
+function FreeCam.getSpeed()
+    return cameraSpeed
 end
 
 -- ========== 模块初始化 ==========
@@ -271,16 +316,8 @@ table.insert(eventConnections, LocalPlayer.CharacterAdded:Connect(onCharacterAdd
 table.insert(eventConnections, LocalPlayer.CharacterRemoving:Connect(onCharacterRemoving))
 
 -- 模块信息
-FreeCam.version = "1.0"
+FreeCam.version = "1.2"
 FreeCam.author = "FreeCam Module"
-FreeCam.description = "提供自由相机功能，支持角色锁定和滚轮调速"
-
-print("FreeCam 模块已加载")
-print("版本: " .. FreeCam.version)
-print("使用方法:")
-print("  FreeCam.enable()  -- 启用自由相机")
-print("  FreeCam.disable() -- 禁用自由相机")
-print("  FreeCam.unload()  -- 完全卸载模块")
-print("默认快捷键: F键切换自由相机")
+FreeCam.description = "使用属性控制自由相机，支持快捷键自定义和滚轮调速"
 
 return FreeCam
