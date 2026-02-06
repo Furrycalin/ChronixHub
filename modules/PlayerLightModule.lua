@@ -195,7 +195,7 @@ end
 -- ==============================================
 -- 全局方法：卸载所有实例（外部调用：LightModule.unload_all()）
 -- ==============================================
-function LightModule.unload_all()
+function LightModule.unloadAll()
     for _, light in ipairs(allLights) do
         if light and type(light.unload) == "function" then
             light:unload()
