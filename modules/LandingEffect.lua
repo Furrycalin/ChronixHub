@@ -8,6 +8,8 @@ local enabled = false
 local connections = {}
 local tweenService = game:GetService("TweenService")
 local debrisService = game:GetService("Debris")
+local runService = game:GetService("RunService")
+local userInputService = game:GetService("UserInputService")
 
 -- 特效设置
 local PARTICLE_SETTINGS = {
@@ -27,42 +29,29 @@ local ANIMATION_SETTINGS = {
 }
 
 -- 内部变量
-local player = nil
+local player = game.Players.LocalPlayer
 local character = nil
 local humanoid = nil
 local humanoidRootPart = nil
 local wasJumping = false
 local jumpStartTime = 0
 
--- 初始化角色
+-- 简化版初始化角色
 local function initCharacter()
-    if not player then
-        player = game:GetService("Players").LocalPlayer
-    end
-    
     -- 获取当前角色
     character = player.Character
-    if not character then
-        -- 等待角色加载
-        local charAddedConnection
-        charAddedConnection = player.CharacterAdded:Connect(function(newChar)
-            character = newChar
-            setupHumanoid()
-            charAddedConnection:Disconnect()
-        end)
-        table.insert(connections, charAddedConnection)
+    
+    if character then
+        -- 角色已存在，直接设置
+        humanoid = character:WaitForChild("Humanoid")
+        humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        print("角色已初始化:", character.Name)
+        return true
     else
-        setupHumanoid()
+        -- 角色不存在，等待角色添加
+        print("等待角色加载...")
+        return false
     end
-end
-
--- 设置Humanoid监听
-local function setupHumanoid()
-    if not character then return end
-    
-    humanoid = character:WaitForChild("Humanoid")
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    
 end
 
 -- 创建特效函数
@@ -126,7 +115,7 @@ end
 local function setupJumpDetection()
     if not character or not humanoid then
         print("未找到角色或Humanoid，无法设置跳跃检测")
-        return
+        return false
     end
     
     -- 重置跳跃状态
@@ -134,8 +123,17 @@ local function setupJumpDetection()
     jumpStartTime = 0
     
     -- 方法1: 使用Heartbeat检测
-    local heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        if not humanoid or not humanoidRootPart then return end
+    local heartbeatConnection = runService.Heartbeat:Connect(function()
+        if not humanoid or not humanoidRootPart then 
+            -- 如果humanoid或humanoidRootPart丢失，尝试重新获取
+            if character and character.Parent then
+                humanoid = character:FindFirstChild("Humanoid")
+                humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            end
+            if not humanoid or not humanoidRootPart then
+                return
+            end
+        end
         
         local state = humanoid:GetState()
         
@@ -185,39 +183,98 @@ local function setupJumpDetection()
     
     table.insert(connections, stateChangedConnection)
     
-    -- 方法3: 角色死亡时重新初始化
+    -- 监听角色死亡事件，以便重新初始化
     local diedConnection = humanoid.Died:Connect(function()
-        -- 角色死亡，重置状态
+        print("角色死亡，等待重生...")
         wasJumping = false
+        
+        -- 重置引用
         character = nil
         humanoid = nil
         humanoidRootPart = nil
         
-        -- 重新初始化角色
-        initCharacter()
+        -- 等待新角色
+        local charAddedConnection
+        charAddedConnection = player.CharacterAdded:Connect(function(newCharacter)
+            -- 等待一小段时间让角色完全加载
+            wait(0.5)
+            
+            character = newCharacter
+            humanoid = character:WaitForChild("Humanoid")
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            
+            print("角色重生完成:", character.Name)
+            
+            -- 重新设置跳跃检测
+            if enabled then
+                -- 先清理旧的连接
+                for _, conn in ipairs(connections) do
+                    if conn.Connected then
+                        conn:Disconnect()
+                    end
+                end
+                connections = {}
+                
+                -- 重新设置
+                setupJumpDetection()
+            end
+            
+            -- 断开这个一次性连接
+            if charAddedConnection then
+                charAddedConnection:Disconnect()
+            end
+        end)
     end)
     
     table.insert(connections, diedConnection)
     
+    print("跳跃检测已设置")
+    return true
 end
 
 -- 开启特效功能
 function LandingEffect.enable()
     if enabled then
+        print("特效功能已经开启")
         return
     end
     
+    print("开启跳跃落地特效...")
     
     -- 初始化角色
-    initCharacter()
+    local charInitialized = initCharacter()
     
-    -- 设置跳跃检测
-    setupJumpDetection()
+    if not charInitialized then
+        -- 角色不存在，等待角色加载
+        print("等待角色加载...")
+        local charAddedConnection
+        charAddedConnection = player.CharacterAdded:Connect(function(newCharacter)
+            character = newCharacter
+            humanoid = character:WaitForChild("Humanoid")
+            humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            
+            print("角色加载完成:", character.Name)
+            
+            -- 设置跳跃检测
+            setupJumpDetection()
+            
+            -- 断开这个一次性连接
+            if charAddedConnection then
+                charAddedConnection:Disconnect()
+            end
+        end)
+        
+        -- 暂时保存这个连接，以便在disable时清理
+        table.insert(connections, charAddedConnection)
+    else
+        -- 角色已存在，直接设置跳跃检测
+        setupJumpDetection()
+    end
     
     -- 设置手动测试快捷键
-    local userInputService = game:GetService("UserInputService")
     local testConnection = userInputService.InputBegan:Connect(function(input, gameProcessed)
         if not gameProcessed and input.KeyCode == Enum.KeyCode.G and character and humanoidRootPart then
+            print("手动触发特效")
             createLandingEffect(humanoidRootPart.Position - Vector3.new(0, 3, 0))
         end
     end)
@@ -225,14 +282,17 @@ function LandingEffect.enable()
     table.insert(connections, testConnection)
     
     enabled = true
+    print("跳跃落地特效已开启")
 end
 
 -- 关闭特效功能
 function LandingEffect.disable()
     if not enabled then
+        print("特效功能已经关闭")
         return
     end
     
+    print("关闭跳跃落地特效...")
     
     -- 断开所有连接
     for _, connection in ipairs(connections) do
@@ -248,16 +308,17 @@ function LandingEffect.disable()
     wasJumping = false
     enabled = false
     
+    print("跳跃落地特效已关闭")
 end
 
 -- 完全卸载脚本
 function LandingEffect.unload()
+    print("卸载跳跃落地特效脚本...")
     
     -- 先禁用
     LandingEffect.disable()
     
     -- 清除所有引用
-    player = nil
     character = nil
     humanoid = nil
     humanoidRootPart = nil
@@ -268,8 +329,13 @@ function LandingEffect.unload()
     end
     
     -- 设置模块为已卸载
-    LandingEffect = {enabled = false, unloaded = true}
+    setmetatable(LandingEffect, {
+        __index = function()
+            error("LandingEffect模块已被卸载")
+        end
+    })
     
+    print("跳跃落地特效脚本已完全卸载")
 end
 
 -- 添加一个检查状态的方法
@@ -286,5 +352,9 @@ function LandingEffect.test()
         print("无法测试: 角色未加载")
     end
 end
+
+print("跳跃落地特效模块加载完成（默认关闭）")
+print("使用方法: LandingEffect.enable() 开启特效")
+print("按G键可以手动触发特效")
 
 return LandingEffect
