@@ -106,7 +106,6 @@ local function createHighlighterInstance(modelName, matchMode, colorPresetKey)
             if processedCount >= totalObjects then
                 connection:Disconnect()
                 self.isApplyingAsync = false
-                print(string.format("异步高亮应用完成。模型名: %s, 处理对象数: %d", self.modelName, totalObjects))
             end
         end)
     end
