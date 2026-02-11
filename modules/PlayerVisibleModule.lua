@@ -1,3 +1,5 @@
+-- 感谢K6提供的源码
+
 local Module = {}
 
 local Players = game:GetService("Players")
