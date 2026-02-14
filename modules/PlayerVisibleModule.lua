@@ -55,7 +55,7 @@ local function onHeartbeat()
     local originalCFrame = rootPart.CFrame
     local originalCameraOffset = humanoid.CameraOffset
 
-    local downCFrame = originalCFrame * CFrame.new(0, -200000, 0)
+    local downCFrame = originalCFrame * CFrame.new(0, 200000, 0)
     rootPart.CFrame = downCFrame
 
     local cameraOffsetGoal = downCFrame:ToObjectSpace(CFrame.new(originalCFrame.Position)).Position
