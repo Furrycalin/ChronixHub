@@ -146,12 +146,7 @@ local function updateUI()
             distanceText.Text = ""
         end
     else
-        if ball.Highlight and ball.Highlight.FillColor == Color3.new(1, 0, 0) then
-            ball.Highlight.OutlineColor = Color3.new(0, 1, 0)
-            ball.Highlight.FillColor = Color3.new(1, 1, 0)
-        end
-        
-        local isLocked = ball.Highlight and ball.Highlight.FillColor == Color3.new(1, 1, 0)
+        local isLocked = ball.Highlight and ball.Highlight.FillColor ~= Color3.new(1, 1, 1)
         if statusText then
             statusText.Text = isLocked and "已被球锁定" or "未被球锁定"
             statusText.TextColor3 = isLocked and Color3.fromRGB(238, 17, 17) or Color3.fromRGB(17, 238, 17)
