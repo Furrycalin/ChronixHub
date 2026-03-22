@@ -34,6 +34,7 @@ function ZoomModule.new()
     self.connections = {
         inputBegan = nil,
         inputEnded = nil,
+        inputChanged = nil, -- 新增：用于监听滚轮
     }
     
     -- 相机引用
@@ -80,6 +81,9 @@ function ZoomModule:OnMouseWheel(input)
     
     -- 应用新的视野
     self:UpdateCameraFOV(self.currentZoomFOV)
+    
+    -- 注意：这里不再调用 input:Processed()
+    -- 因为我们只是想调整自己的相机FOV，并不想阻止其他UI或系统接收滚轮事件。
 end
 
 -- 开始缩放
@@ -180,14 +184,7 @@ function ZoomModule:Enable()
         if self:IsMatchingInput(input) then
             self:StartZoom()
         end
-        
-        -- 处理鼠标滚轮（仅在缩放状态下）
-        if input.UserInputType == Enum.UserInputType.MouseWheel then
-            if self.isZooming then
-                self:OnMouseWheel(input)
-                input:Processed()   -- 阻止默认的摄像机距离调整
-            end
-        end
+        -- 注意：滚轮事件已移至 InputChanged 中处理
     end)
     
     self.connections.inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
@@ -196,6 +193,17 @@ function ZoomModule:Enable()
         -- 处理缩放按键结束
         if self:IsMatchingInput(input) then
             self:StopZoom()
+        end
+    end)
+    
+    -- 新增：在 InputChanged 中监听滚轮事件，这是关键修复点
+    self.connections.inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.MouseWheel then
+            -- 只有在缩放状态下才处理滚轮
+            if self.isZooming then
+                self:OnMouseWheel(input)
+            end
         end
     end)
     
@@ -221,6 +229,12 @@ function ZoomModule:Disable()
     if self.connections.inputEnded then
         self.connections.inputEnded:Disconnect()
         self.connections.inputEnded = nil
+    end
+    
+    -- 新增：断开 InputChanged 的连接
+    if self.connections.inputChanged then
+        self.connections.inputChanged:Disconnect()
+        self.connections.inputChanged = nil
     end
     
     self.isEnabled = false
