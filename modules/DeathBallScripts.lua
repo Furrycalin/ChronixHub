@@ -1,5 +1,6 @@
--- 死亡球脚本模块
+-- 死亡球脚本模块（自执行，暴露全局）
 local DeathBallScript = {}
+DeathBallScript.__index = DeathBallScript
 
 -- 私有变量
 local Players = game:GetService("Players")
@@ -185,12 +186,13 @@ function DeathBallScript:Enable()
         end
     end))
     
-    table.insert(connections, ContextActionService:BindAction("TeleportToBall", function(actionName, inputState)
+    local bindConnection = ContextActionService:BindAction("TeleportToBall", function(actionName, inputState)
         if inputState == Enum.UserInputState.Begin then
             teleportToBallAndBack()
         end
         return Enum.ContextActionResult.Pass
-    end, false, Enum.KeyCode.R))
+    end, false, Enum.KeyCode.R)
+    table.insert(connections, bindConnection)
     
     table.insert(connections, RunService.Heartbeat:Connect(function()
         if isEnabled then
@@ -240,11 +242,15 @@ function DeathBallScript:Unload()
     self:Disable()
     destroyUI()
     
-    -- 清理ContextActionService绑定
+    -- 清理ContextActionService绑定（以防万一）
     ContextActionService:UnbindAction("TeleportToBall")
     
     -- 重置全局标记
     _G.DeathBallScriptLoaded = false
 end
 
+-- 将模块暴露到全局变量
+_G.DeathBallScript = DeathBallScript
+
+-- 如果作为 require 的模块，返回自身
 return DeathBallScript
