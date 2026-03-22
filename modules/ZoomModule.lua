@@ -21,7 +21,7 @@ function ZoomModule.new()
         -- 缩放调整步长（每次按 +/- 键改变的视野值）
         zoomStep = 5,
         -- 最小缩放视野（数值越小放大倍数越大）
-        minZoomFOV = 15,
+        minZoomFOV = 5,
     }
     
     -- 状态变量
