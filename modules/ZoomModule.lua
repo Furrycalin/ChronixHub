@@ -1,5 +1,5 @@
 -- ZoomModule.lua
--- 摄像机缩放模块，支持按键触发，使用 - / + 键调整缩放程度
+-- 摄像机缩放模块，每次触发时重置缩放倍率，不保存手动调整的值
 
 local ZoomModule = {}
 ZoomModule.__index = ZoomModule
@@ -21,24 +21,24 @@ function ZoomModule.new()
         -- 缩放调整步长（每次按 +/- 键改变的视野值）
         zoomStep = 5,
         -- 最小缩放视野（数值越小放大倍数越大）
-        minZoomFOV = 5,
+        minZoomFOV = 5,               -- 修改为5
+        -- 默认缩放视野（每次按下缩放键时的初始视野）
+        defaultZoomFOV = 30,
     }
     
     -- 状态变量
-    self.isEnabled = false           -- 模块是否启用
-    self.isZooming = false           -- 是否正在缩放状态
+    self.isEnabled = false
+    self.isZooming = false
     self.normalFOV = 70              -- 正常视野，会在启用时从相机获取
-    self.currentZoomFOV = 30         -- 当前缩放时的视野，可通过 +/- 调整
+    self.currentZoomFOV = self.config.defaultZoomFOV  -- 当前缩放时的视野
     
-    -- 连接对象，用于后续断开
+    -- 连接对象
     self.connections = {
         inputBegan = nil,
         inputEnded = nil,
     }
     
-    -- 相机引用
     self.camera = workspace.CurrentCamera
-    
     return self
 end
 
@@ -47,10 +47,9 @@ function ZoomModule:GetNormalFOV()
     return self.normalFOV
 end
 
--- 设置正常视野（如果需要在运行时修改）
+-- 设置正常视野（谨慎使用）
 function ZoomModule:SetNormalFOV(fov)
     self.normalFOV = fov
-    -- 如果不在缩放状态，立即应用
     if not self.isZooming and self.isEnabled then
         self.camera.FieldOfView = self.normalFOV
     end
@@ -67,7 +66,7 @@ function ZoomModule:AdjustZoom(delta)
     if not self.isZooming or not self.isEnabled then return end
     
     local step = delta * self.config.zoomStep
-    local newZoomFOV = self.currentZoomFOV + step  -- 注意：增加视野 = 缩小，减少视野 = 放大
+    local newZoomFOV = self.currentZoomFOV + step
     newZoomFOV = math.clamp(newZoomFOV, self.config.minZoomFOV, self.normalFOV)
     
     if newZoomFOV == self.currentZoomFOV then return end
@@ -76,19 +75,17 @@ function ZoomModule:AdjustZoom(delta)
     self:UpdateCameraFOV(self.currentZoomFOV)
 end
 
--- 开始缩放
+-- 开始缩放（按下按键时触发）
 function ZoomModule:StartZoom()
     if not self.isEnabled then return end
     
     self.isZooming = true
-    -- 重置当前缩放视野为上次保存的值，如果大于正常视野则重置为默认值
-    if self.currentZoomFOV > self.normalFOV then
-        self.currentZoomFOV = math.min(30, self.normalFOV - 10)
-    end
+    -- 每次缩放都重置为默认缩放视野，不保存上次调整的值
+    self.currentZoomFOV = self.config.defaultZoomFOV
     self:UpdateCameraFOV(self.currentZoomFOV)
 end
 
--- 结束缩放
+-- 结束缩放（松开按键时触发）
 function ZoomModule:StopZoom()
     if not self.isEnabled then return end
     
@@ -98,7 +95,6 @@ end
 
 -- 设置绑定的按键
 function ZoomModule:SetBindKey(keyType)
-    -- keyType 应该是 Enum.UserInputType 或 Enum.KeyCode 类型
     self.config.bindKey = keyType
 end
 
@@ -107,10 +103,10 @@ function ZoomModule:GetBindKey()
     return self.config.bindKey
 end
 
--- 设置最小缩放视野（放大倍数）
+-- 设置最小缩放视野
 function ZoomModule:SetMinZoomFOV(minFOV)
     self.config.minZoomFOV = minFOV
-    -- 如果当前缩放视野小于新的最小值，进行调整
+    -- 如果当前缩放视野小于新的最小值，进行调整（仅在缩放状态下）
     if self.isZooming and self.currentZoomFOV < minFOV then
         self.currentZoomFOV = minFOV
         self:UpdateCameraFOV(self.currentZoomFOV)
@@ -120,6 +116,16 @@ end
 -- 获取最小缩放视野
 function ZoomModule:GetMinZoomFOV()
     return self.config.minZoomFOV
+end
+
+-- 设置默认缩放视野（每次按下时的初始值）
+function ZoomModule:SetDefaultZoomFOV(defaultFOV)
+    self.config.defaultZoomFOV = math.clamp(defaultFOV, self.config.minZoomFOV, self.normalFOV)
+end
+
+-- 获取默认缩放视野
+function ZoomModule:GetDefaultZoomFOV()
+    return self.config.defaultZoomFOV
 end
 
 -- 设置缩放调整步长
@@ -144,15 +150,7 @@ end
 
 -- 检查输入是否匹配绑定的按键
 function ZoomModule:IsMatchingInput(input)
-    -- 处理鼠标按键
-    if input.UserInputType == self.config.bindKey then
-        return true
-    end
-    -- 处理键盘按键（如果绑定的是键盘按键）
-    if input.KeyCode == self.config.bindKey then
-        return true
-    end
-    return false
+    return input.UserInputType == self.config.bindKey or input.KeyCode == self.config.bindKey
 end
 
 -- 启用模块
@@ -162,9 +160,9 @@ function ZoomModule:Enable()
     -- 获取当前玩家的正常视野
     self.normalFOV = self.camera.FieldOfView
     
-    -- 初始化当前缩放视野为默认值（不超过正常视野）
-    local defaultZoomFOV = math.min(30, self.normalFOV - 10)
-    self.currentZoomFOV = defaultZoomFOV
+    -- 确保默认缩放视野在有效范围内
+    self.config.defaultZoomFOV = math.clamp(self.config.defaultZoomFOV, self.config.minZoomFOV, self.normalFOV)
+    self.currentZoomFOV = self.config.defaultZoomFOV
     
     -- 连接输入事件
     self.connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -178,12 +176,10 @@ function ZoomModule:Enable()
         -- 处理 +/- 调整缩放（仅在缩放状态下）
         if self.isZooming then
             if input.KeyCode == Enum.KeyCode.Minus then
-                -- 按下减号：放大（减小视野）
-                self:AdjustZoom(-1)
-                input:Processed()  -- 阻止按键默认行为（如打开控制台等）
+                self:AdjustZoom(-1)   -- 放大（减小视野）
+                input:Processed()
             elseif input.KeyCode == Enum.KeyCode.Equals then
-                -- 按下加号（通常 = 键）：缩小（增大视野）
-                self:AdjustZoom(1)
+                self:AdjustZoom(1)    -- 缩小（增大视野）
                 input:Processed()
             end
         end
@@ -205,7 +201,6 @@ end
 function ZoomModule:Disable()
     if not self.isEnabled then return end
     
-    -- 如果正在缩放，先恢复视野
     if self.isZooming then
         self:StopZoom()
         self.isZooming = false
@@ -225,12 +220,9 @@ function ZoomModule:Disable()
     self.isEnabled = false
 end
 
--- 卸载模块，完全清理资源
+-- 卸载模块
 function ZoomModule:Unload()
-    -- 先禁用模块，断开所有监听
     self:Disable()
-    
-    -- 清理所有引用，便于垃圾回收
     self.camera = nil
     self.config = nil
     self.connections = nil
