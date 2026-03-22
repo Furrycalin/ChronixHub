@@ -14,7 +14,7 @@ function ZoomModule.new()
     
     -- 配置参数
     self.config = {
-        -- 按键绑定，默认为鼠标侧键4
+        -- 按键绑定，默认为C键
         bindKey = Enum.KeyCode.C,
         -- 缩放过渡动画时间（秒）
         tweenTime = 0.15,
@@ -29,6 +29,9 @@ function ZoomModule.new()
     self.isZooming = false           -- 是否正在缩放状态
     self.normalFOV = 70              -- 正常视野，会在启用时从相机获取
     self.currentZoomFOV = 30         -- 当前缩放时的视野，可通过滚轮调整
+    
+    -- 保存原始相机类型，用于恢复
+    self.originalCameraType = nil
     
     -- 连接对象，用于后续断开
     self.connections = {
@@ -66,8 +69,8 @@ end
 function ZoomModule:OnMouseWheel(input)
     if not self.isZooming or not self.isEnabled then return end
     
-    -- 获取滚轮滚动方向
-    local scrollDelta = input.Delta.Z  -- 正值向上滚动（放大），负值向下滚动（缩小）
+    -- 获取滚轮滚动方向（正值向上滚动，负值向下滚动）
+    local scrollDelta = input.Delta.Z
     
     -- 计算新的缩放视野
     local newZoomFOV = self.currentZoomFOV - (scrollDelta * self.config.scrollSensitivity)
@@ -87,6 +90,11 @@ function ZoomModule:StartZoom()
     if not self.isEnabled then return end
     
     self.isZooming = true
+    
+    -- 保存当前相机类型并设置为脚本控制，防止默认滚轮行为
+    self.originalCameraType = self.camera.CameraType
+    self.camera.CameraType = Enum.CameraType.Scriptable
+    
     -- 重置当前缩放视野为上次保存的值，如果大于正常视野则重置为默认值
     if self.currentZoomFOV > self.normalFOV then
         self.currentZoomFOV = math.min(30, self.normalFOV - 10)
@@ -100,6 +108,12 @@ function ZoomModule:StopZoom()
     
     self.isZooming = false
     self:UpdateCameraFOV(self.normalFOV)
+    
+    -- 恢复原始相机类型
+    if self.originalCameraType then
+        self.camera.CameraType = self.originalCameraType
+        self.originalCameraType = nil
+    end
 end
 
 -- 设置绑定的按键
@@ -185,7 +199,8 @@ function ZoomModule:Enable()
         if input.UserInputType == Enum.UserInputType.MouseWheel then
             if self.isZooming then
                 self:OnMouseWheel(input)
-                input:Processed()   -- 阻止默认的摄像机距离调整
+                -- 标记已处理，但仍建议设置Scriptable模式来彻底阻止默认行为
+                input:Processed()
             end
         end
     end)
@@ -206,7 +221,7 @@ end
 function ZoomModule:Disable()
     if not self.isEnabled then return end
     
-    -- 如果正在缩放，先恢复视野
+    -- 如果正在缩放，先恢复视野和相机类型
     if self.isZooming then
         self:StopZoom()
         self.isZooming = false
@@ -239,6 +254,7 @@ function ZoomModule:Unload()
     self.isZooming = nil
     self.normalFOV = nil
     self.currentZoomFOV = nil
+    self.originalCameraType = nil
 end
 
 return ZoomModule
