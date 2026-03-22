@@ -127,7 +127,7 @@ local function updateUI()
         return
     end
     
-    local isSpectating = playerPos.Position.Z < -777.55 and playerPos.Position.Y > 279.17
+    local isSpectating = playerPos.Position.Z < -767.55 and playerPos.Position.Y > 279.17
     
     if isSpectating then
         if statusText then
