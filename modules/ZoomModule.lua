@@ -67,9 +67,10 @@ function ZoomModule:OnMouseWheel(input)
     self.currentZoomFOV = newZoomFOV
     self:UpdateCameraFOV(self.currentZoomFOV)
 
-    -- 阻止引擎默认的摄像机距离调整
-    input:Processed()
+    -- 修复：移除这一行是解决鼠标被弹出和滚轮不好使的关键
+    -- input:Processed()
 end
+
 
 -- 开始缩放（按住按键时触发）
 function ZoomModule:StartZoom()
