@@ -15,7 +15,7 @@ function ZoomModule.new()
     -- 配置参数
     self.config = {
         -- 按键绑定，默认为鼠标侧键4
-        bindKey = Enum.UserInputType.MouseButton4,
+        bindKey = Enum.KeyCode.C,
         -- 缩放过渡动画时间（秒）
         tweenTime = 0.15,
         -- 滚轮调整灵敏度，数值越小调整越慢
