@@ -183,7 +183,10 @@ function ZoomModule:Enable()
         
         -- 处理鼠标滚轮（仅在缩放状态下）
         if input.UserInputType == Enum.UserInputType.MouseWheel then
-            self:OnMouseWheel(input)
+            if self.isZooming then
+                self:OnMouseWheel(input)
+                input:Processed()   -- 阻止默认的摄像机距离调整
+            end
         end
     end)
     
