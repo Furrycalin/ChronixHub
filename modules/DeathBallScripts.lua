@@ -88,7 +88,7 @@ local function destroyUI()
     end
 end
 
--- R键传送功能（修正版：先瞬移，再按F，再返回）
+-- R键传送功能（改进版：先按F，再瞬移，再返回）
 local function teleportToBallAndBack()
     -- 检查目标球
     if not targetBall or not targetBall:IsDescendantOf(Workspace) then
@@ -101,20 +101,37 @@ local function teleportToBallAndBack()
     end
     
     local currentCFrame = rootPart.CFrame
-    
-    -- 1. 先瞬移到球的位置（保持朝向）
     local ballCFrame = targetBall.CFrame
-    local newCFrame = CFrame.new(ballCFrame.Position, ballCFrame.Position + currentCFrame.LookVector)
+    
+    -- 计算球的半径（假设球为立方体，可根据实际情况微调）
+    local ballSize = targetBall.Size
+    local radius = (ballSize.X + ballSize.Y + ballSize.Z) / 6  -- 近似半径
+    local offset = radius + 2  -- 玩家与球表面的距离（2是玩家碰撞箱半径的估算）
+    
+    -- 1. 先按下F键，进入格挡状态
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    -- 等待一小段时间，让格挡动作完全启动（可调整等待帧数或时间）
+    for _ = 1, 3 do  -- 等待3帧，约0.05秒（60帧下）
+        RunService.Heartbeat:Wait()
+    end
+    
+    -- 2. 计算传送位置：从球心沿玩家当前方向偏移，确保玩家面向球
+    local direction = (currentCFrame.Position - ballCFrame.Position).Unit
+    local newPos = ballCFrame.Position + direction * offset
+    local newCFrame = CFrame.new(newPos, ballCFrame.Position)  -- 面向球心
+    
+    -- 3. 瞬移到该位置
     rootPart.CFrame = newCFrame
     
-    -- 2. 等待一帧，让物理引擎和游戏逻辑检测到碰撞
-    local waitForFrame = RunService.Heartbeat:Wait()
+    -- 4. 再等待一段时间，让碰撞检测生效，确保球被反弹
+    for _ = 1, 3 do
+        RunService.Heartbeat:Wait()
+    end
     
-    -- 3. 模拟按下F键（此时玩家在球的位置，格挡会生效）
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    -- 5. 松开F键（可选，如果游戏不需要保持按下，可以不松；但这里模拟完整按键）
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
     
-    -- 4. 立即传送回原位置
+    -- 6. 立即传送回原位置
     rootPart.CFrame = currentCFrame
 end
 
