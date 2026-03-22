@@ -67,7 +67,7 @@ function ZoomModule:OnMouseWheel(input)
     if not self.isZooming or not self.isEnabled then return end
     
     -- 获取滚轮滚动方向
-    local scrollDelta = input.Position.Z  -- 正值向上滚动（放大），负值向下滚动（缩小）
+    local scrollDelta = input.Delta.Z  -- 正值向上滚动（放大），负值向下滚动（缩小）
     
     -- 计算新的缩放视野
     local newZoomFOV = self.currentZoomFOV - (scrollDelta * self.config.scrollSensitivity)
