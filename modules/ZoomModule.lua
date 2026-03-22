@@ -1,5 +1,5 @@
 -- ZoomModule.lua
--- 一个可扩展的摄像机缩放模块，类似我的世界的缩放功能
+-- 摄像机缩放模块，支持按键触发，使用 - / + 键调整缩放程度
 
 local ZoomModule = {}
 ZoomModule.__index = ZoomModule
@@ -14,12 +14,12 @@ function ZoomModule.new()
     
     -- 配置参数
     self.config = {
-        -- 按键绑定，默认为鼠标侧键4
+        -- 按键绑定，默认为C键
         bindKey = Enum.KeyCode.C,
         -- 缩放过渡动画时间（秒）
         tweenTime = 0.15,
-        -- 滚轮调整灵敏度，数值越小调整越慢
-        scrollSensitivity = 5,
+        -- 缩放调整步长（每次按 +/- 键改变的视野值）
+        zoomStep = 5,
         -- 最小缩放视野（数值越小放大倍数越大）
         minZoomFOV = 15,
     }
@@ -28,13 +28,12 @@ function ZoomModule.new()
     self.isEnabled = false           -- 模块是否启用
     self.isZooming = false           -- 是否正在缩放状态
     self.normalFOV = 70              -- 正常视野，会在启用时从相机获取
-    self.currentZoomFOV = 30         -- 当前缩放时的视野，可通过滚轮调整
+    self.currentZoomFOV = 30         -- 当前缩放时的视野，可通过 +/- 调整
     
     -- 连接对象，用于后续断开
     self.connections = {
         inputBegan = nil,
         inputEnded = nil,
-        inputChanged = nil, -- 新增：用于监听滚轮
     }
     
     -- 相机引用
@@ -63,27 +62,18 @@ function ZoomModule:UpdateCameraFOV(targetFOV)
     tween:Play()
 end
 
--- 处理滚轮缩放
-function ZoomModule:OnMouseWheel(input)
+-- 调整缩放程度（delta: +1 增加视野/缩小，-1 减小视野/放大）
+function ZoomModule:AdjustZoom(delta)
     if not self.isZooming or not self.isEnabled then return end
     
-    -- 获取滚轮滚动方向
-    local scrollDelta = input.Delta.Z  -- 正值向上滚动（放大），负值向下滚动（缩小）
-    
-    -- 计算新的缩放视野
-    local newZoomFOV = self.currentZoomFOV - (scrollDelta * self.config.scrollSensitivity)
-    
-    -- 限制范围：最小为配置的最小缩放视野，最大为正常视野
+    local step = delta * self.config.zoomStep
+    local newZoomFOV = self.currentZoomFOV + step  -- 注意：增加视野 = 缩小，减少视野 = 放大
     newZoomFOV = math.clamp(newZoomFOV, self.config.minZoomFOV, self.normalFOV)
     
-    -- 更新当前缩放视野
+    if newZoomFOV == self.currentZoomFOV then return end
+    
     self.currentZoomFOV = newZoomFOV
-    
-    -- 应用新的视野
     self:UpdateCameraFOV(self.currentZoomFOV)
-    
-    -- 注意：这里不再调用 input:Processed()
-    -- 因为我们只是想调整自己的相机FOV，并不想阻止其他UI或系统接收滚轮事件。
 end
 
 -- 开始缩放
@@ -132,14 +122,14 @@ function ZoomModule:GetMinZoomFOV()
     return self.config.minZoomFOV
 end
 
--- 设置滚轮灵敏度
-function ZoomModule:SetScrollSensitivity(sensitivity)
-    self.config.scrollSensitivity = sensitivity
+-- 设置缩放调整步长
+function ZoomModule:SetZoomStep(step)
+    self.config.zoomStep = step
 end
 
--- 获取滚轮灵敏度
-function ZoomModule:GetScrollSensitivity()
-    return self.config.scrollSensitivity
+-- 获取缩放调整步长
+function ZoomModule:GetZoomStep()
+    return self.config.zoomStep
 end
 
 -- 设置动画时间
@@ -184,7 +174,19 @@ function ZoomModule:Enable()
         if self:IsMatchingInput(input) then
             self:StartZoom()
         end
-        -- 注意：滚轮事件已移至 InputChanged 中处理
+        
+        -- 处理 +/- 调整缩放（仅在缩放状态下）
+        if self.isZooming then
+            if input.KeyCode == Enum.KeyCode.Minus then
+                -- 按下减号：放大（减小视野）
+                self:AdjustZoom(-1)
+                input:Processed()  -- 阻止按键默认行为（如打开控制台等）
+            elseif input.KeyCode == Enum.KeyCode.Equals then
+                -- 按下加号（通常 = 键）：缩小（增大视野）
+                self:AdjustZoom(1)
+                input:Processed()
+            end
+        end
     end)
     
     self.connections.inputEnded = UserInputService.InputEnded:Connect(function(input, gameProcessed)
@@ -193,17 +195,6 @@ function ZoomModule:Enable()
         -- 处理缩放按键结束
         if self:IsMatchingInput(input) then
             self:StopZoom()
-        end
-    end)
-    
-    -- 新增：在 InputChanged 中监听滚轮事件，这是关键修复点
-    self.connections.inputChanged = UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.MouseWheel then
-            -- 只有在缩放状态下才处理滚轮
-            if self.isZooming then
-                self:OnMouseWheel(input)
-            end
         end
     end)
     
@@ -229,12 +220,6 @@ function ZoomModule:Disable()
     if self.connections.inputEnded then
         self.connections.inputEnded:Disconnect()
         self.connections.inputEnded = nil
-    end
-    
-    -- 新增：断开 InputChanged 的连接
-    if self.connections.inputChanged then
-        self.connections.inputChanged:Disconnect()
-        self.connections.inputChanged = nil
     end
     
     self.isEnabled = false
