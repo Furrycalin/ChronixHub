@@ -88,25 +88,33 @@ local function destroyUI()
     end
 end
 
--- R键传送功能
+-- R键传送功能（修正版：先瞬移，再按F，再返回）
 local function teleportToBallAndBack()
+    -- 检查目标球
     if not targetBall or not targetBall:IsDescendantOf(Workspace) then
         return
     end
     
+    -- 检查角色部件
     if not rootPart or not rootPart.Parent then
         return
     end
     
     local currentCFrame = rootPart.CFrame
     
-    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-    
+    -- 1. 先瞬移到球的位置（保持朝向）
     local ballCFrame = targetBall.CFrame
     local newCFrame = CFrame.new(ballCFrame.Position, ballCFrame.Position + currentCFrame.LookVector)
     rootPart.CFrame = newCFrame
     
+    -- 2. 等待一帧，让物理引擎和游戏逻辑检测到碰撞
+    local waitForFrame = RunService.Heartbeat:Wait()
+    
+    -- 3. 模拟按下F键（此时玩家在球的位置，格挡会生效）
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+    
+    -- 4. 立即传送回原位置
     rootPart.CFrame = currentCFrame
 end
 
