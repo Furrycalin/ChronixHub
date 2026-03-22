@@ -1,6 +1,5 @@
 -- 死亡球脚本模块
 local DeathBallScript = {}
-DeathBallScript.__index = DeathBallScript
 
 -- 私有变量
 local Players = game:GetService("Players")
