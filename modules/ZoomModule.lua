@@ -60,7 +60,7 @@ end
 function ZoomModule:OnMouseWheel(input)
     if not self.isZooming or not self.isEnabled then return end
     
-    local scrollDelta = input.Delta.Z
+    local scrollDelta = input.Position.Z
     if scrollDelta == 0 then return end
     
     -- 计算新的缩放视野
