@@ -1,320 +1,230 @@
--- ================================================
--- 文件名：NameTagModule.lua
--- 放置位置：ReplicatedStorage（客户端 require 使用）
--- ================================================
+-- highlight_module_optimized.lua
+-- 高性能高亮模块（异步分帧，防止重复，可调批大小）
 
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local highlighter = {}
 local RunService = game:GetService("RunService")
 
-local NameTagModule = {}
-local instances = {}          -- 存储所有创建的实例，用于模块级卸载
+-- 预定义颜色方案
+local colorPresets = {
+    item = {
+        outlineColor = Color3.fromRGB(0, 170, 255),
+        fillColor = Color3.fromRGB(0, 170, 255)
+    }
+}
 
--- 本地玩家（仅客户端有效）
-local LocalPlayer = Players.LocalPlayer
+-- 存储所有活动的高亮器实例（用于全局卸载）
+local activeHighlighters = {}
 
--- -------------------------------------------------
--- 实例元表
--- -------------------------------------------------
-local NameTagManager = {}
-NameTagManager.__index = NameTagManager
-
---[[
-	.new(
-		modelName: string,                -- 要匹配的模型名称
-		matchMode: "精准"|"模糊",         -- 匹配模式
-		fontSize: number?,               -- 字号（nil 则自动缩放）
-		showDistance: boolean?,          -- 是否显示与本地玩家的距离
-		customText: string?             -- 自定义显示文本（nil 则显示模型原名）
-	)
-	返回值：NameTagManager 实例（默认禁用）
---]]
-function NameTagModule.new(modelName, matchMode, fontSize, showDistance, customText)
-	local self = setmetatable({}, NameTagManager)
-	
-	-- 参数
-	self.modelName = modelName
-	self.matchMode = matchMode == "模糊" and "模糊" or "精准"
-	self.fontSize = fontSize
-	self.showDistance = showDistance or false
-	self.customText = customText
-	
-	-- 状态
-	self.enabled = false
-	self.connections = {}          -- 存储所有 RBXScriptConnection
-	self.activeTags = {}           -- { [Model] = {billboard, label} }
-	self.pendingTasks = {}         -- 存储等待任务句柄，用于取消
-	
-	-- 添加到全局实例列表
-	table.insert(instances, self)
-	
-	return self
+-- 任务ID生成器
+local taskCounter = 0
+local function getNewTaskId()
+    taskCounter = taskCounter + 1
+    return taskCounter
 end
 
--- -------------------------------------------------
--- 启用标签：扫描现有 + 监听新模型
--- -------------------------------------------------
-function NameTagManager:enable()
-	if self.enabled then return end
-	self.enabled = true
-	
-	-- 1. 为已存在的模型添加标签（异步处理）
-	self:_scanExistingModelsAsync()
-	
-	-- 2. 监听新添加的模型
-	local conn = Workspace.DescendantAdded:Connect(function(desc)
-		self:_onDescendantAdded(desc)
-	end)
-	table.insert(self.connections, conn)
-	
-	-- 3. 若开启距离显示，启动每帧更新
-	if self.showDistance then
-		local heartbeatConn = RunService.Heartbeat:Connect(function()
-			self:_updateDistances()
-		end)
-		table.insert(self.connections, heartbeatConn)
-	end
+-- 创建高亮器实例
+-- @param modelName     要匹配的名称
+-- @param matchMode     "only" 完全匹配，否则模糊匹配
+-- @param colorPresetKey 颜色预设键名（如 "item"）
+-- @param batchSize     每帧处理的对象数量（默认100，可根据性能调整）
+local function createHighlighterInstance(modelName, matchMode, colorPresetKey, batchSize)
+    local self = {}
+    
+    self.modelName = modelName
+    self.matchMode = matchMode
+    self.batchSize = batchSize or 100   -- 默认每帧100个对象
+    self.colorPreset = colorPresets[colorPresetKey] or {
+        outlineColor = Color3.new(1, 1, 1),
+        fillColor = Color3.new(1, 1, 1)
+    }
+    self.loop = false
+    self.activeHandles = {}          -- 存储所有高亮实例（用于快速销毁）
+    self.partToHighlight = {}        -- 部件 -> 高亮（防止重复添加）
+    self.scanConnection = nil        -- 当前扫描连接的引用
+    self.descendantConnection = nil   -- workspace.DescendantAdded 连接
+    self.modelConns = {}              -- 模型内部的 DescendantAdded 连接
+    
+    -- 内部：为单个部件添加高亮（防重复）
+    local function addHighlight(part)
+        if not part:IsA("BasePart") then return end
+        -- 检查是否已为此部件创建过高亮
+        if self.partToHighlight[part] then
+            return
+        end
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = self.colorPreset.fillColor
+        highlight.OutlineColor = self.colorPreset.outlineColor
+        highlight.Parent = part
+        table.insert(self.activeHandles, highlight)
+        self.partToHighlight[part] = highlight
+    end
+    
+    -- 内部：移除指定高亮
+    local function removeHighlight(highlight)
+        if highlight and highlight.Parent then
+            highlight:Destroy()
+        end
+    end
+    
+    -- 内部：异步扫描核心（分帧处理）
+    local function asyncApplyCore(taskId)
+        -- 断开旧扫描连接（如果有）
+        if self.scanConnection then
+            self.scanConnection:Disconnect()
+            self.scanConnection = nil
+        end
+        
+        local allObjects = workspace:GetDescendants()
+        local total = #allObjects
+        local processed = 0
+        local batch = self.batchSize
+        
+        -- 创建新的扫描连接
+        self.scanConnection = RunService.RenderStepped:Connect(function()
+            -- 任务已被取消，清理自己并退出
+            if taskId ~= self.currentApplyTaskId then
+                if self.scanConnection then
+                    self.scanConnection:Disconnect()
+                    self.scanConnection = nil
+                end
+                return
+            end
+            
+            local endIdx = math.min(processed + batch, total)
+            for i = processed + 1, endIdx do
+                local obj = allObjects[i]
+                -- 名称匹配
+                if obj.Name == self.modelName or (self.matchMode ~= "only" and string.find(obj.Name, self.modelName)) then
+                    if obj:IsA("Model") then
+                        for _, part in obj:GetDescendants() do
+                            addHighlight(part)
+                        end
+                    elseif obj:IsA("BasePart") then
+                        addHighlight(obj)
+                    end
+                end
+            end
+            processed = endIdx
+            
+            if processed >= total then
+                -- 扫描完成，断开连接
+                if self.scanConnection then
+                    self.scanConnection:Disconnect()
+                    self.scanConnection = nil
+                end
+                self.isApplyingAsync = false
+            end
+        end)
+    end
+    
+    -- 公共方法：应用高亮（异步）
+    self.apply = function()
+        -- 如果正在应用，取消当前任务（通过更新ID）
+        if self.isApplyingAsync then
+            self.currentApplyTaskId = getNewTaskId()
+            -- 主动断开旧扫描连接（更快取消）
+            if self.scanConnection then
+                self.scanConnection:Disconnect()
+                self.scanConnection = nil
+            end
+        else
+            self.currentApplyTaskId = getNewTaskId()
+        end
+        
+        -- 清理之前的动态监听（loop相关）
+        if self.descendantConnection then
+            self.descendantConnection:Disconnect()
+            self.descendantConnection = nil
+        end
+        for _, conn in pairs(self.modelConns) do
+            conn:Disconnect()
+        end
+        self.modelConns = {}
+        
+        self.isApplyingAsync = true
+        asyncApplyCore(self.currentApplyTaskId)
+        
+        -- 如果启用循环，监听新加入的对象
+        if self.loop then
+            self.descendantConnection = workspace.DescendantAdded:Connect(function(descendant)
+                -- 向上查找直到根，检查是否有符合条件的祖先
+                local current = descendant
+                while current do
+                    if current.Name == self.modelName or (self.matchMode ~= "only" and string.find(current.Name, self.modelName)) then
+                        if current:IsA("Model") then
+                            -- 为模型内所有部件添加高亮
+                            for _, part in current:GetDescendants() do
+                                addHighlight(part)
+                            end
+                            -- 监听模型内部新增部件
+                            local childConn = current.DescendantAdded:Connect(function(newPart)
+                                addHighlight(newPart)
+                            end)
+                            table.insert(self.modelConns, childConn)
+                        elseif current:IsA("BasePart") then
+                            addHighlight(current)
+                        end
+                        break
+                    end
+                    current = current.Parent
+                end
+            end)
+        end
+    end
+    
+    -- 公共方法：销毁此高亮器创建的所有高亮
+    self.destroy = function()
+        -- 断开所有连接
+        if self.scanConnection then
+            self.scanConnection:Disconnect()
+            self.scanConnection = nil
+        end
+        if self.descendantConnection then
+            self.descendantConnection:Disconnect()
+            self.descendantConnection = nil
+        end
+        for _, conn in pairs(self.modelConns) do
+            conn:Disconnect()
+        end
+        self.modelConns = {}
+        
+        -- 销毁所有高亮
+        for _, highlight in pairs(self.activeHandles) do
+            removeHighlight(highlight)
+        end
+        self.activeHandles = {}
+        self.partToHighlight = {}
+        
+        -- 取消异步任务
+        if self.isApplyingAsync then
+            self.currentApplyTaskId = getNewTaskId()
+            self.isApplyingAsync = false
+        end
+    end
+    
+    -- 公共方法：卸载此实例（从全局列表移除）
+    self.unload = function()
+        self.destroy()
+        for i, v in ipairs(activeHighlighters) do
+            if v == self then
+                table.remove(activeHighlighters, i)
+                break
+            end
+        end
+    end
+    
+    table.insert(activeHighlighters, self)
+    return self
 end
 
--- -------------------------------------------------
--- 禁用标签：断开监听 + 移除所有已添加标签 + 取消等待任务
--- -------------------------------------------------
-function NameTagManager:disable()
-	if not self.enabled then return end
-	self.enabled = false
-	
-	-- 断开所有连接
-	for _, conn in ipairs(self.connections) do
-		conn:Disconnect()
-	end
-	self.connections = {}
-	
-	-- 取消所有正在等待的添加任务
-	for _, task in pairs(self.pendingTasks) do
-		task.cancelled = true
-	end
-	self.pendingTasks = {}
-	
-	-- 移除所有已添加的 BillboardGui
-	self:_removeAllTags()
+-- 对外接口
+highlighter.new = createHighlighterInstance
+
+-- 全局卸载所有高亮器
+highlighter.unload = function()
+    for i = #activeHighlighters, 1, -1 do
+        activeHighlighters[i]:unload()
+    end
 end
 
--- -------------------------------------------------
--- 销毁当前实例（彻底清理，并从模块实例列表移除）
--- -------------------------------------------------
-function NameTagManager:destroy()
-	self:disable()
-	
-	-- 从模块实例列表中移除自身
-	for i, inst in ipairs(instances) do
-		if inst == self then
-			table.remove(instances, i)
-			break
-		end
-	end
-	
-	-- 断开所有可能的外部引用（元表置空，便于GC）
-	setmetatable(self, nil)
-end
-
--- -------------------------------------------------
--- 模块级卸载：销毁所有实例，彻底清空功能
--- -------------------------------------------------
-function NameTagModule.unload()
-	-- 反向遍历，避免索引错误
-	for i = #instances, 1, -1 do
-		local inst = instances[i]
-		if inst and inst.destroy then
-			inst:destroy()
-		end
-	end
-	instances = {}
-end
-
--- -------------------------------------------------
--- 私有方法：异步扫描所有现有模型（避免阻塞）
--- -------------------------------------------------
-function NameTagManager:_scanExistingModelsAsync()
-	task.spawn(function()
-		-- 先获取所有模型（GetDescendants 可能较大，但只执行一次）
-		local allDescendants = Workspace:GetDescendants()
-		for _, desc in ipairs(allDescendants) do
-			-- 检查是否已被禁用（可能扫描过程中用户关闭了功能）
-			if not self.enabled then return end
-			self:_onDescendantAdded(desc)
-		end
-	end)
-end
-
--- -------------------------------------------------
--- 私有方法：处理单个新加入的对象
--- -------------------------------------------------
-function NameTagManager:_onDescendantAdded(desc)
-	if not self.enabled then return end
-	if not desc:IsA("Model") then return end
-	
-	-- 排除玩家角色（本地玩家和其他玩家）
-	if Players:GetPlayerFromCharacter(desc) then return end
-	
-	-- 名称匹配
-	if not self:_matchName(desc.Name) then return end
-	
-	-- 避免重复添加（可能已经存在标签）
-	if self.activeTags[desc] then return end
-	
-	-- 异步添加标签（等待模型就绪）
-	self:_addTagToModelAsync(desc)
-end
-
--- -------------------------------------------------
--- 私有方法：名称匹配逻辑
--- -------------------------------------------------
-function NameTagManager:_matchName(name)
-	if self.matchMode == "精准" then
-		return name == self.modelName
-	else  -- 模糊匹配
-		return string.find(name, self.modelName) ~= nil
-	end
-end
-
--- -------------------------------------------------
--- 私有方法：异步为模型添加标签（等待可依附部件出现）
--- -------------------------------------------------
-function NameTagManager:_addTagToModelAsync(model)
-	local taskId = {}
-	self.pendingTasks[model] = taskId
-	
-	task.spawn(function()
-		-- 等待超时时间（秒）
-		local timeout = 5
-		local startTime = tick()
-		
-		-- 循环等待合适的 Adornee
-		local adornee = nil
-		while tick() - startTime < timeout do
-			-- 如果功能已被禁用或任务被取消，则退出
-			if not self.enabled or taskId.cancelled then
-				self.pendingTasks[model] = nil
-				return
-			end
-			
-			-- 尝试获取 Head
-			adornee = model:FindFirstChild("Head")
-			if adornee and adornee:IsA("BasePart") then
-				break
-			end
-			
-			-- 尝试获取 PrimaryPart
-			adornee = model.PrimaryPart
-			if adornee and adornee:IsA("BasePart") then
-				break
-			end
-			
-			-- 尝试获取任意 BasePart（但不包括不可见的附属物）
-			for _, child in ipairs(model:GetDescendants()) do
-				if child:IsA("BasePart") then
-					adornee = child
-					break
-				end
-			end
-			if adornee then break end
-			
-			-- 等待一帧再重试
-			task.wait()
-		end
-		
-		-- 清理 pending 记录
-		self.pendingTasks[model] = nil
-		
-		-- 如果超时或功能已禁用，放弃添加
-		if not adornee or not self.enabled then
-			return
-		end
-		
-		-- 再次检查是否已被其他任务添加（防止重复）
-		if self.activeTags[model] then
-			return
-		end
-		
-		-- 创建 BillboardGui
-		local billboard = Instance.new("BillboardGui")
-		billboard.Name = model.Name .. "_NameTag"
-		billboard.Adornee = adornee
-		billboard.Size = UDim2.new(0, 200, 0, 50)
-		billboard.StudsOffset = Vector3.new(0, 3, 0)   -- 头部上方偏移
-		billboard.AlwaysOnTop = true
-		billboard.Parent = model
-		
-		-- 创建 TextLabel
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, 0, 1, 0)
-		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.TextStrokeTransparency = 0.5
-		label.Font = Enum.Font.SourceSansBold
-		label.Parent = billboard
-		
-		-- 文字内容
-		if self.customText then
-			label.Text = self.customText
-		else
-			label.Text = model.Name
-		end
-		
-		-- 字号设置
-		if self.fontSize then
-			label.TextScaled = false
-			label.TextSize = self.fontSize
-		else
-			label.TextScaled = true
-		end
-		
-		-- 存储
-		self.activeTags[model] = {
-			billboard = billboard,
-			label = label
-		}
-	end)
-end
-
--- -------------------------------------------------
--- 私有方法：移除当前实例所有标签
--- -------------------------------------------------
-function NameTagManager:_removeAllTags()
-	for model, tag in pairs(self.activeTags) do
-		if tag.billboard and tag.billboard.Parent then
-			tag.billboard:Destroy()
-		end
-	end
-	self.activeTags = {}
-end
-
--- -------------------------------------------------
--- 私有方法：更新所有已激活标签的距离显示
--- -------------------------------------------------
-function NameTagManager:_updateDistances()
-	if not self.enabled or not self.showDistance then return end
-	
-	-- 获取本地玩家角色根部件
-	local character = LocalPlayer and LocalPlayer.Character
-	local rootPart = character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
-	if not rootPart then return end
-	
-	for model, tag in pairs(self.activeTags) do
-		-- 若模型已被删除，清理标签
-		if not model or not model.Parent then
-			if tag.billboard then tag.billboard:Destroy() end
-			self.activeTags[model] = nil
-			continue
-		end
-		
-		local adornee = tag.billboard.Adornee
-		if adornee then
-			local dist = (adornee.Position - rootPart.Position).Magnitude
-			local baseText = self.customText or model.Name
-			tag.label.Text = string.format("%s (%.1f)", baseText, dist)
-		end
-	end
-end
-
-return NameTagModule
+return highlighter
