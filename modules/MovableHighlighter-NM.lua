@@ -12,7 +12,7 @@ local MovableHighlighter = {}
 -- 默认配置（可修改）
 local DEFAULT_CONFIG = {
     fillColor = Color3.fromRGB(255, 215, 0),      -- 填充色（金色）
-    outlineColor = Color3.fromRGB(255, 0, 0),     -- 轮廓色（红色）
+    outlineColor = Color3.fromRGB(255, 215, 0),     -- 轮廓色（红色）
     fillTransparency = 0.7,
     outlineTransparency = 0.0,
     maxHeight = 100,                               -- 最大允许高度（Y轴）
