@@ -183,7 +183,6 @@ function FlingDetector:unload()
     -- 清理玩家状态
     self.PlayerStates = {}
     
-    print("FlingDetector: Unloaded")
     return true
 end
 
