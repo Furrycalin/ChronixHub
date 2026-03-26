@@ -37,12 +37,13 @@ function NameTagModule.new(modelName, matchMode, fontSize, showDistance, customT
 	self.matchMode = matchMode == "模糊" and "模糊" or "精准"
 	self.fontSize = fontSize
 	self.showDistance = showDistance or false
-	self.customText = customText   -- 可能为 nil，表示使用模型原名
+	self.customText = customText
 	
 	-- 状态
 	self.enabled = false
 	self.connections = {}          -- 存储所有 RBXScriptConnection
 	self.activeTags = {}           -- { [Model] = {billboard, label} }
+	self.pendingTasks = {}         -- 存储等待任务句柄，用于取消
 	
 	-- 添加到全局实例列表
 	table.insert(instances, self)
@@ -57,8 +58,8 @@ function NameTagManager:enable()
 	if self.enabled then return end
 	self.enabled = true
 	
-	-- 1. 为已存在的符合模型添加标签
-	self:_scanExistingModels()
+	-- 1. 为已存在的模型添加标签（异步处理）
+	self:_scanExistingModelsAsync()
 	
 	-- 2. 监听新添加的模型
 	local conn = Workspace.DescendantAdded:Connect(function(desc)
@@ -76,7 +77,7 @@ function NameTagManager:enable()
 end
 
 -- -------------------------------------------------
--- 禁用标签：断开监听 + 移除所有已添加标签
+-- 禁用标签：断开监听 + 移除所有已添加标签 + 取消等待任务
 -- -------------------------------------------------
 function NameTagManager:disable()
 	if not self.enabled then return end
@@ -87,6 +88,12 @@ function NameTagManager:disable()
 		conn:Disconnect()
 	end
 	self.connections = {}
+	
+	-- 取消所有正在等待的添加任务
+	for _, task in pairs(self.pendingTasks) do
+		task.cancelled = true
+	end
+	self.pendingTasks = {}
 	
 	-- 移除所有已添加的 BillboardGui
 	self:_removeAllTags()
@@ -125,12 +132,18 @@ function NameTagModule.unload()
 end
 
 -- -------------------------------------------------
--- 私有方法：扫描 Workspace 中所有现有模型
+-- 私有方法：异步扫描所有现有模型（避免阻塞）
 -- -------------------------------------------------
-function NameTagManager:_scanExistingModels()
-	for _, desc in ipairs(Workspace:GetDescendants()) do
-		self:_onDescendantAdded(desc)
-	end
+function NameTagManager:_scanExistingModelsAsync()
+	task.spawn(function()
+		-- 先获取所有模型（GetDescendants 可能较大，但只执行一次）
+		local allDescendants = Workspace:GetDescendants()
+		for _, desc in ipairs(allDescendants) do
+			-- 检查是否已被禁用（可能扫描过程中用户关闭了功能）
+			if not self.enabled then return end
+			self:_onDescendantAdded(desc)
+		end
+	end)
 end
 
 -- -------------------------------------------------
@@ -146,10 +159,11 @@ function NameTagManager:_onDescendantAdded(desc)
 	-- 名称匹配
 	if not self:_matchName(desc.Name) then return end
 	
-	-- 避免重复添加
+	-- 避免重复添加（可能已经存在标签）
 	if self.activeTags[desc] then return end
 	
-	self:_addTagToModel(desc)
+	-- 异步添加标签（等待模型就绪）
+	self:_addTagToModelAsync(desc)
 end
 
 -- -------------------------------------------------
@@ -164,64 +178,103 @@ function NameTagManager:_matchName(name)
 end
 
 -- -------------------------------------------------
--- 私有方法：为单个模型创建 BillboardGui 标签
+-- 私有方法：异步为模型添加标签（等待可依附部件出现）
 -- -------------------------------------------------
-function NameTagManager:_addTagToModel(model)
-	-- 寻找合适的依附部件（Head > PrimaryPart > 任意BasePart）
-	local adornee = model:FindFirstChild("Head") or model.PrimaryPart
-	if not adornee then
-		for _, child in ipairs(model:GetDescendants()) do
-			if child:IsA("BasePart") then
-				adornee = child
+function NameTagManager:_addTagToModelAsync(model)
+	local taskId = {}
+	self.pendingTasks[model] = taskId
+	
+	task.spawn(function()
+		-- 等待超时时间（秒）
+		local timeout = 5
+		local startTime = tick()
+		
+		-- 循环等待合适的 Adornee
+		local adornee = nil
+		while tick() - startTime < timeout do
+			-- 如果功能已被禁用或任务被取消，则退出
+			if not self.enabled or taskId.cancelled then
+				self.pendingTasks[model] = nil
+				return
+			end
+			
+			-- 尝试获取 Head
+			adornee = model:FindFirstChild("Head")
+			if adornee and adornee:IsA("BasePart") then
 				break
 			end
+			
+			-- 尝试获取 PrimaryPart
+			adornee = model.PrimaryPart
+			if adornee and adornee:IsA("BasePart") then
+				break
+			end
+			
+			-- 尝试获取任意 BasePart（但不包括不可见的附属物）
+			for _, child in ipairs(model:GetDescendants()) do
+				if child:IsA("BasePart") then
+					adornee = child
+					break
+				end
+			end
+			if adornee then break end
+			
+			-- 等待一帧再重试
+			task.wait()
 		end
-	end
-	if not adornee then
-		warn(`[NameTag] 无法为 {model.Name} 添加标签：没有可依附的部件`)
-		return
-	end
-	
-	-- 创建 BillboardGui
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = model.Name .. "_NameTag"
-	billboard.Adornee = adornee
-	billboard.Size = UDim2.new(0, 200, 0, 50)
-	billboard.StudsOffset = Vector3.new(0, 3, 0)   -- 头部上方偏移
-	billboard.AlwaysOnTop = true
-	billboard.Parent = model
-	
-	-- 创建 TextLabel
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0.5
-	label.Font = Enum.Font.SourceSansBold
-	label.Parent = billboard
-	
-	-- 文字内容策略：
-	-- 若提供了 customText，所有模型显示相同文字
-	-- 否则显示模型自身的 Name
-	if self.customText then
-		label.Text = self.customText
-	else
-		label.Text = model.Name
-	end
-	
-	-- 字号设置（若指定 fontSize 则关闭自动缩放）
-	if self.fontSize then
-		label.TextScaled = false
-		label.TextSize = self.fontSize
-	else
-		label.TextScaled = true
-	end
-	
-	-- 存储以便后续更新/移除
-	self.activeTags[model] = {
-		billboard = billboard,
-		label = label
-	}
+		
+		-- 清理 pending 记录
+		self.pendingTasks[model] = nil
+		
+		-- 如果超时或功能已禁用，放弃添加
+		if not adornee or not self.enabled then
+			return
+		end
+		
+		-- 再次检查是否已被其他任务添加（防止重复）
+		if self.activeTags[model] then
+			return
+		end
+		
+		-- 创建 BillboardGui
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = model.Name .. "_NameTag"
+		billboard.Adornee = adornee
+		billboard.Size = UDim2.new(0, 200, 0, 50)
+		billboard.StudsOffset = Vector3.new(0, 3, 0)   -- 头部上方偏移
+		billboard.AlwaysOnTop = true
+		billboard.Parent = model
+		
+		-- 创建 TextLabel
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.TextStrokeTransparency = 0.5
+		label.Font = Enum.Font.SourceSansBold
+		label.Parent = billboard
+		
+		-- 文字内容
+		if self.customText then
+			label.Text = self.customText
+		else
+			label.Text = model.Name
+		end
+		
+		-- 字号设置
+		if self.fontSize then
+			label.TextScaled = false
+			label.TextSize = self.fontSize
+		else
+			label.TextScaled = true
+		end
+		
+		-- 存储
+		self.activeTags[model] = {
+			billboard = billboard,
+			label = label
+		}
+	end)
 end
 
 -- -------------------------------------------------
