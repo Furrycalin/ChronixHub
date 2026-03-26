@@ -12,11 +12,12 @@ local MovableHighlighter = {}
 -- 默认配置（可修改）
 local DEFAULT_CONFIG = {
     fillColor = Color3.fromRGB(255, 215, 0),      -- 填充色（金色）
-    outlineColor = Color3.fromRGB(255, 215, 0),     -- 轮廓色（红色）
+    outlineColor = Color3.fromRGB(255, 0, 0),     -- 轮廓色（红色）
     fillTransparency = 0.7,
     outlineTransparency = 0.0,
     maxHeight = 100,                               -- 最大允许高度（Y轴）
     excludedNames = {"Camera", "Terrain"},         -- 排除的物体名称
+    batchSize = 80,                                -- 每帧处理的对象数量（降低初始卡顿）
 }
 
 -- 实例表（用于全局卸载）
@@ -33,7 +34,7 @@ function MovableHighlighter.new(config)
     local self = setmetatable({}, Highlighter)
     self.config = {}
     for k, v in pairs(DEFAULT_CONFIG) do
-        self.config[k] = config and config[k] or v
+        self.config[k] = config and config[k] ~= nil and config[k] or v
     end
     self.enabled = false
     self.activeHighlights = {}          -- { [BasePart] = Highlight }
@@ -56,9 +57,12 @@ local function isValidPart(self, part)
     if part.Anchored then
         return false
     end
-    -- 3. 排除玩家角色内的部件
-    local playerChar = Players:GetPlayerFromCharacter(part)
-    if playerChar then
+    -- 3. 排除玩家角色及其所有子部件（向上找到根模型）
+    local model = part
+    while model and not model:IsA("Model") do
+        model = model.Parent
+    end
+    if model and Players:GetPlayerFromCharacter(model) then
         return false
     end
     -- 4. 排除名称黑名单
@@ -103,17 +107,24 @@ local function removeAllHighlights(self)
 end
 
 -- -------------------------------------------------
--- 内部函数：分帧扫描现有物体（异步）
+-- 内部函数：分帧扫描现有物体（异步，只收集 BasePart 和 Model）
 -- -------------------------------------------------
 local function scanExistingAsync(self)
     if self.scanConnection then
         self.scanConnection:Disconnect()
         self.scanConnection = nil
     end
+    -- 只收集需要检查的对象（BasePart 和 Model），减少后续遍历
     local allObjects = Workspace:GetDescendants()
-    local total = #allObjects
+    local relevant = {}
+    for _, obj in ipairs(allObjects) do
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            table.insert(relevant, obj)
+        end
+    end
+    local total = #relevant
     local processed = 0
-    local batchSize = 100   -- 每帧处理数量，可根据需要调整
+    local batchSize = self.config.batchSize
     local taskId = {}
     self.pendingTask = taskId
 
@@ -127,10 +138,16 @@ local function scanExistingAsync(self)
         end
         local endIdx = math.min(processed + batchSize, total)
         for i = processed + 1, endIdx do
-            local obj = allObjects[i]
-            -- 只处理 BasePart（模型会通过子部件被覆盖）
+            local obj = relevant[i]
             if obj:IsA("BasePart") and isValidPart(self, obj) then
                 addHighlightToPart(self, obj)
+            elseif obj:IsA("Model") then
+                -- 模型需要检查其内部所有 BasePart
+                for _, part in ipairs(obj:GetDescendants()) do
+                    if part:IsA("BasePart") and isValidPart(self, part) then
+                        addHighlightToPart(self, part)
+                    end
+                end
             end
         end
         processed = endIdx
@@ -157,7 +174,7 @@ local function startListeners(self)
         if desc:IsA("BasePart") and isValidPart(self, desc) then
             addHighlightToPart(self, desc)
         elseif desc:IsA("Model") then
-            -- 模型可能整体加入，递归处理其子部件（但分帧会增加复杂度，这里简单处理：直接扫描模型内部）
+            -- 模型整体加入，递归处理其子部件
             for _, part in ipairs(desc:GetDescendants()) do
                 if part:IsA("BasePart") and isValidPart(self, part) then
                     addHighlightToPart(self, part)
@@ -188,10 +205,12 @@ end
 function Highlighter:enable()
     if self.enabled then return end
     self.enabled = true
-    -- 1. 分帧扫描现有物体
-    scanExistingAsync(self)
-    -- 2. 开始监听新物体
-    startListeners(self)
+    -- 延迟一帧开始扫描，避免阻塞当前线程（可选）
+    task.defer(function()
+        if not self.enabled then return end
+        scanExistingAsync(self)
+        startListeners(self)
+    end)
 end
 
 -- -------------------------------------------------
