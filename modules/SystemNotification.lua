@@ -67,6 +67,20 @@ function SystemNotification.Info(message)
     send(message, Color3.fromRGB(100, 150, 255), "SourceSans", 14)
 end
 
+-- 新增：加载成功（欢迎消息）
+function SystemNotification.Loaded(username)
+    local message = string.format("ChronixHubV2已成功加载，欢迎使用！%s", username or "")
+    -- 样式：亮绿色，大号 GothamBold 斜体
+    send(message, Color3.fromRGB(80, 255, 80), "GothamBold", 20)
+end
+
+-- 新增：卸载成功
+function SystemNotification.Unloaded()
+    local message = "ChronixHubv2已成功卸载"
+    -- 样式：橙黄色，中等大小 SourceSansBold
+    send(message, Color3.fromRGB(255, 180, 60), "SourceSansBold", 16)
+end
+
 -- 完全自定义（颜色、字体、字号）
 function SystemNotification.Custom(message, colorRGB, font, size)
     send(message, colorRGB, font, size)
