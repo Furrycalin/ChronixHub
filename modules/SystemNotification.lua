@@ -90,27 +90,70 @@ local function hsvToColor3(h, s, v)
     return Color3.new(r + m, g + m, b + m)
 end
 
--- 彩虹渐变色（淡雅版）
+-- 辅助：按 UTF-8 字符迭代
+local function utf8chars(str)
+    return coroutine.wrap(function()
+        local i = 1
+        while i <= #str do
+            local byte = string.byte(str, i)
+            local charLen = 1
+            if byte > 0x7F then
+                -- 计算 UTF-8 字符长度
+                if byte >= 0xC0 then charLen = 2
+                elseif byte >= 0xE0 then charLen = 3
+                elseif byte >= 0xF0 then charLen = 4
+                end
+            end
+            local char = string.sub(str, i, i + charLen - 1)
+            coroutine.yield(char)
+            i = i + charLen
+        end
+    end)
+end
+
+-- 彩虹渐变色（淡雅版，UTF-8 安全）
 local function rainbowGradient(text, font, size)
-    local len = #text
+    local chars = {}
+    for ch in utf8chars(text) do
+        table.insert(chars, ch)
+    end
+    local len = #chars
     if len == 0 then return "" end
 
     local parts = {}
-    for i = 1, len do
-        local hue = (i - 1) / (len - 1) * 360  -- 第一个字符0°（红），最后一个字符360°（回到红）→ 实际我们取0~360，最后一个接近360°（红紫之间）
-        -- 但为了首尾不重复，可限制最大到 330° 避免回到红，更丝滑。这里保持360°会让首尾颜色相近但不同。
-        -- 更丝滑：最大330°，使红-紫范围。用户希望红橙黄绿青蓝紫，0~330覆盖这七色。
-        if len > 1 then
-            hue = (i - 1) / (len - 1) * 330  -- 0°（红）到330°（紫）
-        else
-            hue = 0
-        end
-        local color = hsvToColor3(hue, 0.6, 1)  -- 饱和度0.6，亮度1 → 淡彩虹
+    for i, ch in ipairs(chars) do
+        local hue = (i - 1) / (len - 1) * 330  -- 0° 红 → 330° 紫
+        local color = hsvToColor3(hue, 0.6, 1) -- 饱和度0.6，亮度1 → 淡彩虹
         local r = math.floor(color.R * 255)
         local g = math.floor(color.G * 255)
         local b = math.floor(color.B * 255)
-        local char = text:sub(i, i)
-        local escaped = char:gsub("[<>&]", {
+        local escaped = ch:gsub("[<>&]", {
+            ["<"] = "&lt;",
+            [">"] = "&gt;",
+            ["&"] = "&amp;"
+        })
+        parts[#parts + 1] = string.format('<font color="rgb(%d,%d,%d)" face="%s" size="%d">%s</font>',
+            r, g, b, font, size, escaped)
+    end
+    return table.concat(parts)
+end
+
+-- 红色渐变（浅红→深红，UTF-8 安全）
+local function redGradient(text, font, size)
+    local chars = {}
+    for ch in utf8chars(text) do
+        table.insert(chars, ch)
+    end
+    local len = #chars
+    if len == 0 then return "" end
+
+    local parts = {}
+    for i, ch in ipairs(chars) do
+        local t = (i - 1) / (len - 1)
+        local r = math.floor(255 - t * 75)   -- 255 → 180
+        local g = math.floor(100 - t * 100)  -- 100 → 0
+        local b = math.floor(100 - t * 100)  -- 100 → 0
+        local escaped = ch:gsub("[<>&]", {
             ["<"] = "&lt;",
             [">"] = "&gt;",
             ["&"] = "&amp;"
@@ -135,31 +178,6 @@ function SystemNotification.Rainbow(message, font, size)
             channel:DisplaySystemMessage(rich)
         end
     end
-end
-
--- 红色渐变（从浅红到深红）
-local function redGradient(text, font, size)
-    local len = #text
-    if len == 0 then return "" end
-
-    local parts = {}
-    for i = 1, len do
-        -- 亮度因子：0~1，从亮(0.9)到暗(0.4)或从亮到暗均可
-        local t = (i - 1) / (len - 1)   -- 0~1
-        -- 亮红 (255,100,100) 到 深红 (180,0,0)
-        local r = math.floor(255 - t * 75)    -- 255 -> 180
-        local g = math.floor(100 - t * 100)   -- 100 -> 0
-        local b = math.floor(100 - t * 100)   -- 100 -> 0
-        local char = text:sub(i, i)
-        local escaped = char:gsub("[<>&]", {
-            ["<"] = "&lt;",
-            [">"] = "&gt;",
-            ["&"] = "&amp;"
-        })
-        parts[#parts + 1] = string.format('<font color="rgb(%d,%d,%d)" face="%s" size="%d">%s</font>',
-            r, g, b, font, size, escaped)
-    end
-    return table.concat(parts)
 end
 
 -- 红色渐变预设（卸载专用）
