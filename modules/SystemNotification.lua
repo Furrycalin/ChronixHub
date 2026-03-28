@@ -45,23 +45,27 @@ local defaultStyles = {
 	}
 }
 
+-- HTML 转义 (防止用户输入破坏富文本)
+local function escapeHtml(text)
+	return text:gsub("[<>&]", {
+		["<"] = "&lt;",
+		[">"] = "&gt;",
+		["&"] = "&amp;"
+	})
+end
+
 -- 构建富文本字符串 (新版聊天)
 local function buildRichText(text, style)
-	local parts = {}
-	
-	-- 颜色
+	-- 颜色转换 (Color3 -> 0-255整数)
 	local r = math.floor((style.color.R or 1) * 255)
 	local g = math.floor((style.color.G or 1) * 255)
 	local b = math.floor((style.color.B or 1) * 255)
 	local colorAttr = string.format('color="rgb(%d,%d,%d)"', r, g, b)
 	
-	-- 字体
-	local fontAttr = ""
-	if style.font then
-		fontAttr = string.format(' face="%s"', style.font)
-	end
+	-- 字体属性
+	local fontAttr = style.font and string.format(' face="%s"', style.font) or ""
 	
-	-- 字号 (支持数字或相对值，如"+2")
+	-- 字号属性 (数字或字符串)
 	local sizeAttr = ""
 	if style.size then
 		if type(style.size) == "number" then
@@ -71,43 +75,30 @@ local function buildRichText(text, style)
 		end
 	end
 	
-	-- 打开 <font> 标签
-	parts[#parts+1] = string.format('<font%s%s%s>', colorAttr, fontAttr, sizeAttr)
+	-- 构建 <font> 标签
+	local result = string.format('<font%s%s%s>', colorAttr, fontAttr, sizeAttr)
 	
 	-- 粗体/斜体
-	if style.bold then
-		parts[#parts+1] = "<b>"
-	end
-	if style.italic then
-		parts[#parts+1] = "<i>"
-	end
+	if style.bold then result = result .. "<b>" end
+	if style.italic then result = result .. "<i>" end
 	
-	-- 文本内容 (转义HTML字符)
-	local escapedText = text:gsub("[<>&]", {
-		["<"] = "&lt;",
-		[">"] = "&gt;",
-		["&"] = "&amp;"
-	})
-	parts[#parts+1] = escapedText
+	-- 文本内容 (转义)
+	result = result .. escapeHtml(text)
 	
 	-- 关闭粗体/斜体
-	if style.italic then
-		parts[#parts+1] = "</i>"
-	end
-	if style.bold then
-		parts[#parts+1] = "</b>"
-	end
+	if style.italic then result = result .. "</i>" end
+	if style.bold then result = result .. "</b>" end
 	
 	-- 关闭 </font>
-	parts[#parts+1] = "</font>"
+	result = result .. "</font>"
 	
-	return table.concat(parts)
+	return result
 end
 
--- 内部发送函数 (支持样式表或直接传入样式)
+-- 内部发送函数
 local function sendMessage(text, style)
 	if isLegacyChat then
-		-- 旧聊天系统：仅使用颜色，忽略字体字号
+		-- 旧聊天系统：仅支持颜色，忽略字体/字号/粗斜体
 		local player = Players.LocalPlayer
 		if not player then return end
 		local gui = player:WaitForChild("PlayerGui")
@@ -129,12 +120,13 @@ local function sendMessage(text, style)
 	end
 end
 
--- 公开接口：基础发送（自定义样式）
+-- 公开接口：基础发送（支持自定义样式）
 function SystemNotification.Send(Text, Style)
-	-- Style 可以是颜色 (Color3) 或完整样式表
 	local finalStyle = {}
 	if typeof(Style) == "Color3" then
-		finalStyle = { color = Style, font = defaultStyles.Default.font, size = defaultStyles.Default.size, bold = false, italic = false }
+		-- 仅颜色：合并默认样式
+		finalStyle = table.clone(defaultStyles.Default)
+		finalStyle.color = Style
 	elseif type(Style) == "table" then
 		finalStyle = table.clone(defaultStyles.Default)
 		for k, v in pairs(Style) do
