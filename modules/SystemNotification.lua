@@ -67,16 +67,114 @@ function SystemNotification.Info(message)
     send(message, Color3.fromRGB(100, 150, 255), "SourceSans", 14)
 end
 
--- 新增：加载成功（欢迎消息）
-function SystemNotification.Loaded(message)
-    -- 样式：亮绿色，大号 GothamBold 斜体
-    send(message, Color3.fromRGB(80, 255, 80), "GothamBold", 20)
+-- 辅助：HSV 转 Color3（Hue 0-360, Saturation 0-1, Value 0-1）
+local function hsvToColor3(h, s, v)
+    local r, g, b
+    local c = v * s
+    local x = c * (1 - math.abs((h / 60) % 2 - 1))
+    local m = v - c
+
+    if h < 60 then
+        r, g, b = c, x, 0
+    elseif h < 120 then
+        r, g, b = x, c, 0
+    elseif h < 180 then
+        r, g, b = 0, c, x
+    elseif h < 240 then
+        r, g, b = 0, x, c
+    elseif h < 300 then
+        r, g, b = x, 0, c
+    else
+        r, g, b = c, 0, x
+    end
+    return Color3.new(r + m, g + m, b + m)
 end
 
--- 新增：卸载成功
-function SystemNotification.Unloaded(message)
-    -- 样式：橙黄色，中等大小 SourceSansBold
-    send(message, Color3.fromRGB(255, 180, 60), "SourceSansBold", 16)
+-- 彩虹渐变色（淡雅版）
+local function rainbowGradient(text, font, size)
+    local len = #text
+    if len == 0 then return "" end
+
+    local parts = {}
+    for i = 1, len do
+        local hue = (i - 1) / (len - 1) * 360  -- 第一个字符0°（红），最后一个字符360°（回到红）→ 实际我们取0~360，最后一个接近360°（红紫之间）
+        -- 但为了首尾不重复，可限制最大到 330° 避免回到红，更丝滑。这里保持360°会让首尾颜色相近但不同。
+        -- 更丝滑：最大330°，使红-紫范围。用户希望红橙黄绿青蓝紫，0~330覆盖这七色。
+        if len > 1 then
+            hue = (i - 1) / (len - 1) * 330  -- 0°（红）到330°（紫）
+        else
+            hue = 0
+        end
+        local color = hsvToColor3(hue, 0.6, 1)  -- 饱和度0.6，亮度1 → 淡彩虹
+        local r = math.floor(color.R * 255)
+        local g = math.floor(color.G * 255)
+        local b = math.floor(color.B * 255)
+        local char = text:sub(i, i)
+        local escaped = char:gsub("[<>&]", {
+            ["<"] = "&lt;",
+            [">"] = "&gt;",
+            ["&"] = "&amp;"
+        })
+        parts[#parts + 1] = string.format('<font color="rgb(%d,%d,%d)" face="%s" size="%d">%s</font>',
+            r, g, b, font, size, escaped)
+    end
+    return table.concat(parts)
+end
+
+-- 彩虹色预设
+function SystemNotification.Rainbow(message, font, size)
+    font = font or "GothamBold"   -- 默认字体，可按需修改
+    size = size or 18              -- 默认字号
+    if isLegacyChat then
+        -- 旧版不支持多色，直接发送原文本（灰色）
+        SystemNotification.Send(message, Color3.fromRGB(200,200,200))
+    else
+        local rich = rainbowGradient(message, font, size)
+        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if channel then
+            channel:DisplaySystemMessage(rich)
+        end
+    end
+end
+
+-- 红色渐变（从浅红到深红）
+local function redGradient(text, font, size)
+    local len = #text
+    if len == 0 then return "" end
+
+    local parts = {}
+    for i = 1, len do
+        -- 亮度因子：0~1，从亮(0.9)到暗(0.4)或从亮到暗均可
+        local t = (i - 1) / (len - 1)   -- 0~1
+        -- 亮红 (255,100,100) 到 深红 (180,0,0)
+        local r = math.floor(255 - t * 75)    -- 255 -> 180
+        local g = math.floor(100 - t * 100)   -- 100 -> 0
+        local b = math.floor(100 - t * 100)   -- 100 -> 0
+        local char = text:sub(i, i)
+        local escaped = char:gsub("[<>&]", {
+            ["<"] = "&lt;",
+            [">"] = "&gt;",
+            ["&"] = "&amp;"
+        })
+        parts[#parts + 1] = string.format('<font color="rgb(%d,%d,%d)" face="%s" size="%d">%s</font>',
+            r, g, b, font, size, escaped)
+    end
+    return table.concat(parts)
+end
+
+-- 红色渐变预设（卸载专用）
+function SystemNotification.UnloadedGradient(message, font, size)
+    font = font or "SourceSansBold"
+    size = size or 16
+    if isLegacyChat then
+        SystemNotification.Send(message, Color3.fromRGB(255, 100, 100))
+    else
+        local rich = redGradient(message, font, size)
+        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if channel then
+            channel:DisplaySystemMessage(rich)
+        end
+    end
 end
 
 -- 完全自定义（颜色、字体、字号）
