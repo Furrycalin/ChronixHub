@@ -126,7 +126,7 @@ local daySettings = {
     ColorShift_Top = Color3.fromRGB(240, 127, 14),
     ColorShift_Bottom = Color3.fromRGB(11, 0, 20),
     FogColor = Color3.fromRGB(94, 76, 106),
-    FogStart = 0,        -- 雾气起始距离 (近处有雾)
+    FogStart = 200,        -- 雾气起始距离 (近处有雾)
     FogEnd = 1000,       -- 雾气终点距离
     FogEnabled = true
 }
