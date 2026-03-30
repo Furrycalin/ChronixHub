@@ -1,5 +1,8 @@
--- 整合自 Shader.lua 与 Graphics.lua
--- 实现动态日夜效果：白天微雾，夜晚无雾且更暗
+-- 检查是否已经执行过
+if _G.ShadersLoaded then
+    print("光影脚本已加载，跳过重复执行")
+    return
+end
 
 if not game:IsLoaded() then
     game.Loaded:Wait()
@@ -126,36 +129,36 @@ local daySettings = {
     ColorShift_Top = Color3.fromRGB(240, 127, 14),
     ColorShift_Bottom = Color3.fromRGB(11, 0, 20),
     FogColor = Color3.fromRGB(94, 76, 106),
-    FogStart = 200,        -- 雾气起始距离 (近处有雾)
-    FogEnd = 1000,       -- 雾气终点距离
+    FogStart = 200,      -- 雾气起始距离改为200，让白天雾气减小（原为0）
+    FogEnd = 1000,
     FogEnabled = true
 }
 
 -- 夜晚模式 (18:00 - 6:00)
 local nightSettings = {
-    Brightness = 0.5,            -- 大幅降低亮度
-    ExposureCompensation = -0.2, -- 降低曝光
-    Ambient = Color3.fromRGB(15, 10, 20),     -- 更暗的环境光
-    OutdoorAmbient = Color3.fromRGB(8, 5, 15), -- 更暗的室外环境
-    ColorShift_Top = Color3.fromRGB(50, 30, 80),   -- 偏紫的顶光
-    ColorShift_Bottom = Color3.fromRGB(5, 0, 15),  -- 很暗的底光
-    FogColor = Color3.fromRGB(20, 15, 30),
-    FogStart = 1000,     -- 雾气起始距离设为很大，实际无雾
-    FogEnd = 1000,       -- 雾气终点与起点相同，禁用视觉效果
+    Brightness = 0.35,            -- 进一步降低亮度，让夜晚更暗
+    ExposureCompensation = -0.3,  -- 降低曝光
+    Ambient = Color3.fromRGB(10, 6, 15),     -- 更暗的环境光
+    OutdoorAmbient = Color3.fromRGB(5, 3, 12), -- 更暗的室外环境
+    ColorShift_Top = Color3.fromRGB(40, 25, 70),   -- 偏紫的顶光
+    ColorShift_Bottom = Color3.fromRGB(3, 0, 10),  -- 很暗的底光
+    FogColor = Color3.fromRGB(15, 10, 25),
+    FogStart = 9999,     -- 雾气起始距离设为极大，无雾
+    FogEnd = 10000,
     FogEnabled = false
 }
 
--- 黄昏/黎明过渡模式 (可选，让切换更平滑)
+-- 黄昏/黎明过渡模式
 local transitionSettings = {
-    Brightness = 1.2,
-    ExposureCompensation = 0.1,
-    Ambient = Color3.fromRGB(35, 25, 35),
-    OutdoorAmbient = Color3.fromRGB(20, 10, 30),
-    ColorShift_Top = Color3.fromRGB(180, 100, 60),
-    ColorShift_Bottom = Color3.fromRGB(20, 5, 30),
-    FogColor = Color3.fromRGB(70, 55, 80),
-    FogStart = 50,
-    FogEnd = 800,
+    Brightness = 1.0,
+    ExposureCompensation = 0.05,
+    Ambient = Color3.fromRGB(30, 20, 30),
+    OutdoorAmbient = Color3.fromRGB(15, 8, 25),
+    ColorShift_Top = Color3.fromRGB(160, 85, 50),
+    ColorShift_Bottom = Color3.fromRGB(15, 4, 25),
+    FogColor = Color3.fromRGB(65, 50, 75),
+    FogStart = 80,
+    FogEnd = 900,
     FogEnabled = true
 }
 
@@ -188,15 +191,15 @@ local function applyTimeBasedSettings(clockTime)
         Lighting.FogStart = settings.FogStart
         Lighting.FogEnd = settings.FogEnd
     else
-        -- 无雾：将起始距离设得比终点还远，或设为一个极大值
+        -- 无雾：将起始距离设得比终点还远
         Lighting.FogStart = 9999
         Lighting.FogEnd = 10000
     end
     
-    -- 可选：根据时间调整Bloom强度 (让夜晚稍微减少泛光)
+    -- 根据时间调整Bloom强度
     if not isDay then
-        mainBloom.Intensity = 0.05  -- 夜晚Bloom减弱
-        intenseBloom.Intensity = 0.5
+        mainBloom.Intensity = 0.03      -- 夜晚Bloom进一步减弱
+        intenseBloom.Intensity = 0.3
     else
         mainBloom.Intensity = 0.1
         intenseBloom.Intensity = 0.99
@@ -206,20 +209,20 @@ end
 -- 初始化时应用一次
 applyTimeBasedSettings(Lighting.ClockTime)
 
--- 监听时间变化 (每帧检查，或使用GetPropertyChangedSignal)
+-- 监听时间变化
 local lastTime = Lighting.ClockTime
 RunService.Heartbeat:Connect(function()
     local currentTime = Lighting.ClockTime
-    -- 只有当时间变化超过0.01小时时才更新 (约0.6分钟)
     if math.abs(currentTime - lastTime) >= 0.01 then
         lastTime = currentTime
         applyTimeBasedSettings(currentTime)
     end
 end)
 
--- 额外：如果ClockTime被其他地方修改，也触发更新
+-- 如果ClockTime被其他地方修改，也触发更新
 Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
     applyTimeBasedSettings(Lighting.ClockTime)
 end)
 
-print("动态光影脚本已加载 | 白天: 微雾 + 明亮 | 夜晚: 无雾 + 暗色调")
+-- 设置全局变量，标记脚本已执行
+_G.ShadersLoaded = true
