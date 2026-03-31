@@ -34,8 +34,6 @@ _G.SA_FASTLOADING = true
 
 local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
 
-wait(2.1)
-
 -- ============ 创建主窗口 ============
 local MainWindow = ChronixUI:MakeWindow({
     Name = "ChronixHub V3",
