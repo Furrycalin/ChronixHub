@@ -1,8 +1,8 @@
--- ChronixUI v3.0 - 修复关闭按钮回调
+-- ChronixUI v3.1 - 支持动态销毁控件
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "3.0.0"
+ChronixUI.Version = "3.1.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -311,8 +311,11 @@ function ChronixUI:CreateWindow(config)
     local originalSize = windowSize
     local savedPosition = mainFrame.Position
     
-    -- 存储外部关闭回调函数（全局变量，可以在任何地方访问）
+    -- 存储外部关闭回调函数
     local externalCloseCallback = nil
+    
+    -- 存储所有动态创建的控件，用于支持销毁
+    local createdElements = {}
     
     -- 使用 ContextActionService 绑定快捷键
     local toggleActionName = "ChronixUIToggle_" .. tostring(#self.Windows + 1)
@@ -485,6 +488,12 @@ function ChronixUI:CreateWindow(config)
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentScroll
     
+    -- 更新内容区域滚动
+    local function updateContentCanvas()
+        contentScroll.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 40)
+    end
+    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateContentCanvas)
+    
     -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
@@ -588,11 +597,6 @@ function ChronixUI:CreateWindow(config)
         
         local tabLayout = AddListLayout(tabContent, 12)
         
-        local function UpdateCanvas()
-            contentScroll.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 40)
-        end
-        contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvas)
-        
         local function SelectTab()
             for _, otherTab in pairs(windowData.Tabs) do
                 otherTab.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
@@ -603,7 +607,7 @@ function ChronixUI:CreateWindow(config)
             tabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
             tabContent.Visible = true
             windowData.CurrentTab = tabConfig
-            UpdateCanvas()
+            updateContentCanvas()
         end
         
         tabBtn.MouseButton1Click:Connect(SelectTab)
@@ -626,8 +630,28 @@ function ChronixUI:CreateWindow(config)
         
         table.insert(windowData.Tabs, tabData)
         
-        -- UI 元素创建函数
+        -- UI 元素创建函数（支持动态销毁）
         local elements = {}
+        
+        -- 通用销毁函数
+        local function createDestroyable(element, container)
+            local destroyFunc = function()
+                if element and element.Parent then
+                    element:Destroy()
+                end
+                -- 从元素列表中移除
+                for i, e in ipairs(createdElements) do
+                    if e == element then
+                        table.remove(createdElements, i)
+                        break
+                    end
+                end
+                -- 更新布局
+                updateContentCanvas()
+            end
+            table.insert(createdElements, element)
+            return destroyFunc
+        end
         
         function elements:AddButton(config)
             local btnConfig = config or {}
@@ -660,6 +684,10 @@ function ChronixUI:CreateWindow(config)
             btn.MouseLeave:Connect(function()
                 TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Card}):Play()
             end)
+            
+            -- 添加销毁方法
+            btn.Destroy = createDestroyable(btn, tabContent)
+            updateContentCanvas()
             
             return btn
         end
@@ -760,6 +788,9 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
@@ -858,6 +889,9 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
@@ -908,6 +942,9 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
@@ -945,6 +982,9 @@ function ChronixUI:CreateWindow(config)
             inputBox.FocusLost:Connect(function()
                 callback(inputBox.Text)
             end)
+            
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
             
             return container
         end
@@ -1003,10 +1043,12 @@ function ChronixUI:CreateWindow(config)
                 end)
             end)
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
-        -- 颜色选择器
         function elements:AddColorPicker(config)
             local colorConfig = config or {}
             local label = colorConfig.Label or "颜色选择"
@@ -1209,6 +1251,9 @@ function ChronixUI:CreateWindow(config)
             ColorSquare.Visible = false
             HueBar.Visible = false
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
@@ -1231,6 +1276,9 @@ function ChronixUI:CreateWindow(config)
             contentLabel.TextWrapped = true
             contentLabel.AutomaticSize = Enum.AutomaticSize.Y
             
+            container.Destroy = createDestroyable(container, tabContent)
+            updateContentCanvas()
+            
             return container
         end
         
@@ -1240,18 +1288,30 @@ function ChronixUI:CreateWindow(config)
             divider.Size = UDim2.new(1, 0, 0, 1)
             divider.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Border
             divider.BorderSizePixel = 0
+            
+            divider.Destroy = createDestroyable(divider, tabContent)
+            updateContentCanvas()
+            
             return divider
         end
         
         function elements:AddTitle(text)
             local title = CreateLabel(tabContent, text, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 0),
                                        ChronixUI.Themes[ChronixUI.CurrentTheme].Accent, 20, Enum.Font.GothamBold)
+            
+            title.Destroy = createDestroyable(title, tabContent)
+            updateContentCanvas()
+            
             return title
         end
         
         function elements:AddLabel(text)
             local label = CreateLabel(tabContent, text, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 0),
                                        ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14, Enum.Font.Gotham)
+            
+            label.Destroy = createDestroyable(label, tabContent)
+            updateContentCanvas()
+            
             return label
         end
         
