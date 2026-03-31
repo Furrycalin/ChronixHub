@@ -543,7 +543,7 @@ function ChronixUI:MakeWindow(WindowConfig)
         Position = UDim2.new(0, 0, 1, -50),
         Parent = Sidebar
     }, {
-        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5, Position = Enum.UIStrokePosition.Inside })
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 })
     })
 
     -- 玩家头像
