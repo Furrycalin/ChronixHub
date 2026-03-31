@@ -553,7 +553,9 @@ function ChronixUI:CreateWindow(config)
     
     -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
-        windowData:Close()
+        if windowData and windowData.Close then
+            windowData:Close()
+        end
     end)
     
     -- 创建 Tab 函数
