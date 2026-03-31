@@ -1,8 +1,8 @@
--- ChronixUI v1.5
+-- ChronixUI v1.6
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.5.0"
+ChronixUI.Version = "1.6.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -292,7 +292,7 @@ function ChronixUI:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Chronix UI"
     local windowSize = config.Size or UDim2.new(0, 680, 0, 420)
-    local closeCallback = config.OnClose or function() end
+    local closeCallback = config.OnClose or function() end  -- 外部关闭回调
     
     local gui = Instance.new("ScreenGui")
     gui.Name = "ChronixUI_" .. tostring(#self.Windows + 1)
@@ -310,8 +310,7 @@ function ChronixUI:CreateWindow(config)
     local windowVisible = true
     local minimized = false
     local originalSize = windowSize
-    local originalPosition = mainFrame.Position
-    local savedPosition = originalPosition
+    local savedPosition = mainFrame.Position
     
     -- 使用 ContextActionService 绑定快捷键，阻止游戏默认行为
     local toggleActionName = "ChronixUIToggle"
@@ -347,7 +346,9 @@ function ChronixUI:CreateWindow(config)
     
     -- 监听拖动，保存位置
     local function savePosition()
-        savedPosition = mainFrame.Position
+        if not minimized then
+            savedPosition = mainFrame.Position
+        end
     end
     mainFrame:GetPropertyChangedSignal("Position"):Connect(savePosition)
     
@@ -498,15 +499,27 @@ function ChronixUI:CreateWindow(config)
         CloseCallback = closeCallback,
         SettingsTabContent = nil,
         Minimized = false,
-        UpdatePlayerInfo = UpdatePlayerInfo
+        UpdatePlayerInfo = UpdatePlayerInfo,
+        -- 添加关闭窗口的方法，可供外部调用
+        Close = function()
+            PlayClickSound()
+            closeCallback()
+            ContextActionService:UnbindAction(toggleActionName)
+            gui:Destroy()
+            for i, window in pairs(self.Windows) do
+                if window == windowData then
+                    table.remove(self.Windows, i)
+                    break
+                end
+            end
+        end
     }
     
-    -- 最小化功能（缩小宽度更大些，避免文字被挡住）
+    -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         windowData.Minimized = not windowData.Minimized
         if windowData.Minimized then
-            -- 保存当前位置
             savedPosition = mainFrame.Position
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = UDim2.new(0, 280, 0, 45),
@@ -518,7 +531,6 @@ function ChronixUI:CreateWindow(config)
             settingsBtn.Visible = false
             minBtn.Text = "+"
         else
-            -- 恢复到保存的位置和大小
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = originalSize,
                 Position = savedPosition
@@ -531,18 +543,9 @@ function ChronixUI:CreateWindow(config)
         end
     end)
     
-    -- 关闭按钮
+    -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        closeCallback()
-        ContextActionService:UnbindAction(toggleActionName)
-        gui:Destroy()
-        for i, window in pairs(self.Windows) do
-            if window == windowData then
-                table.remove(self.Windows, i)
-                break
-            end
-        end
+        windowData:Close()
     end)
     
     -- 创建 Tab 函数
@@ -601,7 +604,6 @@ function ChronixUI:CreateWindow(config)
         
         if isSettings then
             windowData.SettingsTabContent = tabContent
-            -- 设置 Tab 不在侧边栏显示
             tabBtn.Visible = false
         end
         
