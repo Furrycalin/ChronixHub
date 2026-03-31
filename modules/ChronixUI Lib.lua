@@ -317,6 +317,13 @@ function ChronixUI:CreateWindow(config)
     ContextActionService:BindAction(toggleActionName, function(actionName, inputState, inputObject)
         if inputState == Enum.UserInputState.Begin then
             if inputObject.KeyCode == self.Settings.ToggleKey then
+                -- 在这里增加一个对窗口是否存在的检查
+                if not windowData.Gui or not windowData.Gui.Parent then
+                     -- 如果窗口已经不存在，则取消绑定并退出函数
+                     ContextActionService:UnbindAction(toggleActionName)
+                     return Enum.ContextActionResult.Pass
+                end
+    
                 windowVisible = not windowVisible
                 mainFrame.Visible = windowVisible
                 if not windowVisible and self.Settings.FirstHide then
