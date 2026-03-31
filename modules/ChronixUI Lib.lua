@@ -491,7 +491,7 @@ function ChronixUI:CreateWindow(config)
         CloseCallback = closeCallback,
         SettingsTabContent = nil,
         Minimized = false,
-        UpdatePlayerInfo = UpdatePlayerInfo
+        UpdatePlayerInfo = UpdatePlayerInfo(0, 50)
     }
     
     -- 最小化功能（缩小宽度更大些，避免文字被挡住）
