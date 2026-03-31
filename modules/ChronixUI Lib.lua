@@ -122,7 +122,7 @@ end
 
 local function playIntro(config)
     config = config or {}
-    local introText = config.Text or "ChronixHub V2"
+    local introText = config.Text or "ChronixHub V3"
     local introIcon = config.Icon or "rbxassetid://8834748103"
     local duration = config.Duration or 2.5
     
