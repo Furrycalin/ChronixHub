@@ -1,8 +1,8 @@
--- ChronixUI v1.7
+-- ChronixUI v1.8
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.7.0"
+ChronixUI.Version = "1.8.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -292,7 +292,7 @@ function ChronixUI:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Chronix UI"
     local windowSize = config.Size or UDim2.new(0, 680, 0, 420)
-    local closeCallback = config.OnClose or function() end  -- 初始回调
+    local initialCloseCallback = config.OnClose or function() end
     
     local gui = Instance.new("ScreenGui")
     gui.Name = "ChronixUI_" .. tostring(#self.Windows + 1)
@@ -313,25 +313,20 @@ function ChronixUI:CreateWindow(config)
     local savedPosition = mainFrame.Position
     
     -- 使用 ContextActionService 绑定快捷键，阻止游戏默认行为
-    local toggleActionName = "ChronixUIToggle"
+    local toggleActionName = "ChronixUIToggle_" .. tostring(#self.Windows + 1)
     ContextActionService:BindAction(toggleActionName, function(actionName, inputState, inputObject)
         if inputState == Enum.UserInputState.Begin then
             if inputObject.KeyCode == self.Settings.ToggleKey then
                 windowVisible = not windowVisible
                 mainFrame.Visible = windowVisible
-                if windowVisible then
-                    -- 打开菜单时不需要提示
-                else
-                    -- 隐藏时显示提示
-                    if self.Settings.FirstHide then
-                        self.Settings.FirstHide = false
-                        self:Notify({
-                            Title = "菜单已隐藏",
-                            Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
-                            Type = "info",
-                            Duration = 10
-                        })
-                    end
+                if not windowVisible and self.Settings.FirstHide then
+                    self.Settings.FirstHide = false
+                    self:Notify({
+                        Title = "菜单已隐藏",
+                        Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
+                        Type = "info",
+                        Duration = 10
+                    })
                 end
                 return Enum.ContextActionResult.Sink
             end
@@ -488,7 +483,7 @@ function ChronixUI:CreateWindow(config)
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentScroll
     
-    -- 窗口数据
+    -- 窗口数据对象
     local windowData = {
         Gui = gui,
         MainFrame = mainFrame,
@@ -496,22 +491,29 @@ function ChronixUI:CreateWindow(config)
         ContentLayout = contentLayout,
         Tabs = {},
         CurrentTab = nil,
-        CloseCallback = closeCallback,
+        CloseCallback = initialCloseCallback,
         SettingsTabContent = nil,
         Minimized = false,
         UpdatePlayerInfo = UpdatePlayerInfo,
+        
         -- 动态设置关闭回调的方法
         SetCloseCallback = function(callback)
             windowData.CloseCallback = callback
         end,
+        
         -- 关闭窗口的方法
         Close = function()
             PlayClickSound()
             if windowData.CloseCallback then
-                windowData.CloseCallback()
+                local success, err = pcall(windowData.CloseCallback)
+                if not success then
+                    warn("Close callback error: ", err)
+                end
             end
             ContextActionService:UnbindAction(toggleActionName)
-            gui:Destroy()
+            if gui then
+                gui:Destroy()
+            end
             for i, window in pairs(self.Windows) do
                 if window == windowData then
                     table.remove(self.Windows, i)
@@ -1006,7 +1008,7 @@ function ChronixUI:CreateWindow(config)
             return container
         end
         
-        -- OrionLib 风格的颜色选择器
+        -- 颜色选择器
         function elements:AddColorPicker(config)
             local colorConfig = config or {}
             local label = colorConfig.Label or "颜色选择"
