@@ -1,8 +1,8 @@
--- ChronixUI v1.4
+-- ChronixUI v1.5
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.4.0"
+ChronixUI.Version = "1.5.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -311,6 +311,7 @@ function ChronixUI:CreateWindow(config)
     local minimized = false
     local originalSize = windowSize
     local originalPosition = mainFrame.Position
+    local savedPosition = originalPosition
     
     -- 使用 ContextActionService 绑定快捷键，阻止游戏默认行为
     local toggleActionName = "ChronixUIToggle"
@@ -343,6 +344,12 @@ function ChronixUI:CreateWindow(config)
     local titleBar = CreateFrame(mainFrame, UDim2.new(1, 0, 0, 45), UDim2.new(0, 0, 0, 0),
                                   self.Themes[self.CurrentTheme].Background, 1)
     MakeDraggable(mainFrame, titleBar)
+    
+    -- 监听拖动，保存位置
+    local function savePosition()
+        savedPosition = mainFrame.Position
+    end
+    mainFrame:GetPropertyChangedSignal("Position"):Connect(savePosition)
     
     local titleLabel = CreateLabel(titleBar, windowName, UDim2.new(1, -140, 1, 0), UDim2.new(0, 20, 0, 0),
                                     self.Themes[self.CurrentTheme].Accent, 18, Enum.Font.GothamBold)
@@ -432,7 +439,7 @@ function ChronixUI:CreateWindow(config)
     
     -- 玩家信息更新方法
     local function UpdatePlayerInfo(level, points)
-        playerInfoLabel.Text = string.format("等级 %s | 积分 %s", level or "1", points or "0")
+        playerInfoLabel.Text = string.format("等级 %s | 积分 %s", tostring(level or "1"), tostring(points or "0"))
     end
     
     -- 侧边栏
@@ -491,7 +498,7 @@ function ChronixUI:CreateWindow(config)
         CloseCallback = closeCallback,
         SettingsTabContent = nil,
         Minimized = false,
-        UpdatePlayerInfo = UpdatePlayerInfo(0, 50)
+        UpdatePlayerInfo = UpdatePlayerInfo
     }
     
     -- 最小化功能（缩小宽度更大些，避免文字被挡住）
@@ -499,10 +506,11 @@ function ChronixUI:CreateWindow(config)
         PlayClickSound()
         windowData.Minimized = not windowData.Minimized
         if windowData.Minimized then
-            local currentPos = mainFrame.Position
+            -- 保存当前位置
+            savedPosition = mainFrame.Position
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = UDim2.new(0, 280, 0, 45),
-                Position = currentPos
+                Position = savedPosition
             }):Play()
             sidebar.Visible = false
             contentArea.Visible = false
@@ -510,9 +518,10 @@ function ChronixUI:CreateWindow(config)
             settingsBtn.Visible = false
             minBtn.Text = "+"
         else
+            -- 恢复到保存的位置和大小
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = originalSize,
-                Position = originalPosition
+                Position = savedPosition
             }):Play()
             sidebar.Visible = true
             contentArea.Visible = true
@@ -976,7 +985,9 @@ function ChronixUI:CreateWindow(config)
                         if key ~= "Unknown" then
                             keyBtn.Text = key
                             keyBtn.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Accent
-                            callback(key)
+                            if callback then
+                                callback(key)
+                            end
                             listening = false
                             connection:Disconnect()
                         end
@@ -987,7 +998,7 @@ function ChronixUI:CreateWindow(config)
             return container
         end
         
-        -- OrionLib 风格的颜色选择器（参考原版实现）
+        -- OrionLib 风格的颜色选择器
         function elements:AddColorPicker(config)
             local colorConfig = config or {}
             local label = colorConfig.Label or "颜色选择"
@@ -1003,7 +1014,7 @@ function ChronixUI:CreateWindow(config)
             local ColorH, ColorS, ColorV = Color3.toHSV(default)
             local toggled = false
             
-            -- 颜色选择器控件（参考 OrionLib 实现）
+            -- 颜色选择器控件
             local ColorSelection = Instance.new("ImageLabel")
             ColorSelection.Size = UDim2.new(0, 12, 0, 12)
             ColorSelection.ScaleType = Enum.ScaleType.Fit
@@ -1101,7 +1112,9 @@ function ChronixUI:CreateWindow(config)
                 local color = Color3.fromHSV(ColorH, ColorS, ColorV)
                 colorPreview.BackgroundColor3 = color
                 ColorSquare.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
-                callback(color)
+                if callback then
+                    callback(color)
+                end
             end
             
             local function UpdatePositions()
@@ -1257,18 +1270,14 @@ function ChronixUI:CreateWindow(config)
                         if inputObject.KeyCode == self.Settings.ToggleKey then
                             windowVisible = not windowVisible
                             mainFrame.Visible = windowVisible
-                            if windowVisible then
-                                -- 打开时不需要提示
-                            else
-                                if self.Settings.FirstHide then
-                                    self.Settings.FirstHide = false
-                                    self:Notify({
-                                        Title = "菜单已隐藏",
-                                        Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
-                                        Type = "info",
-                                        Duration = 10
-                                    })
-                                end
+                            if not windowVisible and self.Settings.FirstHide then
+                                self.Settings.FirstHide = false
+                                self:Notify({
+                                    Title = "菜单已隐藏",
+                                    Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
+                                    Type = "info",
+                                    Duration = 10
+                                })
                             end
                             return Enum.ContextActionResult.Sink
                         end
