@@ -19,7 +19,7 @@
 
 ---
 
-## **▶ ChronixHubV3.lua**  
+## **▶ ChronixHubV3**  
 **执行代码：**  
 ```lua
 loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/mainv3.lua"))()
