@@ -1,12 +1,18 @@
--- ChronixUI (基于 OrionLib 架构，白淡紫配色)
--- 保留 OrionLib 所有原有结构和功能
+-- ChronixUI
+-- 基于 OrionLib 架构，白淡紫半透明配色，会员名高亮
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HttpService = game:GetService("HttpService")
+
+-- 检查 Premium 会员
+local function isPremium()
+    return LocalPlayer.MembershipType == Enum.MembershipType.Premium
+end
 
 local ChronixUI = {
     Elements = {},
@@ -28,19 +34,8 @@ local ChronixUI = {
     SaveCfg = false
 }
 
--- Feather Icons 加载
-local Icons = {}
-local Success, Response = pcall(function()
-    Icons = HttpService:JSONDecode(game:HttpGetAsync("https://raw.githubusercontent.com/evoincorp/lucideblox/master/src/modules/util/icons.json")).icons
-end)
-if not Success then
-    warn("\nChronixUI - Failed to load Feather Icons. Error code: " .. Response .. "\n")
-end
-
+-- 移除 Feather Icons 加载，用空函数替代
 local function GetIcon(IconName)
-    if Icons[IconName] ~= nil then
-        return Icons[IconName]
-    end
     return nil
 end
 
@@ -191,14 +186,6 @@ local function AddThemeObject(Object, Type)
     return Object
 end
 
-local function SetTheme()
-    for Name, Type in pairs(ChronixUI.ThemeObjects) do
-        for _, Object in pairs(Type) do
-            Object[ReturnProperty(Object)] = ChronixUI.Themes[ChronixUI.SelectedTheme][Name]
-        end
-    end
-end
-
 local function PackColor(Color)
     return { R = Color.R * 255, G = Color.G * 255, B = Color.B * 255 }
 end
@@ -303,11 +290,7 @@ CreateElement("ScrollFrame", function(Color, Width)
 end)
 
 CreateElement("Image", function(ImageID)
-    local ImageNew = Create("ImageLabel", { Image = ImageID, BackgroundTransparency = 1 })
-    if GetIcon(ImageID) ~= nil then
-        ImageNew.Image = GetIcon(ImageID)
-    end
-    return ImageNew
+    return Create("ImageLabel", { Image = ImageID, BackgroundTransparency = 1 })
 end)
 
 CreateElement("ImageButton", function(ImageID)
@@ -401,6 +384,9 @@ function ChronixUI:MakeNotification(NotificationConfig)
     end)
 end
 
+-- ============ 加载动画 ============
+local LoadAnimationModule = nil
+
 -- ============ 主窗口 ============
 function ChronixUI:MakeWindow(WindowConfig)
     local FirstTab = true
@@ -428,6 +414,23 @@ function ChronixUI:MakeWindow(WindowConfig)
     if WindowConfig.SaveConfig then
         if not isfolder(WindowConfig.ConfigFolder) then
             makefolder(WindowConfig.ConfigFolder)
+        end
+    end
+
+    -- 使用你的加载动画（替换 OrionLib 自带动画）
+    if WindowConfig.IntroEnabled then
+        LoadAnimationModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
+        if LoadAnimationModule then
+            LoadAnimationModule:LoadAnimation(2.5, {
+                titleText = WindowConfig.Name,
+                loadingText = "加载中... ",
+                backgroundColor = Color3.new(0.102, 0.098, 0.102),
+                textColor = Color3.new(1, 1, 1),
+                language = "zh",
+                onComplete = function(isCancelled) end,
+                showCancelButton = true
+            })
+            task.wait(2.1)
         end
     end
 
@@ -473,9 +476,10 @@ function ChronixUI:MakeWindow(WindowConfig)
     })
 
     -- 左侧栏
-    local WindowStuff = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(255, 255, 255), 0, 10), {
+    local WindowStuff = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Main, 0, 10), {
         Size = UDim2.new(0, 150, 1, -50),
-        Position = UDim2.new(0, 0, 0, 50)
+        Position = UDim2.new(0, 0, 0, 50),
+        BackgroundTransparency = 0.15  -- 半透明效果
     }), {
         AddThemeObject(SetProps(MakeElement("Frame"), {
             Size = UDim2.new(1, 0, 0, 10),
@@ -522,8 +526,9 @@ function ChronixUI:MakeWindow(WindowConfig)
                 Size = UDim2.new(1, -60, 0, 13),
                 Position = UDim2.new(0, 50, 0, 12),
                 Font = Enum.Font.GothamBold,
-                ClipsDescendants = true
-            }), "Text"),
+                ClipsDescendants = true,
+                TextColor3 = isPremium() and Color3.fromRGB(220, 180, 80) or ChronixUI.Themes[ChronixUI.SelectedTheme].TextDark
+            }), "TextDark"),
             AddThemeObject(SetProps(MakeElement("Label", "", 12), {
                 Size = UDim2.new(1, -60, 0, 12),
                 Position = UDim2.new(0, 50, 1, -25),
@@ -545,14 +550,15 @@ function ChronixUI:MakeWindow(WindowConfig)
         Position = UDim2.new(0, 0, 1, -1)
     }), "Stroke")
 
-    -- 主窗口
+    -- 主窗口（半透明毛玻璃效果）
     local MainWindow = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Main, 0, 10), {
         Parent = Chronix,
         Position = UDim2.new(0.5, -307, 0.5, -172),
         Size = UDim2.new(0, 615, 0, 344),
         ClipsDescendants = true,
         Active = true,
-        Draggable = true
+        Draggable = true,
+        BackgroundTransparency = 0.25  -- 半透明效果
     }), {
         SetChildren(SetProps(MakeElement("TFrame"), {
             Size = UDim2.new(1, 0, 0, 50),
@@ -624,45 +630,7 @@ function ChronixUI:MakeWindow(WindowConfig)
         Minimized = not Minimized
     end)
 
-    -- 开场动画
-    local function LoadSequence()
-        MainWindow.Visible = false
-        local LoadSequenceLogo = SetProps(MakeElement("Image", WindowConfig.IntroIcon), {
-            Parent = Chronix,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.4, 0),
-            Size = UDim2.new(0, 28, 0, 28),
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-            ImageTransparency = 1
-        })
-
-        local LoadSequenceText = SetProps(MakeElement("Label", WindowConfig.IntroText, 14), {
-            Parent = Chronix,
-            Size = UDim2.new(1, 0, 1, 0),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 19, 0.5, 0),
-            TextXAlignment = Enum.TextXAlignment.Center,
-            Font = Enum.Font.GothamBold,
-            TextTransparency = 1
-        })
-
-        TweenService:Create(LoadSequenceLogo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = 0, Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-        wait(0.8)
-        TweenService:Create(LoadSequenceLogo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, -(LoadSequenceText.TextBounds.X / 2), 0.5, 0) }):Play()
-        wait(0.3)
-        TweenService:Create(LoadSequenceText, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
-        wait(2)
-        TweenService:Create(LoadSequenceText, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 1 }):Play()
-        MainWindow.Visible = true
-        LoadSequenceLogo:Destroy()
-        LoadSequenceText:Destroy()
-    end
-
-    if WindowConfig.IntroEnabled then
-        LoadSequence()
-    end
-
-    -- 标签页和控件创建函数（与 OrionLib 完全一致）
+    -- 标签页创建函数
     local TabFunction = {}
     function TabFunction:MakeTab(TabConfig)
         TabConfig = TabConfig or {}
@@ -1583,14 +1551,20 @@ function ChronixUI:MakeWindow(WindowConfig)
 
         local ElementFunction = {}
 
+        -- 修复 AddSection：兼容字符串和 table 两种调用方式
         function ElementFunction:AddSection(SectionConfig)
-            SectionConfig.Name = SectionConfig.Name or "Section"
+            local sectionName
+            if type(SectionConfig) == "table" then
+                sectionName = SectionConfig.Name or "Section"
+            else
+                sectionName = SectionConfig or "Section"
+            end
 
             local SectionFrame = SetChildren(SetProps(MakeElement("TFrame"), {
                 Size = UDim2.new(1, 0, 0, 26),
                 Parent = Container
             }), {
-                AddThemeObject(SetProps(MakeElement("Label", SectionConfig.Name, 14), {
+                AddThemeObject(SetProps(MakeElement("Label", sectionName, 14), {
                     Size = UDim2.new(1, -12, 0, 16),
                     Position = UDim2.new(0, 0, 0, 3),
                     Font = Enum.Font.GothamSemibold
