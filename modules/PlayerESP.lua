@@ -8,6 +8,9 @@ local labels = {}          -- 玩家 -> BillboardGui
 local connections = {}     -- 玩家 -> {CharacterAdded连接, CharacterRemoving连接}
 local playerAddedConn = nil
 local playerRemovingConn = nil
+-- 在 DEFAULT_CONFIG 上方添加
+local FRIEND_COLOR = Color3.new(0, 1, 0)  -- 绿色
+local NON_FRIEND_COLOR = Color3.new(1, 0, 0) -- 红色
 
 -- 本地玩家
 local localPlayer = game.Players.LocalPlayer
@@ -28,14 +31,21 @@ local DEFAULT_CONFIG = {
 -- 添加高亮
 local function addHighlight(player, character)
     if player == localPlayer or not character then return end
+    
+    -- 【新增】判断是否为好友
+    local isFriend = player:IsFriendsWith(localPlayer.UserId)
+    local fillColor = isFriend and FRIEND_COLOR or NON_FRIEND_COLOR
+    local outlineColor = fillColor -- 让轮廓颜色与填充色相同，你也可以单独设置
+
     local highlight = Instance.new("Highlight")
     highlight.Adornee = character
-    highlight.FillColor = DEFAULT_CONFIG.fillColor
+    highlight.FillColor = fillColor          -- 使用动态颜色
     highlight.FillTransparency = DEFAULT_CONFIG.fillTransparency
-    highlight.OutlineColor = DEFAULT_CONFIG.outlineColor
+    highlight.OutlineColor = outlineColor    -- 使用动态轮廓色
     highlight.OutlineTransparency = DEFAULT_CONFIG.outlineTransparency
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
+    
     if DEFAULT_CONFIG.onlyOutline then
         highlight.FillTransparency = 1
     end
@@ -48,6 +58,10 @@ local function addLabel(player, character)
     local head = character:WaitForChild("Head", 5)
     if not head then return end
 
+    -- 【新增】判断是否为好友
+    local isFriend = player:IsFriendsWith(localPlayer.UserId)
+    local prefix = isFriend and "⭐ " or ""  -- 好友名字前加星标
+
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = head
     billboard.Size = DEFAULT_CONFIG.labelSize
@@ -58,9 +72,9 @@ local function addLabel(player, character)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     if player.DisplayName == player.Name then
-        label.Text = player.DisplayName
+        label.Text = prefix .. player.DisplayName  -- 应用前缀
     else
-        label.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+        label.Text = prefix .. player.DisplayName .. " (@" .. player.Name .. ")"
     end
     label.TextColor3 = DEFAULT_CONFIG.textColor
     label.BackgroundTransparency = 1
