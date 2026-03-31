@@ -37,10 +37,7 @@ local mainWindow = ChronixUI:CreateWindow({
     Title = "ChronixHub V3",
     ShowIntro = true,           -- 是否显示开场动画
     IntroText = "ChronixHub V3", -- 开场动画文字
-    IntroDuration = 2.5,        -- 开场动画时长
-    CloseCallback = function()   -- 关闭窗口时的回调
-        print("窗口已关闭")
-    end
+    IntroDuration = 2.5        -- 开场动画时长
 })
 
 -- ============ 自动创建设置标签页（包含快捷键设置） ============
