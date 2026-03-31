@@ -1,8 +1,8 @@
--- ChronixUI v1.2
+-- ChronixUI v1.3
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.2.0"
+ChronixUI.Version = "1.3.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -102,7 +102,6 @@ local function AddListLayout(parent, padding, order)
 end
 
 -- 通知系统
-local NotificationSystem = {}
 local notifications = {}
 local notificationScreenGui = nil
 
@@ -220,9 +219,9 @@ function ChronixUI:Notify(config)
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 20, 0, 20)
     closeBtn.Position = UDim2.new(1, -28, 0, 8)
-    closeBtn.Text = "✕"
+    closeBtn.Text = "×"
     closeBtn.TextColor3 = self.Themes[self.CurrentTheme].TextDark
-    closeBtn.TextSize = 12
+    closeBtn.TextSize = 14
     closeBtn.BackgroundTransparency = 1
     closeBtn.BorderSizePixel = 0
     closeBtn.Parent = contentContainer
@@ -291,7 +290,7 @@ end
 function ChronixUI:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Chronix UI"
-    local windowSize = config.Size or UDim2.new(0, 720, 0, 480)
+    local windowSize = config.Size or UDim2.new(0, 680, 0, 420)
     local closeCallback = config.OnClose or function() end
     
     local gui = Instance.new("ScreenGui")
@@ -310,7 +309,7 @@ function ChronixUI:CreateWindow(config)
     local windowVisible = true
     local minimized = false
     local originalSize = windowSize
-    local originalPosition = UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2)
+    local originalPosition = mainFrame.Position
     
     -- 使用 ContextActionService 绑定快捷键，阻止游戏默认行为
     local toggleActionName = "ChronixUIToggle"
@@ -334,7 +333,7 @@ function ChronixUI:CreateWindow(config)
     end, false, self.Settings.ToggleKey)
     
     -- 标题栏
-    local titleBar = CreateFrame(mainFrame, UDim2.new(1, 0, 0, 50), UDim2.new(0, 0, 0, 0),
+    local titleBar = CreateFrame(mainFrame, UDim2.new(1, 0, 0, 45), UDim2.new(0, 0, 0, 0),
                                   self.Themes[self.CurrentTheme].Background, 1)
     MakeDraggable(mainFrame, titleBar)
     
@@ -342,8 +341,8 @@ function ChronixUI:CreateWindow(config)
                                     self.Themes[self.CurrentTheme].Accent, 18, Enum.Font.GothamBold)
     
     local buttonContainer = Instance.new("Frame")
-    buttonContainer.Size = UDim2.new(0, 100, 1, 0)
-    buttonContainer.Position = UDim2.new(1, -110, 0, 0)
+    buttonContainer.Size = UDim2.new(0, 120, 1, 0)
+    buttonContainer.Position = UDim2.new(1, -130, 0, 0)
     buttonContainer.BackgroundTransparency = 1
     buttonContainer.Parent = titleBar
     
@@ -362,14 +361,10 @@ function ChronixUI:CreateWindow(config)
     settingsCorner.Parent = settingsBtn
     AddStroke(settingsBtn, self.Themes[self.CurrentTheme].Border)
     
-    settingsBtn.MouseButton1Click:Connect(function()
-        PlayClickSound()
-    end)
-    
     -- 最小化按钮
     local minBtn = Instance.new("TextButton")
     minBtn.Size = UDim2.new(0, 32, 0, 32)
-    minBtn.Position = UDim2.new(0, 34, 0.5, -16)
+    minBtn.Position = UDim2.new(0, 38, 0.5, -16)
     minBtn.Text = "−"
     minBtn.TextColor3 = self.Themes[self.CurrentTheme].Text
     minBtn.TextSize = 24
@@ -384,10 +379,10 @@ function ChronixUI:CreateWindow(config)
     -- 关闭按钮
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 32, 0, 32)
-    closeBtn.Position = UDim2.new(0, 68, 0.5, -16)
-    closeBtn.Text = "✕"
+    closeBtn.Position = UDim2.new(0, 76, 0.5, -16)
+    closeBtn.Text = "×"
     closeBtn.TextColor3 = self.Themes[self.CurrentTheme].Text
-    closeBtn.TextSize = 18
+    closeBtn.TextSize = 20
     closeBtn.BackgroundColor3 = self.Themes[self.CurrentTheme].Card
     closeBtn.BorderSizePixel = 0
     closeBtn.Parent = buttonContainer
@@ -424,12 +419,12 @@ function ChronixUI:CreateWindow(config)
     local playerNameLabel = CreateLabel(playerBar, LocalPlayer.DisplayName, UDim2.new(0, 200, 0, 24), UDim2.new(0, 60, 0, 8),
                                          self.Themes[self.CurrentTheme].Text, 16, Enum.Font.GothamBold)
     
-    local playerInfoLabel = CreateLabel(playerBar, "等级 1 | 积分 0", UDim2.new(0, 200, 0, 20), UDim2.new(0, 60, 0, 32),
+    local playerInfoLabel = CreateLabel(playerBar, "等级 1 | 积分 0", UDim2.new(0, 200, 0, 20), UDim2.new(0, 60, 0, 30),
                                          self.Themes[self.CurrentTheme].TextDark, 12)
     playerInfoLabel.Name = "PlayerInfoLabel"
     
     -- 侧边栏
-    local sidebar = CreateFrame(mainFrame, UDim2.new(0, 160, 1, -100), UDim2.new(0, 0, 0, 50),
+    local sidebar = CreateFrame(mainFrame, UDim2.new(0, 160, 1, -95), UDim2.new(0, 0, 0, 45),
                                  self.Themes[self.CurrentTheme].Sidebar)
     
     local sidebarTitle = CreateLabel(sidebar, "功能菜单", UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 10),
@@ -448,7 +443,7 @@ function ChronixUI:CreateWindow(config)
     local tabList = AddListLayout(tabContainer, 8)
     
     -- 内容区域
-    local contentArea = CreateFrame(mainFrame, UDim2.new(1, -160, 1, -100), UDim2.new(0, 160, 0, 50),
+    local contentArea = CreateFrame(mainFrame, UDim2.new(1, -160, 1, -95), UDim2.new(0, 160, 0, 45),
                                      self.Themes[self.CurrentTheme].Background, 1)
     
     local contentScroll = Instance.new("ScrollingFrame")
@@ -467,9 +462,6 @@ function ChronixUI:CreateWindow(config)
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentScroll
     
-    -- 设置 Tab（内置）
-    local settingsTabContent = nil
-    
     -- 窗口数据
     local windowData = {
         Gui = gui,
@@ -479,23 +471,29 @@ function ChronixUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         CloseCallback = closeCallback,
-        SettingsTabContent = nil
+        SettingsTabContent = nil,
+        Minimized = false
     }
     
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
-        minimized = not minimized
-        if minimized then
+        windowData.Minimized = not windowData.Minimized
+        if windowData.Minimized then
+            -- 保存当前位置和大小
+            local currentPos = mainFrame.Position
+            -- 缩到左上角，只显示标题栏，隐藏设置按钮
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                Size = UDim2.new(0, 200, 0, 50),
-                Position = mainFrame.Position
+                Size = UDim2.new(0, 200, 0, 45),
+                Position = currentPos
             }):Play()
             sidebar.Visible = false
             contentArea.Visible = false
             playerBar.Visible = false
+            settingsBtn.Visible = false
             minBtn.Text = "+"
         else
+            -- 从当前位置展开到原始大小
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = originalSize,
                 Position = originalPosition
@@ -503,6 +501,7 @@ function ChronixUI:CreateWindow(config)
             sidebar.Visible = true
             contentArea.Visible = true
             playerBar.Visible = true
+            settingsBtn.Visible = true
             minBtn.Text = "−"
         end
     end)
@@ -577,7 +576,6 @@ function ChronixUI:CreateWindow(config)
         
         if isSettings then
             windowData.SettingsTabContent = tabContent
-            settingsTabContent = tabContent
         end
         
         if #windowData.Tabs == 0 and not isSettings then
@@ -663,7 +661,6 @@ function ChronixUI:CreateWindow(config)
             btnCorner.Parent = dropdownBtn
             AddStroke(dropdownBtn, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
             
-            -- 向下箭头
             local arrowIcon = Instance.new("TextLabel")
             arrowIcon.Parent = dropdownBtn
             arrowIcon.Size = UDim2.new(0, 20, 1, 0)
@@ -989,7 +986,6 @@ function ChronixUI:CreateWindow(config)
             headerFrame.Parent = container
             headerFrame.Size = UDim2.new(1, 0, 0, 40)
             headerFrame.BackgroundTransparency = 1
-            headerFrame.AutomaticSize = Enum.AutomaticSize.Y
             
             local labelText = CreateLabel(headerFrame, label, UDim2.new(1, -50, 1, 0), UDim2.new(0, 0, 0, 0),
                                            ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14, Enum.Font.GothamSemibold)
@@ -1005,7 +1001,7 @@ function ChronixUI:CreateWindow(config)
             previewCorner.Parent = colorPreview
             AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
             
-            -- 颜色选择器面板（动态展开）
+            -- 颜色选择器面板
             local pickerPanel = Instance.new("Frame")
             pickerPanel.Parent = container
             pickerPanel.Size = UDim2.new(1, 0, 0, 0)
@@ -1060,20 +1056,22 @@ function ChronixUI:CreateWindow(config)
             squareCorner.CornerRadius = UDim.new(0, 4)
             squareCorner.Parent = colorSquare
             
-            local saturationGradient = Instance.new("UIGradient")
-            saturationGradient.Color = ColorSequence.new{
+            -- 饱和度渐变（白色到纯色）
+            local satGradient = Instance.new("UIGradient")
+            satGradient.Color = ColorSequence.new{
                 ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
             }
-            saturationGradient.Parent = colorSquare
+            satGradient.Parent = colorSquare
             
-            local brightnessGradient = Instance.new("UIGradient")
-            brightnessGradient.Color = ColorSequence.new{
+            -- 明度渐变（透明到黑色）
+            local valGradient = Instance.new("UIGradient")
+            valGradient.Color = ColorSequence.new{
                 ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
             }
-            brightnessGradient.Transparency = NumberSequence.new(1, 0)
-            brightnessGradient.Parent = colorSquare
+            valGradient.Transparency = NumberSequence.new(1, 0)
+            valGradient.Parent = colorSquare
             
             local colorSelector = Instance.new("Frame")
             colorSelector.Size = UDim2.new(0, 8, 0, 8)
@@ -1089,6 +1087,21 @@ function ChronixUI:CreateWindow(config)
             local currentHue = 0
             local currentSat = 1
             local currentVal = 1
+            
+            local function updateColor()
+                local color = Color3.fromHSV(currentHue, currentSat, currentVal)
+                colorPreview.BackgroundColor3 = color
+                callback(color)
+            end
+            
+            local function updateColorSquare()
+                local hueColor = Color3.fromHSV(currentHue, 1, 1)
+                satGradient.Color = ColorSequence.new{
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(1, hueColor)
+                }
+                colorSquare.BackgroundColor3 = hueColor
+            end
             
             colorPreview.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1107,12 +1120,6 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            local function updateColor()
-                local color = Color3.fromHSV(currentHue, currentSat, currentVal)
-                colorPreview.BackgroundColor3 = color
-                callback(color)
-            end
-            
             -- 色相选择
             local hueDragConnection = nil
             hueBar.InputBegan:Connect(function(input)
@@ -1120,7 +1127,7 @@ function ChronixUI:CreateWindow(config)
                     local y = math.clamp((input.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
                     currentHue = 1 - y
                     hueSelector.Position = UDim2.new(0, 0, y, -2)
-                    colorSquare.BackgroundColor3 = Color3.fromHSV(currentHue, 1, 1)
+                    updateColorSquare()
                     updateColor()
                     
                     hueDragConnection = UserInputService.InputChanged:Connect(function(input2)
@@ -1128,7 +1135,7 @@ function ChronixUI:CreateWindow(config)
                             local newY = math.clamp((input2.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
                             currentHue = 1 - newY
                             hueSelector.Position = UDim2.new(0, 0, newY, -2)
-                            colorSquare.BackgroundColor3 = Color3.fromHSV(currentHue, 1, 1)
+                            updateColorSquare()
                             updateColor()
                         end
                     end)
@@ -1171,14 +1178,14 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            -- 初始位置
+            -- 初始设置
             local h, s, v = Color3.toHSV(default)
             currentHue = h
             currentSat = s
             currentVal = v
             hueSelector.Position = UDim2.new(0, 0, 1 - h, -2)
             colorSelector.Position = UDim2.new(s, -4, 1 - v, -4)
-            colorSquare.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            updateColorSquare()
             container.Size = UDim2.new(1, 0, 0, 50)
             
             return container
@@ -1233,22 +1240,18 @@ function ChronixUI:CreateWindow(config)
     -- 创建内置设置 Tab
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
     
-    -- 添加设置内容
     settingsElements:AddTitle("UI 设置")
     settingsElements:AddDivider()
     
-    -- 快捷键设置
-    local keybindElement = settingsElements:AddKeybind({
+    settingsElements:AddKeybind({
         Label = "菜单开关按键",
         Default = self.Settings.ToggleKeyName,
         Callback = function(key)
-            -- 更新全局设置
             local oldKey = self.Settings.ToggleKey
             local newKey = Enum.KeyCode[key]
             if newKey then
                 self.Settings.ToggleKey = newKey
                 self.Settings.ToggleKeyName = key
-                -- 重新绑定快捷键
                 ContextActionService:UnbindAction(toggleActionName)
                 ContextActionService:BindAction(toggleActionName, function(actionName, inputState, inputObject)
                     if inputState == Enum.UserInputState.Begin then
@@ -1283,11 +1286,23 @@ function ChronixUI:CreateWindow(config)
     
     -- 设置按钮打开设置 Tab
     settingsBtn.MouseButton1Click:Connect(function()
+        PlayClickSound()
         if windowData.SettingsTabContent then
-            -- 找到设置 Tab 的按钮并点击
             for _, tab in pairs(windowData.Tabs) do
                 if tab.Name == "设置" then
-                    tab.Button:Click()
+                    -- 直接触发按钮的点击事件
+                    local btn = tab.Button
+                    btn.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Accent
+                    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    for _, otherTab in pairs(windowData.Tabs) do
+                        if otherTab ~= tab then
+                            otherTab.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
+                            otherTab.Button.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
+                            otherTab.Content.Visible = false
+                        end
+                    end
+                    windowData.SettingsTabContent.Visible = true
+                    windowData.CurrentTab = { Name = "设置" }
                     break
                 end
             end
