@@ -1,8 +1,8 @@
--- ChronixUI v1.8
+-- ChronixUI v1.9 - 修复 CloseCallback 问题
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.8.0"
+ChronixUI.Version = "1.9.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -317,13 +317,6 @@ function ChronixUI:CreateWindow(config)
     ContextActionService:BindAction(toggleActionName, function(actionName, inputState, inputObject)
         if inputState == Enum.UserInputState.Begin then
             if inputObject.KeyCode == self.Settings.ToggleKey then
-                -- 在这里增加一个对窗口是否存在的检查
-                if not windowData.Gui or not windowData.Gui.Parent then
-                     -- 如果窗口已经不存在，则取消绑定并退出函数
-                     ContextActionService:UnbindAction(toggleActionName)
-                     return Enum.ContextActionResult.Pass
-                end
-    
                 windowVisible = not windowVisible
                 mainFrame.Visible = windowVisible
                 if not windowVisible and self.Settings.FirstHide then
@@ -490,7 +483,7 @@ function ChronixUI:CreateWindow(config)
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentScroll
     
-    -- 窗口数据对象
+    -- 先创建窗口数据对象（包含所有方法）
     local windowData = {
         Gui = gui,
         MainFrame = mainFrame,
@@ -501,34 +494,33 @@ function ChronixUI:CreateWindow(config)
         CloseCallback = initialCloseCallback,
         SettingsTabContent = nil,
         Minimized = false,
-        UpdatePlayerInfo = UpdatePlayerInfo,
-        
-        -- 动态设置关闭回调的方法
-        SetCloseCallback = function(callback)
-            windowData.CloseCallback = callback
-        end,
-        
-        -- 关闭窗口的方法
-        Close = function()
-            PlayClickSound()
-            if windowData.CloseCallback then
-                local success, err = pcall(windowData.CloseCallback)
-                if not success then
-                    warn("Close callback error: ", err)
-                end
-            end
-            ContextActionService:UnbindAction(toggleActionName)
-            if gui then
-                gui:Destroy()
-            end
-            for i, window in pairs(self.Windows) do
-                if window == windowData then
-                    table.remove(self.Windows, i)
-                    break
-                end
+        UpdatePlayerInfo = UpdatePlayerInfo
+    }
+    
+    -- 添加方法到 windowData
+    function windowData:SetCloseCallback(callback)
+        self.CloseCallback = callback
+    end
+    
+    function windowData:Close()
+        PlayClickSound()
+        if self.CloseCallback then
+            local success, err = pcall(self.CloseCallback)
+            if not success then
+                warn("Close callback error: ", err)
             end
         end
-    }
+        ContextActionService:UnbindAction(toggleActionName)
+        if gui then
+            gui:Destroy()
+        end
+        for i, window in pairs(ChronixUI.Windows) do
+            if window == windowData then
+                table.remove(ChronixUI.Windows, i)
+                break
+            end
+        end
+    end
     
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
@@ -560,9 +552,7 @@ function ChronixUI:CreateWindow(config)
     
     -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
-        if windowData and typeof(windowData.Close) == "function" then
-            windowData:Close()
-        end
+        windowData:Close()
     end)
     
     -- 创建 Tab 函数
