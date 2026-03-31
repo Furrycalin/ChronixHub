@@ -1,13 +1,14 @@
--- ChronixUI v1.3
+-- ChronixUI v1.4
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.3.0"
+ChronixUI.Version = "1.4.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
     ToggleKey = Enum.KeyCode.RightShift,
-    ToggleKeyName = "RightShift"
+    ToggleKeyName = "RightShift",
+    FirstHide = true
 }
 
 -- 服务引用
@@ -319,12 +320,18 @@ function ChronixUI:CreateWindow(config)
                 windowVisible = not windowVisible
                 mainFrame.Visible = windowVisible
                 if windowVisible then
-                    self:Notify({
-                        Title = "菜单",
-                        Content = "菜单已显示",
-                        Type = "info",
-                        Duration = 2
-                    })
+                    -- 打开菜单时不需要提示
+                else
+                    -- 隐藏时显示提示
+                    if self.Settings.FirstHide then
+                        self.Settings.FirstHide = false
+                        self:Notify({
+                            Title = "菜单已隐藏",
+                            Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
+                            Type = "info",
+                            Duration = 10
+                        })
+                    end
                 end
                 return Enum.ContextActionResult.Sink
             end
@@ -350,7 +357,7 @@ function ChronixUI:CreateWindow(config)
     local settingsBtn = Instance.new("TextButton")
     settingsBtn.Size = UDim2.new(0, 32, 0, 32)
     settingsBtn.Position = UDim2.new(0, 0, 0.5, -16)
-    settingsBtn.Text = "⚙"
+    settingsBtn.Text = "⚙️"
     settingsBtn.TextColor3 = self.Themes[self.CurrentTheme].Text
     settingsBtn.TextSize = 20
     settingsBtn.BackgroundColor3 = self.Themes[self.CurrentTheme].Card
@@ -423,6 +430,11 @@ function ChronixUI:CreateWindow(config)
                                          self.Themes[self.CurrentTheme].TextDark, 12)
     playerInfoLabel.Name = "PlayerInfoLabel"
     
+    -- 玩家信息更新方法
+    local function UpdatePlayerInfo(level, points)
+        playerInfoLabel.Text = string.format("等级 %s | 积分 %s", level or "1", points or "0")
+    end
+    
     -- 侧边栏
     local sidebar = CreateFrame(mainFrame, UDim2.new(0, 160, 1, -95), UDim2.new(0, 0, 0, 45),
                                  self.Themes[self.CurrentTheme].Sidebar)
@@ -437,10 +449,16 @@ function ChronixUI:CreateWindow(config)
     tabContainer.Position = UDim2.new(0, 0, 0, 50)
     tabContainer.BackgroundTransparency = 1
     tabContainer.BorderSizePixel = 0
-    tabContainer.ScrollBarThickness = 4
+    tabContainer.ScrollBarThickness = 6
     tabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
     
     local tabList = AddListLayout(tabContainer, 8)
+    
+    -- 更新侧边栏滚动区域
+    local function updateSidebarCanvas()
+        tabContainer.CanvasSize = UDim2.new(0, 0, 0, tabList.AbsoluteContentSize.Y + 20)
+    end
+    tabList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateSidebarCanvas)
     
     -- 内容区域
     local contentArea = CreateFrame(mainFrame, UDim2.new(1, -160, 1, -95), UDim2.new(0, 160, 0, 45),
@@ -472,19 +490,18 @@ function ChronixUI:CreateWindow(config)
         CurrentTab = nil,
         CloseCallback = closeCallback,
         SettingsTabContent = nil,
-        Minimized = false
+        Minimized = false,
+        UpdatePlayerInfo = UpdatePlayerInfo
     }
     
-    -- 最小化功能
+    -- 最小化功能（缩小宽度更大些，避免文字被挡住）
     minBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         windowData.Minimized = not windowData.Minimized
         if windowData.Minimized then
-            -- 保存当前位置和大小
             local currentPos = mainFrame.Position
-            -- 缩到左上角，只显示标题栏，隐藏设置按钮
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                Size = UDim2.new(0, 200, 0, 45),
+                Size = UDim2.new(0, 280, 0, 45),
                 Position = currentPos
             }):Play()
             sidebar.Visible = false
@@ -493,7 +510,6 @@ function ChronixUI:CreateWindow(config)
             settingsBtn.Visible = false
             minBtn.Text = "+"
         else
-            -- 从当前位置展开到原始大小
             TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
                 Size = originalSize,
                 Position = originalPosition
@@ -576,6 +592,8 @@ function ChronixUI:CreateWindow(config)
         
         if isSettings then
             windowData.SettingsTabContent = tabContent
+            -- 设置 Tab 不在侧边栏显示
+            tabBtn.Visible = false
         end
         
         if #windowData.Tabs == 0 and not isSettings then
@@ -969,6 +987,7 @@ function ChronixUI:CreateWindow(config)
             return container
         end
         
+        -- OrionLib 风格的颜色选择器（参考原版实现）
         function elements:AddColorPicker(config)
             local colorConfig = config or {}
             local label = colorConfig.Label or "颜色选择"
@@ -977,57 +996,43 @@ function ChronixUI:CreateWindow(config)
             
             local container = Instance.new("Frame")
             container.Parent = tabContent
-            container.Size = UDim2.new(1, 0, 0, 0)
+            container.Size = UDim2.new(1, 0, 0, 38)
             container.BackgroundTransparency = 1
             container.AutomaticSize = Enum.AutomaticSize.Y
             
-            -- 标题和预览行
-            local headerFrame = Instance.new("Frame")
-            headerFrame.Parent = container
-            headerFrame.Size = UDim2.new(1, 0, 0, 40)
-            headerFrame.BackgroundTransparency = 1
+            local ColorH, ColorS, ColorV = Color3.toHSV(default)
+            local toggled = false
             
-            local labelText = CreateLabel(headerFrame, label, UDim2.new(1, -50, 1, 0), UDim2.new(0, 0, 0, 0),
-                                           ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14, Enum.Font.GothamSemibold)
+            -- 颜色选择器控件（参考 OrionLib 实现）
+            local ColorSelection = Instance.new("ImageLabel")
+            ColorSelection.Size = UDim2.new(0, 12, 0, 12)
+            ColorSelection.ScaleType = Enum.ScaleType.Fit
+            ColorSelection.AnchorPoint = Vector2.new(0.5, 0.5)
+            ColorSelection.BackgroundTransparency = 1
+            ColorSelection.Image = "http://www.roblox.com/asset/?id=4805639000"
             
-            local colorPreview = Instance.new("Frame")
-            colorPreview.Parent = headerFrame
-            colorPreview.Size = UDim2.new(0, 30, 0, 30)
-            colorPreview.Position = UDim2.new(1, -40, 0, 5)
-            colorPreview.BackgroundColor3 = default
-            colorPreview.BorderSizePixel = 0
-            local previewCorner = Instance.new("UICorner")
-            previewCorner.CornerRadius = UDim.new(0, 6)
-            previewCorner.Parent = colorPreview
-            AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+            local HueSelection = Instance.new("ImageLabel")
+            HueSelection.Size = UDim2.new(0, 12, 0, 12)
+            HueSelection.ScaleType = Enum.ScaleType.Fit
+            HueSelection.AnchorPoint = Vector2.new(0.5, 0.5)
+            HueSelection.BackgroundTransparency = 1
+            HueSelection.Image = "http://www.roblox.com/asset/?id=4805639000"
             
-            -- 颜色选择器面板
-            local pickerPanel = Instance.new("Frame")
-            pickerPanel.Parent = container
-            pickerPanel.Size = UDim2.new(1, 0, 0, 0)
-            pickerPanel.Position = UDim2.new(0, 0, 0, 45)
-            pickerPanel.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Card
-            pickerPanel.Visible = false
-            pickerPanel.ClipsDescendants = true
-            local panelCorner = Instance.new("UICorner")
-            panelCorner.CornerRadius = UDim.new(0, 6)
-            panelCorner.Parent = pickerPanel
-            AddStroke(pickerPanel, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+            local ColorSquare = Instance.new("ImageLabel")
+            ColorSquare.Size = UDim2.new(1, -25, 1, 0)
+            ColorSquare.Visible = false
+            ColorSquare.Image = "rbxassetid://4155801252"
+            ColorSquare.BackgroundTransparency = 1
             
-            -- 色相条
-            local hueBar = Instance.new("Frame")
-            hueBar.Parent = pickerPanel
-            hueBar.Size = UDim2.new(0, 20, 1, -20)
-            hueBar.Position = UDim2.new(1, -30, 0, 10)
-            hueBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            hueBar.BorderSizePixel = 0
-            local hueCorner = Instance.new("UICorner")
-            hueCorner.CornerRadius = UDim.new(0, 4)
-            hueCorner.Parent = hueBar
+            local HueBar = Instance.new("Frame")
+            HueBar.Size = UDim2.new(0, 20, 1, 0)
+            HueBar.Position = UDim2.new(1, -20, 0, 0)
+            HueBar.Visible = false
+            HueBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
             
-            local hueGradient = Instance.new("UIGradient")
-            hueGradient.Rotation = 270
-            hueGradient.Color = ColorSequence.new{
+            local HueGradient = Instance.new("UIGradient")
+            HueGradient.Rotation = 270
+            HueGradient.Color = ColorSequence.new{
                 ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
                 ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
                 ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
@@ -1036,157 +1041,152 @@ function ChronixUI:CreateWindow(config)
                 ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
             }
-            hueGradient.Parent = hueBar
+            HueGradient.Parent = HueBar
             
-            local hueSelector = Instance.new("Frame")
-            hueSelector.Size = UDim2.new(1, 0, 0, 4)
-            hueSelector.Position = UDim2.new(0, 0, 0, 0)
-            hueSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            hueSelector.BorderSizePixel = 0
-            hueSelector.Parent = hueBar
+            local PickerContainer = Instance.new("Frame")
+            PickerContainer.Position = UDim2.new(0, 0, 0, 38)
+            PickerContainer.Size = UDim2.new(1, 0, 1, -38)
+            PickerContainer.BackgroundTransparency = 1
+            PickerContainer.ClipsDescendants = true
             
-            -- 颜色方块
-            local colorSquare = Instance.new("Frame")
-            colorSquare.Parent = pickerPanel
-            colorSquare.Size = UDim2.new(1, -50, 1, -20)
-            colorSquare.Position = UDim2.new(0, 10, 0, 10)
-            colorSquare.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            colorSquare.BorderSizePixel = 0
-            local squareCorner = Instance.new("UICorner")
-            squareCorner.CornerRadius = UDim.new(0, 4)
-            squareCorner.Parent = colorSquare
+            ColorSquare.Parent = PickerContainer
+            HueBar.Parent = PickerContainer
+            ColorSelection.Parent = ColorSquare
+            HueSelection.Parent = HueBar
             
-            -- 饱和度渐变（白色到纯色）
-            local satGradient = Instance.new("UIGradient")
-            satGradient.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-            }
-            satGradient.Parent = colorSquare
+            local padding = Instance.new("UIPadding")
+            padding.PaddingLeft = UDim.new(0, 35)
+            padding.PaddingRight = UDim.new(0, 35)
+            padding.PaddingBottom = UDim.new(0, 10)
+            padding.PaddingTop = UDim.new(0, 17)
+            padding.Parent = PickerContainer
             
-            -- 明度渐变（透明到黑色）
-            local valGradient = Instance.new("UIGradient")
-            valGradient.Color = ColorSequence.new{
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-            }
-            valGradient.Transparency = NumberSequence.new(1, 0)
-            valGradient.Parent = colorSquare
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 5)
+            corner.Parent = ColorSquare
             
-            local colorSelector = Instance.new("Frame")
-            colorSelector.Size = UDim2.new(0, 8, 0, 8)
-            colorSelector.Position = UDim2.new(0, 0, 0, 0)
-            colorSelector.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            colorSelector.BorderSizePixel = 0
-            local selectorCorner = Instance.new("UICorner")
-            selectorCorner.CornerRadius = UDim.new(0, 4)
-            selectorCorner.Parent = colorSelector
-            colorSelector.Parent = colorSquare
+            local hueCorner = Instance.new("UICorner")
+            hueCorner.CornerRadius = UDim.new(0, 5)
+            hueCorner.Parent = HueBar
             
-            local expanded = false
-            local currentHue = 0
-            local currentSat = 1
-            local currentVal = 1
+            -- 标题栏
+            local header = Instance.new("Frame")
+            header.Size = UDim2.new(1, 0, 0, 38)
+            header.BackgroundTransparency = 1
+            header.Parent = container
             
-            local function updateColor()
-                local color = Color3.fromHSV(currentHue, currentSat, currentVal)
+            local labelText = CreateLabel(header, label, UDim2.new(1, -50, 1, 0), UDim2.new(0, 12, 0, 0),
+                                           ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14, Enum.Font.GothamSemibold)
+            
+            local colorPreview = Instance.new("Frame")
+            colorPreview.Size = UDim2.new(0, 30, 0, 30)
+            colorPreview.Position = UDim2.new(1, -40, 0.5, -15)
+            colorPreview.BackgroundColor3 = default
+            colorPreview.BorderSizePixel = 0
+            colorPreview.Parent = header
+            local previewCorner = Instance.new("UICorner")
+            previewCorner.CornerRadius = UDim.new(0, 6)
+            previewCorner.Parent = colorPreview
+            AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+            
+            local expandBtn = Instance.new("TextButton")
+            expandBtn.Size = UDim2.new(1, 0, 1, 0)
+            expandBtn.BackgroundTransparency = 1
+            expandBtn.Text = ""
+            expandBtn.Parent = header
+            
+            PickerContainer.Parent = container
+            
+            local function UpdateColorPicker()
+                local color = Color3.fromHSV(ColorH, ColorS, ColorV)
                 colorPreview.BackgroundColor3 = color
+                ColorSquare.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
                 callback(color)
             end
             
-            local function updateColorSquare()
-                local hueColor = Color3.fromHSV(currentHue, 1, 1)
-                satGradient.Color = ColorSequence.new{
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-                    ColorSequenceKeypoint.new(1, hueColor)
-                }
-                colorSquare.BackgroundColor3 = hueColor
+            local function UpdatePositions()
+                ColorSelection.Position = UDim2.new(ColorS, -6, ColorV, -6)
+                HueSelection.Position = UDim2.new(0.5, 0, 1 - ColorH, -6)
             end
             
-            colorPreview.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    PlayClickSound()
-                    expanded = not expanded
-                    pickerPanel.Visible = true
-                    if expanded then
-                        TweenService:Create(pickerPanel, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 150)}):Play()
-                        container.Size = UDim2.new(1, 0, 0, 200)
-                    else
-                        TweenService:Create(pickerPanel, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-                        wait(0.2)
-                        pickerPanel.Visible = false
-                        container.Size = UDim2.new(1, 0, 0, 50)
-                    end
-                end
-            end)
-            
             -- 色相选择
-            local hueDragConnection = nil
-            hueBar.InputBegan:Connect(function(input)
+            local HueInput = nil
+            HueBar.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    local y = math.clamp((input.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
-                    currentHue = 1 - y
-                    hueSelector.Position = UDim2.new(0, 0, y, -2)
-                    updateColorSquare()
-                    updateColor()
+                    local HueY = math.clamp((input.Position.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 1)
+                    ColorH = 1 - HueY
+                    HueSelection.Position = UDim2.new(0.5, 0, HueY, -6)
+                    UpdateColorPicker()
                     
-                    hueDragConnection = UserInputService.InputChanged:Connect(function(input2)
-                        if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                            local newY = math.clamp((input2.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
-                            currentHue = 1 - newY
-                            hueSelector.Position = UDim2.new(0, 0, newY, -2)
-                            updateColorSquare()
-                            updateColor()
-                        end
+                    if HueInput then HueInput:Disconnect() end
+                    HueInput = RunService.RenderStepped:Connect(function()
+                        local newY = math.clamp((Mouse.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 1)
+                        ColorH = 1 - newY
+                        HueSelection.Position = UDim2.new(0.5, 0, newY, -6)
+                        UpdateColorPicker()
                     end)
                     
                     input.Changed:Connect(function()
                         if input.UserInputState == Enum.UserInputState.End then
-                            if hueDragConnection then hueDragConnection:Disconnect() end
+                            if HueInput then HueInput:Disconnect() end
                         end
                     end)
                 end
             end)
             
             -- 颜色方块选择
-            local squareDragConnection = nil
-            colorSquare.InputBegan:Connect(function(input)
+            local ColorInput = nil
+            ColorSquare.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    local x = math.clamp((input.Position.X - colorSquare.AbsolutePosition.X) / colorSquare.AbsoluteSize.X, 0, 1)
-                    local y = math.clamp((input.Position.Y - colorSquare.AbsolutePosition.Y) / colorSquare.AbsoluteSize.Y, 0, 1)
-                    currentSat = x
-                    currentVal = 1 - y
-                    colorSelector.Position = UDim2.new(x, -4, y, -4)
-                    updateColor()
+                    local ColorX = math.clamp((input.Position.X - ColorSquare.AbsolutePosition.X) / ColorSquare.AbsoluteSize.X, 0, 1)
+                    local ColorY = math.clamp((input.Position.Y - ColorSquare.AbsolutePosition.Y) / ColorSquare.AbsoluteSize.Y, 0, 1)
+                    ColorS = ColorX
+                    ColorV = 1 - ColorY
+                    ColorSelection.Position = UDim2.new(ColorX, -6, ColorY, -6)
+                    UpdateColorPicker()
                     
-                    squareDragConnection = UserInputService.InputChanged:Connect(function(input2)
-                        if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                            local newX = math.clamp((input2.Position.X - colorSquare.AbsolutePosition.X) / colorSquare.AbsoluteSize.X, 0, 1)
-                            local newY = math.clamp((input2.Position.Y - colorSquare.AbsolutePosition.Y) / colorSquare.AbsoluteSize.Y, 0, 1)
-                            currentSat = newX
-                            currentVal = 1 - newY
-                            colorSelector.Position = UDim2.new(newX, -4, newY, -4)
-                            updateColor()
-                        end
+                    if ColorInput then ColorInput:Disconnect() end
+                    ColorInput = RunService.RenderStepped:Connect(function()
+                        local newX = math.clamp((Mouse.X - ColorSquare.AbsolutePosition.X) / ColorSquare.AbsoluteSize.X, 0, 1)
+                        local newY = math.clamp((Mouse.Y - ColorSquare.AbsolutePosition.Y) / ColorSquare.AbsoluteSize.Y, 0, 1)
+                        ColorS = newX
+                        ColorV = 1 - newY
+                        ColorSelection.Position = UDim2.new(newX, -6, newY, -6)
+                        UpdateColorPicker()
                     end)
                     
                     input.Changed:Connect(function()
                         if input.UserInputState == Enum.UserInputState.End then
-                            if squareDragConnection then squareDragConnection:Disconnect() end
+                            if ColorInput then ColorInput:Disconnect() end
                         end
                     end)
                 end
             end)
             
+            -- 展开/收起
+            expandBtn.MouseButton1Click:Connect(function()
+                PlayClickSound()
+                toggled = not toggled
+                if toggled then
+                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 150)}):Play()
+                    PickerContainer.Visible = true
+                    ColorSquare.Visible = true
+                    HueBar.Visible = true
+                else
+                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 38)}):Play()
+                    wait(0.15)
+                    PickerContainer.Visible = false
+                    ColorSquare.Visible = false
+                    HueBar.Visible = false
+                end
+            end)
+            
             -- 初始设置
-            local h, s, v = Color3.toHSV(default)
-            currentHue = h
-            currentSat = s
-            currentVal = v
-            hueSelector.Position = UDim2.new(0, 0, 1 - h, -2)
-            colorSelector.Position = UDim2.new(s, -4, 1 - v, -4)
-            updateColorSquare()
-            container.Size = UDim2.new(1, 0, 0, 50)
+            UpdatePositions()
+            UpdateColorPicker()
+            PickerContainer.Visible = false
+            ColorSquare.Visible = false
+            HueBar.Visible = false
             
             return container
         end
@@ -1237,7 +1237,7 @@ function ChronixUI:CreateWindow(config)
         return elements
     end
     
-    -- 创建内置设置 Tab
+    -- 创建内置设置 Tab（不在侧边栏显示）
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
     
     settingsElements:AddTitle("UI 设置")
@@ -1247,7 +1247,6 @@ function ChronixUI:CreateWindow(config)
         Label = "菜单开关按键",
         Default = self.Settings.ToggleKeyName,
         Callback = function(key)
-            local oldKey = self.Settings.ToggleKey
             local newKey = Enum.KeyCode[key]
             if newKey then
                 self.Settings.ToggleKey = newKey
@@ -1259,12 +1258,17 @@ function ChronixUI:CreateWindow(config)
                             windowVisible = not windowVisible
                             mainFrame.Visible = windowVisible
                             if windowVisible then
-                                self:Notify({
-                                    Title = "菜单",
-                                    Content = "菜单已显示",
-                                    Type = "info",
-                                    Duration = 2
-                                })
+                                -- 打开时不需要提示
+                            else
+                                if self.Settings.FirstHide then
+                                    self.Settings.FirstHide = false
+                                    self:Notify({
+                                        Title = "菜单已隐藏",
+                                        Content = string.format("按 %s 重新打开菜单", self.Settings.ToggleKeyName),
+                                        Type = "info",
+                                        Duration = 10
+                                    })
+                                end
                             end
                             return Enum.ContextActionResult.Sink
                         end
@@ -1290,10 +1294,8 @@ function ChronixUI:CreateWindow(config)
         if windowData.SettingsTabContent then
             for _, tab in pairs(windowData.Tabs) do
                 if tab.Name == "设置" then
-                    -- 直接触发按钮的点击事件
-                    local btn = tab.Button
-                    btn.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Accent
-                    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    tab.Button.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Accent
+                    tab.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
                     for _, otherTab in pairs(windowData.Tabs) do
                         if otherTab ~= tab then
                             otherTab.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
@@ -1327,17 +1329,6 @@ end
 function ChronixUI:SetTheme(themeName)
     if self.Themes[themeName] then
         self.CurrentTheme = themeName
-    end
-end
-
--- 更新玩家信息
-function ChronixUI:UpdatePlayerInfo(level, points)
-    for _, window in pairs(self.Windows) do
-        for _, child in ipairs(window.MainFrame:GetDescendants()) do
-            if child.Name == "PlayerInfoLabel" and child:IsA("TextLabel") then
-                child.Text = string.format("等级 %s | 积分 %s", level or "1", points or "0")
-            end
-        end
     end
 end
 
