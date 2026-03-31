@@ -1,6 +1,5 @@
 -- ChronixUI
--- 完整版：开场动画 + 窗口最小化 + 设置标签页 + 快捷键隐藏
--- 无图标依赖，集成 ChronixHub 加载动画
+-- 毛玻璃质感 + 白淡紫配色 + 会员名高亮
 
 local ChronixUI = {}
 
@@ -8,30 +7,53 @@ local ChronixUI = {}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local HttpService = game:GetService("HttpService")
 
-local ChronixUI = {
-    Elements = {},
-    ThemeObjects = {},
-    Connections = {},
-    Flags = {},
-    Themes = {
-        Default = {
-            Main = Color3.fromRGB(30, 30, 46),      -- 墨蓝色主背景
-            Second = Color3.fromRGB(40, 40, 56),    -- 深墨蓝次背景
-            Stroke = Color3.fromRGB(80, 80, 110),   -- 边框色
-            Divider = Color3.fromRGB(60, 60, 90),   -- 分割线色
-            Text = Color3.fromRGB(100, 100, 180),   -- 强调文字色
-            TextDark = Color3.fromRGB(200, 200, 220) -- 普通文字色
-        }
-    },
-    SelectedTheme = "Default",
-    Folder = nil,
-    SaveCfg = false,
-    Gui = nil
+-- 检查是否为 Premium 会员
+local function isPremium()
+    return LocalPlayer.MembershipType == Enum.MembershipType.Premium
+end
+
+-- 主题配置：白淡紫配色 + 毛玻璃
+local Theme = {
+    -- 颜色
+    MainBg = Color3.fromRGB(245, 240, 255),      -- 淡紫色背景
+    GlassBg = Color3.fromRGB(255, 255, 255),     -- 白色毛玻璃底
+    GlassTransparency = 0.75,                     -- 毛玻璃透明度
+    SidebarBg = Color3.fromRGB(235, 225, 250),    -- 左侧栏淡紫
+    SidebarHover = Color3.fromRGB(215, 200, 240), -- 左侧栏悬停
+    SidebarActive = Color3.fromRGB(180, 160, 220),-- 左侧栏选中
+    AccentColor = Color3.fromRGB(150, 120, 200),  -- 强调色（紫色）
+    SuccessColor = Color3.fromRGB(120, 200, 120), -- 成功绿色
+    ErrorColor = Color3.fromRGB(220, 120, 120),   -- 错误红色
+    TextColor = Color3.fromRGB(50, 40, 70),       -- 深紫色文字
+    TextSecondary = Color3.fromRGB(100, 90, 120), -- 次要文字
+    PremiumColor = Color3.fromRGB(220, 180, 80),  -- 会员金色
+    
+    -- 字体
+    Font = Enum.Font.Gotham,
+    FontBold = Enum.Font.GothamBold,
+    TextSize = 14,
+    TitleSize = 18,
+    SidebarTextSize = 15,  -- 左侧栏文字放大
+    
+    -- 尺寸
+    WindowWidth = 615,
+    WindowHeight = 344,
+    SidebarWidth = 150,
+    RowHeight = 38,
+    
+    -- 动画
+    TweenTime = 0.2,
 }
+
+-- 存储实例
+local activeWindows = {}
+local activeNotifications = {}
+local windowHideKey = Enum.KeyCode.RightShift
 
 -- ============ 工具函数 ============
 
@@ -161,14 +183,14 @@ local function SaveCfg(Name)
     writefile(ChronixUI.Folder .. "/" .. Name .. ".txt", tostring(HttpService:JSONEncode(Data)))
 end
 
--- ============ 基础元素创建（无图标） ============
+-- ============ 基础元素创建 ============
 
 CreateElement("Corner", function(Scale, Offset)
     return Create("UICorner", { CornerRadius = UDim.new(Scale or 0, Offset or 10) })
 end)
 
 CreateElement("Stroke", function(Color, Thickness)
-    return Create("UIStroke", { Color = Color or Color3.fromRGB(255, 255, 255), Thickness = Thickness or 1 })
+    return Create("UIStroke", { Color = Color or Color3.fromRGB(200, 200, 200), Thickness = Thickness or 1 })
 end)
 
 CreateElement("List", function(Scale, Offset)
@@ -215,12 +237,16 @@ CreateElement("ScrollFrame", function(Color, Width)
     })
 end)
 
+CreateElement("Image", function(ImageID)
+    return Create("ImageLabel", { Image = ImageID, BackgroundTransparency = 1 })
+end)
+
 CreateElement("Label", function(Text, TextSize, Transparency)
     return Create("TextLabel", {
         Text = Text or "",
-        TextColor3 = ChronixUI.Themes[ChronixUI.SelectedTheme].TextDark,
+        TextColor3 = Theme.TextColor,
         TextTransparency = Transparency or 0,
-        TextSize = TextSize or 15,
+        TextSize = TextSize or Theme.TextSize,
         Font = Enum.Font.Gotham,
         RichText = true,
         BackgroundTransparency = 1,
@@ -260,20 +286,21 @@ function ChronixUI:MakeNotification(NotificationConfig)
             Parent = NotificationHolder
         })
 
-        local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Color3.fromRGB(25, 25, 25), 0, 10), {
+        local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Theme.SidebarBg, 0, 10), {
             Parent = NotificationParent,
             Size = UDim2.new(1, 0, 0, 0),
             Position = UDim2.new(1, -55, 0, 0),
             BackgroundTransparency = 0,
             AutomaticSize = Enum.AutomaticSize.Y
         }), {
-            MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
+            MakeElement("Stroke", Theme.AccentColor, 1),
             MakeElement("Padding", 12, 12, 12, 12),
             SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
                 Size = UDim2.new(1, -30, 0, 20),
                 Position = UDim2.new(0, 30, 0, 0),
                 Font = Enum.Font.GothamBold,
-                Name = "Title"
+                Name = "Title",
+                TextColor3 = Theme.AccentColor
             }),
             SetProps(MakeElement("Label", NotificationConfig.Content, 14), {
                 Size = UDim2.new(1, 0, 0, 0),
@@ -281,7 +308,7 @@ function ChronixUI:MakeNotification(NotificationConfig)
                 Font = Enum.Font.GothamSemibold,
                 Name = "Content",
                 AutomaticSize = Enum.AutomaticSize.Y,
-                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextColor3 = Theme.TextColor,
                 TextWrapped = true
             })
         })
@@ -302,14 +329,9 @@ end
 
 -- ============ 加载动画 ============
 
-local LoadAnimationModule = nil
-
 local function PlayLoadingAnimation(config)
     config = config or {}
     local duration = config.Duration or 2.5
-    
-    -- 这里直接使用你提供的加载动画逻辑
-    -- 由于代码较长，简化为快速跳过
     task.wait(duration)
 end
 
@@ -324,11 +346,6 @@ function ChronixUI:MakeWindow(WindowConfig)
     WindowConfig.Name = WindowConfig.Name or "ChronixHub"
     WindowConfig.ConfigFolder = WindowConfig.ConfigFolder or WindowConfig.Name
     WindowConfig.SaveConfig = WindowConfig.SaveConfig or false
-    WindowConfig.HidePremium = WindowConfig.HidePremium or false
-    if WindowConfig.IntroEnabled == nil then
-        WindowConfig.IntroEnabled = true
-    end
-    WindowConfig.IntroText = WindowConfig.IntroText or WindowConfig.Name
     WindowConfig.CloseCallback = WindowConfig.CloseCallback or function() end
 
     ChronixUI.Folder = WindowConfig.ConfigFolder
@@ -341,20 +358,15 @@ function ChronixUI:MakeWindow(WindowConfig)
     end
 
     -- 开场动画
-    if WindowConfig.IntroEnabled then
-        -- 这里调用你的加载动画模块
+    if WindowConfig.IntroEnabled ~= false then
         local LoadAnimation = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
         LoadAnimation:LoadAnimation(2.5, {
-            titleText = WindowConfig.IntroText,
+            titleText = WindowConfig.Name,
             loadingText = "加载中... ",
-            backgroundColor = Color3.new(0.102, 0.098, 0.102),
-            textColor = Color3.new(1, 1, 1),
+            backgroundColor = Color3.new(0.95, 0.92, 1),
+            textColor = Theme.TextColor,
             language = "zh",
-            onComplete = function(isCancelled)
-                if isCancelled then
-                    return
-                end
-            end,
+            onComplete = function() end,
             showCancelButton = true
         })
         task.wait(2.5)
@@ -372,184 +384,257 @@ function ChronixUI:MakeWindow(WindowConfig)
         Gui.Parent = gethui() or game.CoreGui
     end
     ChronixUI.Gui = Gui
-    NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
-        SetProps(MakeElement("List"), {
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            VerticalAlignment = Enum.VerticalAlignment.Bottom,
-            Padding = UDim.new(0, 5)
-        })
-    }), {
-        Position = UDim2.new(1, -25, 1, -25),
-        Size = UDim2.new(0, 300, 1, -25),
-        AnchorPoint = Vector2.new(1, 1),
-        Parent = Gui
-    })
 
-    -- 标签页列表容器
-    local TabHolder = AddThemeObject(SetChildren(SetProps(MakeElement("ScrollFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Stroke, 4), {
-        Size = UDim2.new(1, 0, 1, -50)
-    }), {
-        MakeElement("List"),
-        MakeElement("Padding", 8, 0, 0, 8)
-    }), "Divider")
+    -- 毛玻璃背景效果
+    local blurEffect = Instance.new("BlurEffect")
+    blurEffect.Size = 8
+    blurEffect.Parent = Gui
 
-    AddConnection(TabHolder.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-        TabHolder.CanvasSize = UDim2.new(0, 0, 0, TabHolder.UIListLayout.AbsoluteContentSize.Y + 16)
-    end)
-
-    -- 关闭按钮
-    local CloseBtn = SetChildren(SetProps(MakeElement("Button"), {
-        Size = UDim2.new(0.5, 0, 1, 0),
-        Position = UDim2.new(0.5, 0, 0, 0),
-        BackgroundTransparency = 1
-    }), {
-        AddThemeObject(SetProps(MakeElement("Label", "✕", 18), {
-            Size = UDim2.new(1, 0, 1, 0),
-            TextXAlignment = Enum.TextXAlignment.Center
-        }), "Text")
-    })
-
-    -- 最小化按钮
-    local MinimizeBtn = SetChildren(SetProps(MakeElement("Button"), {
-        Size = UDim2.new(0.5, 0, 1, 0),
-        BackgroundTransparency = 1
-    }), {
-        AddThemeObject(SetProps(MakeElement("Label", "−", 20), {
-            Size = UDim2.new(1, 0, 1, 0),
-            TextXAlignment = Enum.TextXAlignment.Center,
-            Name = "Ico"
-        }), "Text")
-    })
-
-    -- 拖拽区域
-    local DragPoint = SetProps(MakeElement("TFrame"), {
-        Size = UDim2.new(1, 0, 0, 50)
-    })
-
-    -- 左侧功能栏
-    local WindowStuff = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Main, 0, 10), {
-        Size = UDim2.new(0, 150, 1, -50),
-        Position = UDim2.new(0, 0, 0, 50)
-    }), {
-        AddThemeObject(SetProps(MakeElement("Frame"), {
-            Size = UDim2.new(1, 0, 0, 10),
-            Position = UDim2.new(0, 0, 0, 0)
-        }), "Second"),
-        AddThemeObject(SetProps(MakeElement("Frame"), {
-            Size = UDim2.new(0, 10, 1, 0),
-            Position = UDim2.new(1, -10, 0, 0)
-        }), "Second"),
-        AddThemeObject(SetProps(MakeElement("Frame"), {
-            Size = UDim2.new(0, 1, 1, 0),
-            Position = UDim2.new(1, -1, 0, 0)
-        }), "Stroke"),
-        TabHolder,
-        SetChildren(SetProps(MakeElement("TFrame"), {
-            Size = UDim2.new(1, 0, 0, 50),
-            Position = UDim2.new(0, 0, 1, -50)
-        }), {
-            AddThemeObject(SetProps(MakeElement("Frame"), {
-                Size = UDim2.new(1, 0, 0, 1)
-            }), "Stroke"),
-            SetChildren(SetProps(MakeElement("TFrame"), {
-                AnchorPoint = Vector2.new(0, 0.5),
-                Size = UDim2.new(0, 32, 0, 32),
-                Position = UDim2.new(0, 10, 0.5, 0)
-            }), {
-                AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                MakeElement("Corner", 1)
-            }),
-            AddThemeObject(SetProps(MakeElement("Label", LocalPlayer.DisplayName, WindowConfig.HidePremium and 14 or 13), {
-                Size = UDim2.new(1, -60, 0, 13),
-                Position = WindowConfig.HidePremium and UDim2.new(0, 50, 0, 19) or UDim2.new(0, 50, 0, 12),
-                Font = Enum.Font.GothamBold,
-                ClipsDescendants = true
-            }), "Text"),
-            AddThemeObject(SetProps(MakeElement("Label", "", 12), {
-                Size = UDim2.new(1, -60, 0, 12),
-                Position = UDim2.new(0, 50, 1, -25),
-                Visible = not WindowConfig.HidePremium
-            }), "TextDark")
-        }),
-    }), "Second")
-
-    -- 窗口标题
-    local WindowName = AddThemeObject(SetProps(MakeElement("Label", WindowConfig.Name, 14), {
-        Size = UDim2.new(1, -30, 2, 0),
-        Position = UDim2.new(0, 25, 0, -24),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 20
-    }), "Text")
-
-    local WindowTopBarLine = AddThemeObject(SetProps(MakeElement("Frame"), {
-        Size = UDim2.new(1, 0, 0, 1),
-        Position = UDim2.new(0, 0, 1, -1)
-    }), "Stroke")
-
-    -- 主窗口
-    local MainWindow = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Main, 0, 10), {
-        Parent = Gui,
+    -- 主窗口（毛玻璃效果）
+    local MainWindow = Create("Frame", {
+        BackgroundColor3 = Theme.GlassBg,
+        BackgroundTransparency = Theme.GlassTransparency,
+        BorderSizePixel = 0,
         Position = UDim2.new(0.5, -307, 0.5, -172),
         Size = UDim2.new(0, 615, 0, 344),
         ClipsDescendants = true,
-        Active = true,
-        Draggable = true
-    }), {
-        SetChildren(SetProps(MakeElement("TFrame"), {
-            Size = UDim2.new(1, 0, 0, 50),
-            Name = "TopBar"
-        }), {
-            WindowName,
-            WindowTopBarLine,
-            AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 7), {
-                Size = UDim2.new(0, 70, 0, 30),
-                Position = UDim2.new(1, -90, 0, 10)
-            }), {
-                AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                AddThemeObject(SetProps(MakeElement("Frame"), {
-                    Size = UDim2.new(0, 1, 1, 0),
-                    Position = UDim2.new(0.5, 0, 0, 0)
-                }), "Stroke"),
-                CloseBtn,
-                MinimizeBtn
-            }), "Second"),
-        }),
-        DragPoint,
-        WindowStuff
-    }), "Main")
+        Parent = Gui
+    }, {
+        Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 })
+    })
+
+    -- 标题栏
+    local TopBar = Create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 50),
+        Parent = MainWindow
+    })
+
+    -- 窗口标题
+    local WindowName = Create("TextLabel", {
+        Text = WindowConfig.Name,
+        TextColor3 = Theme.TextColor,
+        TextSize = Theme.TitleSize,
+        Font = Theme.FontBold,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 25, 0, -24),
+        Size = UDim2.new(1, -30, 2, 0),
+        Parent = TopBar
+    })
+
+    -- 标题栏线条
+    local TitleLine = Create("Frame", {
+        BackgroundColor3 = Theme.AccentColor,
+        Size = UDim2.new(1, 0, 0, 1),
+        Position = UDim2.new(0, 0, 1, -1),
+        BackgroundTransparency = 0.5,
+        Parent = TopBar
+    })
+
+    -- 按钮容器
+    local ButtonContainer = Create("RoundFrame", Theme.SidebarBg, 0, 7, {
+        Size = UDim2.new(0, 70, 0, 30),
+        Position = UDim2.new(1, -90, 0, 10),
+        Parent = TopBar
+    }, {
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 }),
+        Create("Frame", { Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(0.5, 0, 0, 0), BackgroundColor3 = Theme.AccentColor, BackgroundTransparency = 0.5 })
+    })
+
+    -- 关闭按钮
+    local CloseBtn = Create("TextButton", {
+        Text = "×",
+        TextColor3 = Theme.TextColor,
+        TextSize = 20,
+        Font = Theme.FontBold,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0.5, 0, 1, 0),
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Parent = ButtonContainer
+    })
+
+    -- 最小化按钮
+    local MinimizeBtn = Create("TextButton", {
+        Text = "−",
+        TextColor3 = Theme.TextColor,
+        TextSize = 20,
+        Font = Theme.FontBold,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0.5, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        Parent = ButtonContainer
+    })
+
+    -- 拖拽区域
+    local DragPoint = Create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 50),
+        Parent = MainWindow
+    })
+
+    -- 左侧栏（不透明）
+    local Sidebar = Create("RoundFrame", Theme.SidebarBg, 0, 0, {
+        Size = UDim2.new(0, Theme.SidebarWidth, 1, -50),
+        Position = UDim2.new(0, 0, 0, 50),
+        Parent = MainWindow
+    }, {
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 })
+    })
+
+    -- 左侧栏滚动容器
+    local TabHolder = Create("ScrollingFrame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, -50),
+        Position = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = Theme.AccentColor,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = Sidebar
+    })
+
+    local TabList = Create("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 5),
+        Parent = TabHolder
+    })
+
+    AddConnection(TabList:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+        TabHolder.CanvasSize = UDim2.new(0, 0, 0, TabList.AbsoluteContentSize.Y + 10)
+    end)
+
+    -- 底部用户信息栏
+    local BottomBar = Create("Frame", {
+        BackgroundColor3 = Theme.SidebarBg,
+        BackgroundTransparency = 0,
+        Size = UDim2.new(1, 0, 0, 50),
+        Position = UDim2.new(0, 0, 1, -50),
+        Parent = Sidebar
+    }, {
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5, Position = Enum.UIStrokePosition.Inside })
+    })
+
+    -- 玩家头像
+    local AvatarFrame = Create("Frame", {
+        BackgroundColor3 = Theme.AccentColor,
+        BackgroundTransparency = 0.3,
+        Size = UDim2.new(0, 32, 0, 32),
+        Position = UDim2.new(0, 10, 0.5, -16),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Parent = BottomBar
+    }, {
+        Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    local AvatarImage = Create("ImageLabel", {
+        Size = UDim2.new(1, -2, 1, -2),
+        Position = UDim2.new(0, 1, 0, 1),
+        BackgroundTransparency = 1,
+        Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png",
+        Parent = AvatarFrame
+    }, {
+        Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    -- 玩家名（Premium 高亮）
+    local PlayerNameLabel = Create("TextLabel", {
+        Text = LocalPlayer.DisplayName,
+        TextColor3 = isPremium() and Theme.PremiumColor or Theme.TextColor,
+        TextSize = Theme.SidebarTextSize,
+        Font = Theme.FontBold,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 50, 0.5, -10),
+        Size = UDim2.new(0.6, 0, 0, 20),
+        Parent = BottomBar
+    })
+
+    -- Premium 标识
+    if isPremium() then
+        local PremiumIcon = Create("TextLabel", {
+            Text = "⭐",
+            TextColor3 = Theme.PremiumColor,
+            TextSize = 14,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 50, 0.5, 8),
+            Size = UDim2.new(0, 20, 0, 20),
+            Parent = BottomBar
+        })
+    end
+
+    -- 右侧内容区域
+    local ContentArea = Create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -Theme.SidebarWidth, 1, -50),
+        Position = UDim2.new(0, Theme.SidebarWidth, 0, 50),
+        Parent = MainWindow
+    })
+
+    local ContentScroller = Create("ScrollingFrame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 1, -20),
+        Position = UDim2.new(0, 10, 0, 10),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = Theme.AccentColor,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = ContentArea
+    })
+
+    local ContentLayout = Create("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = ContentScroller
+    })
+
+    local function updateCanvas()
+        task.wait()
+        ContentScroller.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 20)
+    end
+    ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 
     MakeDraggable(DragPoint, MainWindow)
 
+    -- 窗口状态
+    local isMinimized = false
+
+    -- 关闭按钮功能
     AddConnection(CloseBtn.MouseButton1Up, function()
         MainWindow.Visible = false
-        UIHidden = true
         WindowConfig.CloseCallback()
     end)
 
-    AddConnection(UserInputService.InputBegan, function(Input)
-        if Input.KeyCode == Enum.KeyCode.RightShift and UIHidden then
-            MainWindow.Visible = true
-        end
-    end)
-
+    -- 最小化功能
     AddConnection(MinimizeBtn.MouseButton1Up, function()
-        if Minimized then
-            TweenService:Create(MainWindow, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, 615, 0, 344) }):Play()
-            MinimizeBtn.Ico.Text = "−"
-            wait(0.02)
+        if isMinimized then
+            TweenService:Create(MainWindow, TweenInfo.new(0.3), { Size = UDim2.new(0, 615, 0, 344) }):Play()
+            MinimizeBtn.Text = "−"
+            wait(0.05)
             MainWindow.ClipsDescendants = false
-            WindowStuff.Visible = true
-            WindowTopBarLine.Visible = true
+            Sidebar.Visible = true
+            ContentArea.Visible = true
         else
             MainWindow.ClipsDescendants = true
-            WindowTopBarLine.Visible = false
-            MinimizeBtn.Ico.Text = "□"
-            TweenService:Create(MainWindow, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, WindowName.TextBounds.X + 140, 0, 50) }):Play()
+            MinimizeBtn.Text = "□"
+            TweenService:Create(MainWindow, TweenInfo.new(0.3), { Size = UDim2.new(0, WindowName.TextBounds.X + 140, 0, 50) }):Play()
             wait(0.1)
-            WindowStuff.Visible = false
+            Sidebar.Visible = false
+            ContentArea.Visible = false
         end
-        Minimized = not Minimized
+        isMinimized = not isMinimized
+    end)
+
+    -- 隐藏/显示快捷键 (RightShift)
+    local hideConnection
+    hideConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == windowHideKey then
+            if MainWindow.Visible then
+                MainWindow.Visible = false
+                UIHidden = true
+            else
+                MainWindow.Visible = true
+                UIHidden = false
+            end
+        end
     end)
 
     -- 标签页创建函数
@@ -558,29 +643,34 @@ function ChronixUI:MakeWindow(WindowConfig)
         TabConfig = TabConfig or {}
         TabConfig.Name = TabConfig.Name or "Tab"
 
-        local TabFrame = SetChildren(SetProps(MakeElement("Button"), {
-            Size = UDim2.new(1, 0, 0, 30),
+        local TabBtn = Create("TextButton", {
+            Text = TabConfig.Name,
+            TextColor3 = Theme.TextSecondary,
+            TextSize = Theme.SidebarTextSize,
+            Font = Theme.Font,
+            BackgroundColor3 = Theme.SidebarBg,
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, -10, 0, 40),
+            Position = UDim2.new(0, 5, 0, 0),
             Parent = TabHolder
-        }), {
-            AddThemeObject(SetProps(MakeElement("Label", TabConfig.Name, 14), {
-                Size = UDim2.new(1, -35, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                Font = Enum.Font.GothamSemibold,
-                TextTransparency = 0.4,
-                Name = "Title"
-            }), "Text")
+        }, {
+            Create("UICorner", { CornerRadius = UDim.new(0, 8) })
         })
 
-        local Container = AddThemeObject(SetChildren(SetProps(MakeElement("ScrollFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Stroke, 5), {
+        local Container = Create("ScrollingFrame", {
+            BackgroundTransparency = 1,
             Size = UDim2.new(1, -150, 1, -50),
             Position = UDim2.new(0, 150, 0, 50),
             Parent = MainWindow,
             Visible = false,
-            Name = "ItemContainer"
-        }), {
-            MakeElement("List", 0, 6),
-            MakeElement("Padding", 15, 10, 10, 15)
-        }), "Divider")
+            ScrollBarThickness = 4,
+            ScrollBarImageColor3 = Theme.AccentColor,
+            CanvasSize = UDim2.new(0, 0, 0, 0)
+        }, {
+            Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+            Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 15), PaddingBottom = UDim.new(0, 15) })
+        })
 
         AddConnection(Container.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
             Container.CanvasSize = UDim2.new(0, 0, 0, Container.UIListLayout.AbsoluteContentSize.Y + 30)
@@ -588,25 +678,25 @@ function ChronixUI:MakeWindow(WindowConfig)
 
         if FirstTab then
             FirstTab = false
-            TabFrame.Title.TextTransparency = 0
-            TabFrame.Title.Font = Enum.Font.GothamBlack
+            TabBtn.TextColor3 = Theme.TextColor
+            TabBtn.BackgroundColor3 = Theme.SidebarActive
             Container.Visible = true
         end
 
-        AddConnection(TabFrame.MouseButton1Click, function()
-            for _, Tab in next, TabHolder:GetChildren() do
-                if Tab:IsA("TextButton") then
-                    Tab.Title.Font = Enum.Font.GothamSemibold
-                    TweenService:Create(Tab.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = 0.4 }):Play()
+        AddConnection(TabBtn.MouseButton1Click, function()
+            for _, child in pairs(TabHolder:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.TextColor3 = Theme.TextSecondary
+                    child.BackgroundColor3 = Theme.SidebarBg
                 end
             end
-            for _, ItemContainer in next, MainWindow:GetChildren() do
-                if ItemContainer.Name == "ItemContainer" then
-                    ItemContainer.Visible = false
+            for _, cont in pairs(MainWindow:GetChildren()) do
+                if cont:IsA("ScrollingFrame") and cont ~= ContentScroller and cont ~= TabHolder then
+                    cont.Visible = false
                 end
             end
-            TweenService:Create(TabFrame.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
-            TabFrame.Title.Font = Enum.Font.GothamBlack
+            TabBtn.TextColor3 = Theme.TextColor
+            TabBtn.BackgroundColor3 = Theme.SidebarActive
             Container.Visible = true
         end)
 
@@ -614,827 +704,381 @@ function ChronixUI:MakeWindow(WindowConfig)
         local function GetElements(ItemParent)
             local ElementFunction = {}
 
-            -- 修复：AddSection 接收 table 参数
             function ElementFunction:AddSection(SectionConfig)
-                -- 兼容两种调用方式：传入 table 或直接传入字符串
-                local sectionName
-                if type(SectionConfig) == "table" then
-                    sectionName = SectionConfig.Name or "Section"
-                else
-                    sectionName = SectionConfig or "Section"
-                end
+                local sectionName = type(SectionConfig) == "table" and SectionConfig.Name or SectionConfig or "Section"
 
-                local SectionFrame = SetChildren(SetProps(MakeElement("TFrame"), {
+                local SectionFrame = Create("Frame", {
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 26),
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", sectionName, 14), {
-                        Size = UDim2.new(1, -12, 0, 16),
-                        Position = UDim2.new(0, 0, 0, 3),
-                        Font = Enum.Font.GothamSemibold
-                    }), "TextDark"),
-                    SetChildren(SetProps(MakeElement("TFrame"), {
-                        AnchorPoint = Vector2.new(0, 0),
-                        Size = UDim2.new(1, 0, 1, -24),
-                        Position = UDim2.new(0, 0, 0, 23),
-                        Name = "Holder"
-                    }), {
-                        MakeElement("List", 0, 6)
-                    }),
                 })
 
-                AddConnection(SectionFrame.Holder.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-                    SectionFrame.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y + 31)
-                    SectionFrame.Holder.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y)
-                end)
+                local SectionTitle = Create("TextLabel", {
+                    Text = sectionName,
+                    TextColor3 = Theme.AccentColor,
+                    TextSize = 14,
+                    Font = Theme.FontBold,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 0, 0, 3),
+                    Size = UDim2.new(1, -12, 0, 16),
+                    Parent = SectionFrame
+                })
+
+                local SectionHolder = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 1, -24),
+                    Position = UDim2.new(0, 0, 0, 23),
+                    Parent = SectionFrame
+                }, {
+                    Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+                })
+
+                local function updateSectionHeight()
+                    task.wait()
+                    SectionFrame.Size = UDim2.new(1, 0, 0, SectionHolder.UIListLayout.AbsoluteContentSize.Y + 31)
+                    SectionHolder.Size = UDim2.new(1, 0, 0, SectionHolder.UIListLayout.AbsoluteContentSize.Y)
+                end
+                SectionHolder.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateSectionHeight)
+                updateSectionHeight()
 
                 local SectionFunction = {}
-                for i, v in next, GetElements(SectionFrame.Holder) do
+                for i, v in next, GetElements(SectionHolder) do
                     SectionFunction[i] = v
                 end
                 return SectionFunction
             end
 
-            -- 标签
             function ElementFunction:AddLabel(Text)
-                local LabelFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
+                return Create("TextLabel", {
+                    Text = Text,
+                    TextColor3 = Theme.TextSecondary,
+                    TextSize = Theme.TextSize - 2,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 30),
-                    BackgroundTransparency = 0.7,
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", Text, 15), {
-                        Size = UDim2.new(1, -12, 1, 0),
-                        Position = UDim2.new(0, 12, 0, 0),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke")
-                }), "Second")
-                return { Set = function(ToChange) LabelFrame.Content.Text = ToChange end }
+                })
             end
 
-            -- 段落
-            function ElementFunction:AddParagraph(Text, Content)
-                Text = Text or "Text"
-                Content = Content or "Content"
-
-                local ParagraphFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
-                    Size = UDim2.new(1, 0, 0, 30),
-                    BackgroundTransparency = 0.7,
-                    Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", Text, 15), {
-                        Size = UDim2.new(1, -12, 0, 14),
-                        Position = UDim2.new(0, 12, 0, 10),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Title"
-                    }), "Text"),
-                    AddThemeObject(SetProps(MakeElement("Label", "", 13), {
-                        Size = UDim2.new(1, -24, 0, 0),
-                        Position = UDim2.new(0, 12, 0, 26),
-                        Font = Enum.Font.GothamSemibold,
-                        Name = "Content",
-                        TextWrapped = true
-                    }), "TextDark"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke")
-                }), "Second")
-
-                AddConnection(ParagraphFrame.Content:GetPropertyChangedSignal("Text"), function()
-                    ParagraphFrame.Content.Size = UDim2.new(1, -24, 0, ParagraphFrame.Content.TextBounds.Y)
-                    ParagraphFrame.Size = UDim2.new(1, 0, 0, ParagraphFrame.Content.TextBounds.Y + 35)
-                end)
-
-                ParagraphFrame.Content.Text = Content
-                return { Set = function(ToChange) ParagraphFrame.Content.Text = ToChange end }
-            end
-
-            -- 按钮
             function ElementFunction:AddButton(ButtonConfig)
                 ButtonConfig = ButtonConfig or {}
-                ButtonConfig.Name = ButtonConfig.Name or "Button"
-                ButtonConfig.Callback = ButtonConfig.Callback or function() end
-
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-                local ButtonFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
+                local btn = Create("TextButton", {
+                    Text = ButtonConfig.Name or "Button",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundColor3 = Theme.SidebarBg,
+                    BorderSizePixel = 0,
                     Size = UDim2.new(1, 0, 0, 33),
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", ButtonConfig.Name, 15), {
-                        Size = UDim2.new(1, -12, 1, 0),
-                        Position = UDim2.new(0, 12, 0, 0),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    Click
-                }), "Second")
+                }, {
+                    Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+                })
 
-                AddConnection(Click.MouseEnter, function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
+                btn.MouseEnter:Connect(function()
+                    TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Theme.SidebarHover }):Play()
                 end)
-                AddConnection(Click.MouseLeave, function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = ChronixUI.Themes[ChronixUI.SelectedTheme].Second }):Play()
+                btn.MouseLeave:Connect(function()
+                    TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Theme.SidebarBg }):Play()
                 end)
-                AddConnection(Click.MouseButton1Up, function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                    spawn(function() ButtonConfig.Callback() end)
-                end)
-                AddConnection(Click.MouseButton1Down, function()
-                    TweenService:Create(ButtonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 6) }):Play()
+                btn.MouseButton1Click:Connect(function()
+                    if ButtonConfig.Callback then ButtonConfig.Callback() end
                 end)
 
-                return { Set = function(ButtonText) ButtonFrame.Content.Text = ButtonText end }
+                return btn
             end
 
-            -- 开关
             function ElementFunction:AddToggle(ToggleConfig)
                 ToggleConfig = ToggleConfig or {}
-                ToggleConfig.Name = ToggleConfig.Name or "Toggle"
-                ToggleConfig.Default = ToggleConfig.Default or false
-                ToggleConfig.Callback = ToggleConfig.Callback or function() end
-                ToggleConfig.Color = ToggleConfig.Color or ChronixUI.Themes[ChronixUI.SelectedTheme].Text
-                ToggleConfig.Flag = ToggleConfig.Flag or nil
-                ToggleConfig.Save = ToggleConfig.Save or false
+                local toggled = ToggleConfig.Default or false
 
-                local Toggle = { Value = ToggleConfig.Default, Save = ToggleConfig.Save, Type = "Toggle" }
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-
-                local ToggleBox = SetChildren(SetProps(MakeElement("RoundFrame", ToggleConfig.Color, 0, 4), {
-                    Size = UDim2.new(0, 24, 0, 24),
-                    Position = UDim2.new(1, -24, 0.5, 0),
-                    AnchorPoint = Vector2.new(0.5, 0.5)
-                }), {
-                    SetProps(MakeElement("Stroke"), { Color = ToggleConfig.Color, Name = "Stroke", Transparency = 0.5 }),
-                    SetProps(MakeElement("Label", "✓", 16), {
-                        Size = UDim2.new(1, 0, 1, 0),
-                        TextXAlignment = Enum.TextXAlignment.Center,
-                        TextColor3 = Color3.fromRGB(255, 255, 255),
-                        Name = "Ico"
-                    }),
-                })
-
-                local ToggleFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 38),
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", ToggleConfig.Name, 15), {
-                        Size = UDim2.new(1, -12, 1, 0),
-                        Position = UDim2.new(0, 12, 0, 0),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    ToggleBox,
-                    Click
-                }), "Second")
+                })
 
-                function Toggle:Set(Value)
-                    Toggle.Value = Value
-                    TweenService:Create(ToggleBox, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Toggle.Value and ToggleConfig.Color or ChronixUI.Themes.Default.Divider }):Play()
-                    TweenService:Create(ToggleBox.Stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Color = Toggle.Value and ToggleConfig.Color or ChronixUI.Themes.Default.Stroke }):Play()
-                    TweenService:Create(ToggleBox.Ico, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = Toggle.Value and 0 or 1 }):Play()
-                    ToggleConfig.Callback(Toggle.Value)
-                    if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
+                local label = Create("TextLabel", {
+                    Text = ToggleConfig.Name or "Toggle",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 12, 0, 0),
+                    Size = UDim2.new(1, -70, 1, 0),
+                    Parent = container
+                })
+
+                local toggleBtn = Create("TextButton", {
+                    Text = toggled and "ON" or "OFF",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize - 2,
+                    Font = Theme.FontBold,
+                    BackgroundColor3 = toggled and Theme.AccentColor or Theme.SidebarBg,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(0, 50, 0, 28),
+                    Position = UDim2.new(1, -60, 0.5, -14),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Parent = container
+                }, {
+                    Create("UICorner", { CornerRadius = UDim.new(0, 14) })
+                })
+
+                local function update(value)
+                    toggled = value
+                    toggleBtn.Text = toggled and "ON" or "OFF"
+                    toggleBtn.BackgroundColor3 = toggled and Theme.AccentColor or Theme.SidebarBg
+                    if ToggleConfig.Callback then ToggleConfig.Callback(toggled) end
+                    if ToggleConfig.Flag then ChronixUI.Flags[ToggleConfig.Flag] = { Value = toggled, Save = ToggleConfig.Save, Type = "Toggle", Set = update } end
                 end
 
-                Toggle:Set(Toggle.Value)
+                toggleBtn.MouseButton1Click:Connect(function() update(not toggled) end)
 
-                AddConnection(Click.MouseEnter, function()
-                    TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                end)
-                AddConnection(Click.MouseLeave, function()
-                    TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = ChronixUI.Themes[ChronixUI.SelectedTheme].Second }):Play()
-                end)
-                AddConnection(Click.MouseButton1Up, function()
-                    TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                    Toggle:Set(not Toggle.Value)
-                end)
-                AddConnection(Click.MouseButton1Down, function()
-                    TweenService:Create(ToggleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 6) }):Play()
-                end)
-
-                if ToggleConfig.Flag then
-                    ChronixUI.Flags[ToggleConfig.Flag] = Toggle
-                end
-                return Toggle
+                return { Set = update, Get = function() return toggled end }
             end
 
-            -- 滑块
             function ElementFunction:AddSlider(SliderConfig)
                 SliderConfig = SliderConfig or {}
-                SliderConfig.Name = SliderConfig.Name or "Slider"
-                SliderConfig.Min = SliderConfig.Min or 0
-                SliderConfig.Max = SliderConfig.Max or 100
-                SliderConfig.Increment = SliderConfig.Increment or 1
-                SliderConfig.Default = SliderConfig.Default or 50
-                SliderConfig.Callback = SliderConfig.Callback or function() end
-                SliderConfig.ValueName = SliderConfig.ValueName or ""
-                SliderConfig.Color = SliderConfig.Color or ChronixUI.Themes[ChronixUI.SelectedTheme].Text
-                SliderConfig.Flag = SliderConfig.Flag or nil
-                SliderConfig.Save = SliderConfig.Save or false
+                local min = SliderConfig.Min or 0
+                local max = SliderConfig.Max or 100
+                local value = SliderConfig.Default or min
 
-                local Slider = { Value = SliderConfig.Default, Save = SliderConfig.Save, Type = "Slider" }
-                local Dragging = false
-
-                local SliderDrag = SetChildren(SetProps(MakeElement("RoundFrame", SliderConfig.Color, 0, 5), {
-                    Size = UDim2.new(0, 0, 1, 0),
-                    BackgroundTransparency = 0.3,
-                    ClipsDescendants = true
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", "value", 13), {
-                        Size = UDim2.new(1, -12, 0, 14),
-                        Position = UDim2.new(0, 12, 0, 6),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Value",
-                        TextTransparency = 0
-                    }), "Text")
-                })
-
-                local SliderBar = SetChildren(SetProps(MakeElement("RoundFrame", SliderConfig.Color, 0, 5), {
-                    Size = UDim2.new(1, -24, 0, 26),
-                    Position = UDim2.new(0, 12, 0, 30),
-                    BackgroundTransparency = 0.9
-                }), {
-                    SetProps(MakeElement("Stroke"), { Color = SliderConfig.Color }),
-                    AddThemeObject(SetProps(MakeElement("Label", "value", 13), {
-                        Size = UDim2.new(1, -12, 0, 14),
-                        Position = UDim2.new(0, 12, 0, 6),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Value",
-                        TextTransparency = 0.8
-                    }), "Text"),
-                    SliderDrag
-                })
-
-                local SliderFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 4), {
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 65),
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", SliderConfig.Name, 15), {
-                        Size = UDim2.new(1, -12, 0, 14),
-                        Position = UDim2.new(0, 12, 0, 10),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    SliderBar
-                }), "Second")
+                })
 
-                SliderBar.InputBegan:Connect(function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        Dragging = true
-                    end
-                end)
-                SliderBar.InputEnded:Connect(function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        Dragging = false
-                    end
-                end)
+                local label = Create("TextLabel", {
+                    Text = SliderConfig.Name or "Slider",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 12, 0, 10),
+                    Size = UDim2.new(1, -24, 0, 20),
+                    Parent = container
+                })
 
-                UserInputService.InputChanged:Connect(function(Input)
-                    if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local SizeScale = math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
-                        Slider:Set(SliderConfig.Min + ((SliderConfig.Max - SliderConfig.Min) * SizeScale))
-                        if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
-                    end
-                end)
+                local valueLabel = Create("TextLabel", {
+                    Text = tostring(value),
+                    TextColor3 = Theme.AccentColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.FontBold,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(1, -60, 0, 10),
+                    Size = UDim2.new(0, 50, 0, 20),
+                    Parent = container
+                })
 
-                function Slider:Set(Value)
-                    self.Value = math.clamp(Round(Value, SliderConfig.Increment), SliderConfig.Min, SliderConfig.Max)
-                    TweenService:Create(SliderDrag, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromScale((self.Value - SliderConfig.Min) / (SliderConfig.Max - SliderConfig.Min), 1) }):Play()
-                    SliderBar.Value.Text = tostring(self.Value) .. " " .. SliderConfig.ValueName
-                    SliderDrag.Value.Text = tostring(self.Value) .. " " .. SliderConfig.ValueName
-                    SliderConfig.Callback(self.Value)
+                local track = Create("Frame", {
+                    BackgroundColor3 = Theme.SidebarBg,
+                    Size = UDim2.new(1, -24, 0, 4),
+                    Position = UDim2.new(0, 12, 0, 40),
+                    BorderSizePixel = 0,
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 2) }) })
+
+                local fill = Create("Frame", {
+                    BackgroundColor3 = Theme.AccentColor,
+                    Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
+                    BorderSizePixel = 0,
+                    Parent = track
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 2) }) })
+
+                local thumb = Create("TextButton", {
+                    Text = "",
+                    BackgroundColor3 = Theme.TextColor,
+                    Size = UDim2.new(0, 16, 0, 16),
+                    Position = UDim2.new((value - min) / (max - min), -8, 0, -6),
+                    BorderSizePixel = 0,
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+
+                local dragging = false
+
+                local function update(val)
+                    value = math.clamp(val, min, max)
+                    local percent = (value - min) / (max - min)
+                    fill.Size = UDim2.new(percent, 0, 1, 0)
+                    thumb.Position = UDim2.new(percent, -8, 0, -6)
+                    valueLabel.Text = tostring(math.floor(value))
+                    if SliderConfig.Callback then SliderConfig.Callback(value) end
                 end
 
-                Slider:Set(Slider.Value)
-                if SliderConfig.Flag then
-                    ChronixUI.Flags[SliderConfig.Flag] = Slider
-                end
-                return Slider
+                thumb.MouseButton1Down:Connect(function(input)
+                    dragging = true
+                    local percent = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                    update(min + (max - min) * percent)
+                end)
+
+                UserInputService.InputChanged:Connect(function(input)
+                    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                        local percent = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                        update(min + (max - min) * percent)
+                    end
+                end)
+
+                UserInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = false
+                    end
+                end)
+
+                return { Set = update, Get = function() return value end }
             end
 
-            -- 下拉菜单
             function ElementFunction:AddDropdown(DropdownConfig)
                 DropdownConfig = DropdownConfig or {}
-                DropdownConfig.Name = DropdownConfig.Name or "Dropdown"
-                DropdownConfig.Options = DropdownConfig.Options or {}
-                DropdownConfig.Default = DropdownConfig.Default or ""
-                DropdownConfig.Callback = DropdownConfig.Callback or function() end
-                DropdownConfig.Flag = DropdownConfig.Flag or nil
-                DropdownConfig.Save = DropdownConfig.Save or false
+                local options = DropdownConfig.Options or {}
+                local selected = DropdownConfig.Default or options[1]
+                local isOpen = false
 
-                local Dropdown = { Value = DropdownConfig.Default, Options = DropdownConfig.Options, Buttons = {}, Toggled = false, Type = "Dropdown", Save = DropdownConfig.Save }
-                local MaxElements = 5
-
-                if not table.find(Dropdown.Options, Dropdown.Value) then
-                    Dropdown.Value = "..."
-                end
-
-                local DropdownList = MakeElement("List")
-                local DropdownContainer = AddThemeObject(SetProps(SetChildren(MakeElement("ScrollFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Stroke, 4), {
-                    DropdownList
-                }), {
-                    Parent = ItemParent,
-                    Position = UDim2.new(0, 0, 0, 38),
-                    Size = UDim2.new(1, 0, 1, -38),
-                    ClipsDescendants = true
-                }), "Divider")
-
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-
-                local DropdownFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 38),
-                    Parent = ItemParent,
-                    ClipsDescendants = true
-                }), {
-                    DropdownContainer,
-                    SetProps(SetChildren(MakeElement("TFrame"), {
-                        AddThemeObject(SetProps(MakeElement("Label", DropdownConfig.Name, 15), {
-                            Size = UDim2.new(1, -12, 1, 0),
-                            Position = UDim2.new(0, 12, 0, 0),
-                            Font = Enum.Font.GothamBold,
-                            Name = "Content"
-                        }), "Text"),
-                        AddThemeObject(SetProps(MakeElement("Label", "Selected", 13), {
-                            Size = UDim2.new(1, -40, 1, 0),
-                            Font = Enum.Font.Gotham,
-                            Name = "Selected",
-                            TextXAlignment = Enum.TextXAlignment.Right
-                        }), "TextDark"),
-                        AddThemeObject(SetProps(MakeElement("Frame"), {
-                            Size = UDim2.new(1, 0, 0, 1),
-                            Position = UDim2.new(0, 0, 1, -1),
-                            Name = "Line",
-                            Visible = false
-                        }), "Stroke"),
-                        Click
-                    }), {
-                        Size = UDim2.new(1, 0, 0, 38),
+                    Parent = ItemParent
+                })
+
+                local label = Create("TextLabel", {
+                    Text = DropdownConfig.Name or "Dropdown",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 12, 0, 0),
+                    Size = UDim2.new(0.4, 0, 1, 0),
+                    Parent = container
+                })
+
+                local dropdownBtn = Create("TextButton", {
+                    Text = selected,
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundColor3 = Theme.SidebarBg,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(0.6, -25, 0, 28),
+                    Position = UDim2.new(0.4, 5, 0.5, -14),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+
+                local dropdownList = nil
+
+                local function closeList()
+                    if dropdownList then
+                        TweenService:Create(dropdownList, TweenInfo.new(0.2), { Size = UDim2.new(0.6, -25, 0, 0) }):Play()
+                        task.wait(0.2)
+                        dropdownList:Destroy()
+                        dropdownList = nil
+                    end
+                    isOpen = false
+                end
+
+                dropdownBtn.MouseButton1Click:Connect(function()
+                    if isOpen then closeList() return end
+                    isOpen = true
+
+                    dropdownList = Create("ScrollingFrame", {
+                        BackgroundColor3 = Theme.SidebarBg,
+                        Size = UDim2.new(0.6, -25, 0, 0),
+                        Position = UDim2.new(0.4, 5, 0, 38),
+                        ScrollBarThickness = 4,
                         ClipsDescendants = true,
-                        Name = "F"
-                    }),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    MakeElement("Corner")
-                }), "Second")
+                        Parent = container
+                    }, {
+                        Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+                        Create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder })
+                    })
 
-                AddConnection(DropdownList:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-                    DropdownContainer.CanvasSize = UDim2.new(0, 0, 0, DropdownList.AbsoluteContentSize.Y)
-                end)
-
-                local function AddOptions(Options)
-                    for _, Option in pairs(Options) do
-                        local OptionBtn = AddThemeObject(SetProps(SetChildren(MakeElement("Button", ChronixUI.Themes[ChronixUI.SelectedTheme].Second), {
-                            MakeElement("Corner", 0, 6),
-                            AddThemeObject(SetProps(MakeElement("Label", Option, 13, 0.4), {
-                                Position = UDim2.new(0, 8, 0, 0),
-                                Size = UDim2.new(1, -8, 1, 0),
-                                Name = "Title"
-                            }), "Text")
-                        }), {
-                            Parent = DropdownContainer,
-                            Size = UDim2.new(1, 0, 0, 28),
-                            BackgroundTransparency = 1,
-                            ClipsDescendants = true
-                        }), "Divider")
-
-                        AddConnection(OptionBtn.MouseButton1Click, function()
-                            Dropdown:Set(Option)
-                            if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
+                    local totalHeight = 0
+                    for _, opt in ipairs(options) do
+                        local optBtn = Create("TextButton", {
+                            Text = opt,
+                            TextColor3 = Theme.TextSecondary,
+                            TextSize = Theme.TextSize,
+                            Font = Theme.Font,
+                            BackgroundColor3 = Theme.SidebarBg,
+                            Size = UDim2.new(1, 0, 0, 32),
+                            Parent = dropdownList
+                        })
+                        optBtn.MouseEnter:Connect(function()
+                            optBtn.BackgroundColor3 = Theme.SidebarHover
+                            optBtn.TextColor3 = Theme.TextColor
                         end)
-
-                        Dropdown.Buttons[Option] = OptionBtn
+                        optBtn.MouseLeave:Connect(function()
+                            optBtn.BackgroundColor3 = Theme.SidebarBg
+                            optBtn.TextColor3 = Theme.TextSecondary
+                        end)
+                        optBtn.MouseButton1Click:Connect(function()
+                            selected = opt
+                            dropdownBtn.Text = selected
+                            if DropdownConfig.Callback then DropdownConfig.Callback(selected) end
+                            closeList()
+                        end)
+                        totalHeight = totalHeight + 34
                     end
-                end
 
-                function Dropdown:Refresh(Options, Delete)
-                    if Delete then
-                        for _, v in pairs(Dropdown.Buttons) do
-                            v:Destroy()
+                    local maxHeight = math.min(totalHeight, 200)
+                    dropdownList.Size = UDim2.new(0.6, -25, 0, maxHeight)
+                    dropdownList.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+
+                    local clickConn = UserInputService.InputBegan:Connect(function(input)
+                        if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            local mousePos = UserInputService:GetMouseLocation()
+                            local absPos = dropdownList.AbsolutePosition
+                            local absSize = dropdownList.AbsoluteSize
+                            if mousePos.X < absPos.X or mousePos.X > absPos.X + absSize.X or
+                               mousePos.Y < absPos.Y or mousePos.Y > absPos.Y + absSize.Y then
+                                closeList()
+                                clickConn:Disconnect()
+                            end
                         end
-                        table.clear(Dropdown.Options)
-                        table.clear(Dropdown.Buttons)
-                    end
-                    Dropdown.Options = Options
-                    AddOptions(Dropdown.Options)
-                end
-
-                function Dropdown:Set(Value)
-                    if not table.find(Dropdown.Options, Value) then
-                        Dropdown.Value = "..."
-                        DropdownFrame.F.Selected.Text = Dropdown.Value
-                        for _, v in pairs(Dropdown.Buttons) do
-                            TweenService:Create(v, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-                            TweenService:Create(v.Title, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0.4 }):Play()
-                        end
-                        return
-                    end
-
-                    Dropdown.Value = Value
-                    DropdownFrame.F.Selected.Text = Dropdown.Value
-
-                    for _, v in pairs(Dropdown.Buttons) do
-                        TweenService:Create(v, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-                        TweenService:Create(v.Title, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0.4 }):Play()
-                    end
-                    TweenService:Create(Dropdown.Buttons[Value], TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0 }):Play()
-                    TweenService:Create(Dropdown.Buttons[Value].Title, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
-                    DropdownConfig.Callback(Dropdown.Value)
-                end
-
-                AddConnection(Click.MouseButton1Click, function()
-                    Dropdown.Toggled = not Dropdown.Toggled
-                    DropdownFrame.F.Line.Visible = Dropdown.Toggled
-                    if #Dropdown.Options > MaxElements then
-                        TweenService:Create(DropdownFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Dropdown.Toggled and UDim2.new(1, 0, 0, 38 + (MaxElements * 28)) or UDim2.new(1, 0, 0, 38) }):Play()
-                    else
-                        TweenService:Create(DropdownFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Dropdown.Toggled and UDim2.new(1, 0, 0, DropdownList.AbsoluteContentSize.Y + 38) or UDim2.new(1, 0, 0, 38) }):Play()
-                    end
+                    end)
                 end)
 
-                Dropdown:Refresh(Dropdown.Options, false)
-                Dropdown:Set(Dropdown.Value)
-                if DropdownConfig.Flag then
-                    ChronixUI.Flags[DropdownConfig.Flag] = Dropdown
-                end
-                return Dropdown
+                return { Set = function(val) selected = val; dropdownBtn.Text = val end, Get = function() return selected end }
             end
 
-            -- 文本框
             function ElementFunction:AddTextbox(TextboxConfig)
                 TextboxConfig = TextboxConfig or {}
-                TextboxConfig.Name = TextboxConfig.Name or "Textbox"
-                TextboxConfig.Default = TextboxConfig.Default or ""
-                TextboxConfig.TextDisappear = TextboxConfig.TextDisappear or false
-                TextboxConfig.Callback = TextboxConfig.Callback or function() end
-
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-
-                local TextboxActual = AddThemeObject(Create("TextBox", {
-                    Size = UDim2.new(1, 0, 1, 0),
+                local container = Create("Frame", {
                     BackgroundTransparency = 1,
-                    TextColor3 = Color3.fromRGB(255, 255, 255),
-                    PlaceholderColor3 = Color3.fromRGB(210, 210, 210),
-                    PlaceholderText = "请输入",
-                    Font = Enum.Font.GothamSemibold,
-                    TextXAlignment = Enum.TextXAlignment.Center,
-                    TextSize = 14,
-                    ClearTextOnFocus = false
-                }), "Text")
-
-                local TextContainer = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 4), {
-                    Size = UDim2.new(0, 24, 0, 24),
-                    Position = UDim2.new(1, -12, 0.5, 0),
-                    AnchorPoint = Vector2.new(1, 0.5)
-                }), {
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    TextboxActual
-                }), "Main")
-
-                local TextboxFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
                     Size = UDim2.new(1, 0, 0, 38),
                     Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", TextboxConfig.Name, 15), {
-                        Size = UDim2.new(1, -12, 1, 0),
-                        Position = UDim2.new(0, 12, 0, 0),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    TextContainer,
-                    Click
-                }), "Second")
+                })
 
-                AddConnection(TextboxActual:GetPropertyChangedSignal("Text"), function()
-                    TweenService:Create(TextContainer, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, TextboxActual.TextBounds.X + 16, 0, 24) }):Play()
-                end)
-
-                AddConnection(TextboxActual.FocusLost, function()
-                    TextboxConfig.Callback(TextboxActual.Text)
-                    if TextboxConfig.TextDisappear then
-                        TextboxActual.Text = ""
-                    end
-                end)
-
-                TextboxActual.Text = TextboxConfig.Default
-
-                AddConnection(Click.MouseEnter, function()
-                    TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                end)
-                AddConnection(Click.MouseLeave, function()
-                    TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = ChronixUI.Themes[ChronixUI.SelectedTheme].Second }):Play()
-                end)
-                AddConnection(Click.MouseButton1Up, function()
-                    TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                    TextboxActual:CaptureFocus()
-                end)
-                AddConnection(Click.MouseButton1Down, function()
-                    TweenService:Create(TextboxFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 6) }):Play()
-                end)
-            end
-
-            -- 按键绑定
-            function ElementFunction:AddBind(BindConfig)
-                BindConfig = BindConfig or {}
-                BindConfig.Name = BindConfig.Name or "Bind"
-                BindConfig.Default = BindConfig.Default or Enum.KeyCode.Unknown
-                BindConfig.Hold = BindConfig.Hold or false
-                BindConfig.Callback = BindConfig.Callback or function() end
-                BindConfig.Flag = BindConfig.Flag or nil
-                BindConfig.Save = BindConfig.Save or false
-
-                local WhitelistedMouse = { Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2, Enum.UserInputType.MouseButton3 }
-                local BlacklistedKeys = { Enum.KeyCode.Unknown, Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D, Enum.KeyCode.Up, Enum.KeyCode.Left, Enum.KeyCode.Down, Enum.KeyCode.Right, Enum.KeyCode.Slash, Enum.KeyCode.Tab, Enum.KeyCode.Backspace, Enum.KeyCode.Escape }
-
-                local function CheckKey(Table, Key)
-                    for _, v in next, Table do
-                        if v == Key then return true end
-                    end
-                    return false
-                end
-
-                local Bind = { Value = BindConfig.Default, Binding = false, Type = "Bind", Save = BindConfig.Save }
-                local Holding = false
-
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-
-                local BindBox = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 4), {
-                    Size = UDim2.new(0, 24, 0, 24),
-                    Position = UDim2.new(1, -12, 0.5, 0),
-                    AnchorPoint = Vector2.new(1, 0.5)
-                }), {
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    AddThemeObject(SetProps(MakeElement("Label", "", 14), {
-                        Size = UDim2.new(1, 0, 1, 0),
-                        Font = Enum.Font.GothamBold,
-                        TextXAlignment = Enum.TextXAlignment.Center,
-                        Name = "Value"
-                    }), "Text")
-                }), "Main")
-
-                local BindFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
-                    Size = UDim2.new(1, 0, 0, 38),
-                    Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", BindConfig.Name, 15), {
-                        Size = UDim2.new(1, -12, 1, 0),
-                        Position = UDim2.new(0, 12, 0, 0),
-                        Font = Enum.Font.GothamBold,
-                        Name = "Content"
-                    }), "Text"),
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                    BindBox,
-                    Click
-                }), "Second")
-
-                AddConnection(BindBox.Value:GetPropertyChangedSignal("Text"), function()
-                    TweenService:Create(BindBox, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, BindBox.Value.TextBounds.X + 16, 0, 24) }):Play()
-                end)
-
-                AddConnection(Click.InputEnded, function(Input)
-                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if Bind.Binding then return end
-                        Bind.Binding = true
-                        BindBox.Value.Text = ""
-                    end
-                end)
-
-                AddConnection(UserInputService.InputBegan, function(Input)
-                    if UserInputService:GetFocusedTextBox() then return end
-                    if (Input.KeyCode.Name == Bind.Value or Input.UserInputType.Name == Bind.Value) and not Bind.Binding then
-                        if BindConfig.Hold then
-                            Holding = true
-                            BindConfig.Callback(Holding)
-                        else
-                            BindConfig.Callback()
-                        end
-                    elseif Bind.Binding then
-                        local Key
-                        pcall(function()
-                            if not CheckKey(BlacklistedKeys, Input.KeyCode) then
-                                Key = Input.KeyCode
-                            end
-                        end)
-                        pcall(function()
-                            if CheckKey(WhitelistedMouse, Input.UserInputType) and not Key then
-                                Key = Input.UserInputType
-                            end
-                        end)
-                        Key = Key or Bind.Value
-                        Bind:Set(Key)
-                        if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
-                    end
-                end)
-
-                AddConnection(UserInputService.InputEnded, function(Input)
-                    if Input.KeyCode.Name == Bind.Value or Input.UserInputType.Name == Bind.Value then
-                        if BindConfig.Hold and Holding then
-                            Holding = false
-                            BindConfig.Callback(Holding)
-                        end
-                    end
-                end)
-
-                AddConnection(Click.MouseEnter, function()
-                    TweenService:Create(BindFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                end)
-                AddConnection(Click.MouseLeave, function()
-                    TweenService:Create(BindFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = ChronixUI.Themes[ChronixUI.SelectedTheme].Second }):Play()
-                end)
-                AddConnection(Click.MouseButton1Up, function()
-                    TweenService:Create(BindFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 3, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 3) }):Play()
-                end)
-                AddConnection(Click.MouseButton1Down, function()
-                    TweenService:Create(BindFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Color3.fromRGB(ChronixUI.Themes[ChronixUI.SelectedTheme].Second.R * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.G * 255 + 6, ChronixUI.Themes[ChronixUI.SelectedTheme].Second.B * 255 + 6) }):Play()
-                end)
-
-                function Bind:Set(Key)
-                    Bind.Binding = false
-                    Bind.Value = Key or Bind.Value
-                    Bind.Value = Bind.Value.Name or Bind.Value
-                    BindBox.Value.Text = Bind.Value
-                end
-
-                Bind:Set(BindConfig.Default)
-                if BindConfig.Flag then
-                    ChronixUI.Flags[BindConfig.Flag] = Bind
-                end
-                return Bind
-            end
-
-            -- 颜色选择器
-            function ElementFunction:AddColorpicker(ColorpickerConfig)
-                ColorpickerConfig = ColorpickerConfig or {}
-                ColorpickerConfig.Name = ColorpickerConfig.Name or "Colorpicker"
-                ColorpickerConfig.Default = ColorpickerConfig.Default or Color3.fromRGB(255, 255, 255)
-                ColorpickerConfig.Callback = ColorpickerConfig.Callback or function() end
-                ColorpickerConfig.Flag = ColorpickerConfig.Flag or nil
-                ColorpickerConfig.Save = ColorpickerConfig.Save or false
-
-                local ColorH, ColorS, ColorV = 1, 1, 1
-                local Colorpicker = { Value = ColorpickerConfig.Default, Toggled = false, Type = "Colorpicker", Save = ColorpickerConfig.Save }
-
-                local ColorSelection = Create("ImageLabel", {
-                    Size = UDim2.new(0, 18, 0, 18),
-                    Position = UDim2.new(select(3, Color3.toHSV(Colorpicker.Value))),
-                    ScaleType = Enum.ScaleType.Fit,
-                    AnchorPoint = Vector2.new(0.5, 0.5),
+                local label = Create("TextLabel", {
+                    Text = TextboxConfig.Name or "Input",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
                     BackgroundTransparency = 1,
-                    Image = "http://www.roblox.com/asset/?id=4805639000"
+                    Position = UDim2.new(0, 12, 0, 0),
+                    Size = UDim2.new(0.4, 0, 1, 0),
+                    Parent = container
                 })
 
-                local HueSelection = Create("ImageLabel", {
-                    Size = UDim2.new(0, 18, 0, 18),
-                    Position = UDim2.new(0.5, 0, 1 - select(1, Color3.toHSV(Colorpicker.Value))),
-                    ScaleType = Enum.ScaleType.Fit,
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    BackgroundTransparency = 1,
-                    Image = "http://www.roblox.com/asset/?id=4805639000"
-                })
+                local input = Create("TextBox", {
+                    Text = TextboxConfig.Default or "",
+                    PlaceholderText = TextboxConfig.Placeholder or "",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundColor3 = Theme.SidebarBg,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(0.6, -25, 0, 28),
+                    Position = UDim2.new(0.4, 5, 0.5, -14),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
 
-                local Color = Create("ImageLabel", {
-                    Size = UDim2.new(1, -25, 1, 0),
-                    Visible = false,
-                    Image = "rbxassetid://4155801252"
-                }, {
-                    Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
-                    ColorSelection
-                })
-
-                local Hue = Create("Frame", {
-                    Size = UDim2.new(0, 20, 1, 0),
-                    Position = UDim2.new(1, -20, 0, 0),
-                    Visible = false
-                }, {
-                    Create("UIGradient", { Rotation = 270, Color = ColorSequence.new{ ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 4)), ColorSequenceKeypoint.new(0.20, Color3.fromRGB(234, 255, 0)), ColorSequenceKeypoint.new(0.40, Color3.fromRGB(21, 255, 0)), ColorSequenceKeypoint.new(0.60, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.80, Color3.fromRGB(0, 17, 255)), ColorSequenceKeypoint.new(0.90, Color3.fromRGB(255, 0, 251)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 4)) } }),
-                    Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
-                    HueSelection
-                })
-
-                local ColorpickerContainer = Create("Frame", {
-                    Position = UDim2.new(0, 0, 0, 32),
-                    Size = UDim2.new(1, 0, 1, -32),
-                    BackgroundTransparency = 1,
-                    ClipsDescendants = true
-                }, {
-                    Hue,
-                    Color,
-                    Create("UIPadding", {
-                        PaddingLeft = UDim.new(0, 35),
-                        PaddingRight = UDim.new(0, 35),
-                        PaddingBottom = UDim.new(0, 10),
-                        PaddingTop = UDim.new(0, 17)
-                    })
-                })
-
-                local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
-
-                local ColorpickerBox = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 4), {
-                    Size = UDim2.new(0, 24, 0, 24),
-                    Position = UDim2.new(1, -12, 0.5, 0),
-                    AnchorPoint = Vector2.new(1, 0.5)
-                }), {
-                    AddThemeObject(MakeElement("Stroke"), "Stroke")
-                }), "Main")
-
-                local ColorpickerFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
-                    Size = UDim2.new(1, 0, 0, 38),
-                    Parent = ItemParent
-                }), {
-                    SetProps(SetChildren(MakeElement("TFrame"), {
-                        AddThemeObject(SetProps(MakeElement("Label", ColorpickerConfig.Name, 15), {
-                            Size = UDim2.new(1, -12, 1, 0),
-                            Position = UDim2.new(0, 12, 0, 0),
-                            Font = Enum.Font.GothamBold,
-                            Name = "Content"
-                        }), "Text"),
-                        ColorpickerBox,
-                        Click,
-                        AddThemeObject(SetProps(MakeElement("Frame"), {
-                            Size = UDim2.new(1, 0, 0, 1),
-                            Position = UDim2.new(0, 0, 1, -1),
-                            Name = "Line",
-                            Visible = false
-                        }), "Stroke"),
-                    }), {
-                        Size = UDim2.new(1, 0, 0, 38),
-                        ClipsDescendants = true,
-                        Name = "F"
-                    }),
-                    ColorpickerContainer,
-                    AddThemeObject(MakeElement("Stroke"), "Stroke"),
-                }), "Second")
-
-                AddConnection(Click.MouseButton1Click, function()
-                    Colorpicker.Toggled = not Colorpicker.Toggled
-                    TweenService:Create(ColorpickerFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Colorpicker.Toggled and UDim2.new(1, 0, 0, 148) or UDim2.new(1, 0, 0, 38) }):Play()
-                    Color.Visible = Colorpicker.Toggled
-                    Hue.Visible = Colorpicker.Toggled
-                    ColorpickerFrame.F.Line.Visible = Colorpicker.Toggled
+                input.FocusLost:Connect(function()
+                    if TextboxConfig.Callback then TextboxConfig.Callback(input.Text) end
                 end)
 
-                local function UpdateColorPicker()
-                    ColorpickerBox.BackgroundColor3 = Color3.fromHSV(ColorH, ColorS, ColorV)
-                    Color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
-                    Colorpicker:Set(ColorpickerBox.BackgroundColor3)
-                    ColorpickerConfig.Callback(ColorpickerBox.BackgroundColor3)
-                    if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
-                end
-
-                ColorH = 1 - (math.clamp(HueSelection.AbsolutePosition.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
-                ColorS = (math.clamp(ColorSelection.AbsolutePosition.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-                ColorV = 1 - (math.clamp(ColorSelection.AbsolutePosition.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
-
-                AddConnection(Color.InputBegan, function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if ColorInput then ColorInput:Disconnect() end
-                        ColorInput = AddConnection(RunService.RenderStepped, function()
-                            local ColorX = (math.clamp(Mouse.X - Color.AbsolutePosition.X, 0, Color.AbsoluteSize.X) / Color.AbsoluteSize.X)
-                            local ColorY = (math.clamp(Mouse.Y - Color.AbsolutePosition.Y, 0, Color.AbsoluteSize.Y) / Color.AbsoluteSize.Y)
-                            ColorSelection.Position = UDim2.new(ColorX, 0, ColorY, 0)
-                            ColorS = ColorX
-                            ColorV = 1 - ColorY
-                            UpdateColorPicker()
-                        end)
-                    end
-                end)
-
-                AddConnection(Color.InputEnded, function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if ColorInput then ColorInput:Disconnect() end
-                    end
-                end)
-
-                AddConnection(Hue.InputBegan, function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if HueInput then HueInput:Disconnect() end
-                        HueInput = AddConnection(RunService.RenderStepped, function()
-                            local HueY = (math.clamp(Mouse.Y - Hue.AbsolutePosition.Y, 0, Hue.AbsoluteSize.Y) / Hue.AbsoluteSize.Y)
-                            HueSelection.Position = UDim2.new(0.5, 0, HueY, 0)
-                            ColorH = 1 - HueY
-                            UpdateColorPicker()
-                        end)
-                    end
-                end)
-
-                AddConnection(Hue.InputEnded, function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        if HueInput then HueInput:Disconnect() end
-                    end
-                end)
-
-                function Colorpicker:Set(Value)
-                    Colorpicker.Value = Value
-                    ColorpickerBox.BackgroundColor3 = Colorpicker.Value
-                    ColorpickerConfig.Callback(Colorpicker.Value)
-                end
-
-                Colorpicker:Set(Colorpicker.Value)
-                if ColorpickerConfig.Flag then
-                    ChronixUI.Flags[ColorpickerConfig.Flag] = Colorpicker
-                end
-                return Colorpicker
+                return input
             end
 
             return ElementFunction
@@ -1443,32 +1087,6 @@ function ChronixUI:MakeWindow(WindowConfig)
         local ElementFunction = {}
         for i, v in next, GetElements(Container) do
             ElementFunction[i] = v
-        end
-
-        -- Premium Only 处理
-        if TabConfig.PremiumOnly then
-            for i, v in next, ElementFunction do
-                ElementFunction[i] = function() end
-            end
-            Container:FindFirstChild("UIListLayout"):Destroy()
-            Container:FindFirstChild("UIPadding"):Destroy()
-            SetChildren(SetProps(MakeElement("TFrame"), {
-                Size = UDim2.new(1, 0, 1, 0),
-                Parent = Container
-            }), {
-                AddThemeObject(SetProps(MakeElement("Label", "Premium Features", 14), {
-                    Size = UDim2.new(1, 0, 0, 30),
-                    Position = UDim2.new(0, 0, 0.4, 0),
-                    Font = Enum.Font.GothamBold,
-                    TextXAlignment = Enum.TextXAlignment.Center
-                }), "Text"),
-                AddThemeObject(SetProps(MakeElement("Label", "This feature is locked to premium users.", 12), {
-                    Size = UDim2.new(1, 0, 0, 20),
-                    Position = UDim2.new(0, 0, 0.55, 0),
-                    Font = Enum.Font.Gotham,
-                    TextXAlignment = Enum.TextXAlignment.Center
-                }), "TextDark")
-            })
         end
 
         return ElementFunction
