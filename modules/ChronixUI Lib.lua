@@ -1,8 +1,8 @@
--- ChronixUI v2.1 - 支持动态设置关闭回调
+-- ChronixUI v3.0 - 修复关闭按钮回调
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "2.1.0"
+ChronixUI.Version = "3.0.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -311,8 +311,8 @@ function ChronixUI:CreateWindow(config)
     local originalSize = windowSize
     local savedPosition = mainFrame.Position
     
-    -- 存储回调函数列表（支持多个回调）
-    local closeCallbacks = {}
+    -- 存储外部关闭回调函数（全局变量，可以在任何地方访问）
+    local externalCloseCallback = nil
     
     -- 使用 ContextActionService 绑定快捷键
     local toggleActionName = "ChronixUIToggle_" .. tostring(#self.Windows + 1)
@@ -485,6 +485,30 @@ function ChronixUI:CreateWindow(config)
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentScroll
     
+    -- 关闭按钮点击事件
+    closeBtn.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        -- 先执行外部回调（如果有）
+        if externalCloseCallback then
+            local success, err = pcall(externalCloseCallback)
+            if not success then
+                warn("Close callback error: ", err)
+            end
+        end
+        -- 然后销毁UI
+        ContextActionService:UnbindAction(toggleActionName)
+        if gui then
+            gui:Destroy()
+        end
+        -- 从窗口列表中移除
+        for i, window in pairs(self.Windows) do
+            if window.Gui == gui then
+                table.remove(self.Windows, i)
+                break
+            end
+        end
+    end)
+    
     -- 创建窗口数据对象
     local windowData = {
         Gui = gui,
@@ -496,30 +520,9 @@ function ChronixUI:CreateWindow(config)
         SettingsTabContent = nil,
         Minimized = false,
         UpdatePlayerInfo = UpdatePlayerInfo,
-        -- 添加关闭回调（可以随时添加多个）
-        OnClose = function(callback)
-            table.insert(closeCallbacks, callback)
-        end,
-        -- 关闭窗口的方法
-        Close = function()
-            PlayClickSound()
-            -- 执行所有注册的回调
-            for _, callback in ipairs(closeCallbacks) do
-                local success, err = pcall(callback)
-                if not success then
-                    warn("Close callback error: ", err)
-                end
-            end
-            ContextActionService:UnbindAction(toggleActionName)
-            if gui then
-                gui:Destroy()
-            end
-            for i, window in pairs(ChronixUI.Windows) do
-                if window == windowData then
-                    table.remove(ChronixUI.Windows, i)
-                    break
-                end
-            end
+        -- 设置关闭回调的方法
+        SetCloseCallback = function(callback)
+            externalCloseCallback = callback
         end
     }
     
@@ -549,11 +552,6 @@ function ChronixUI:CreateWindow(config)
             settingsBtn.Visible = true
             minBtn.Text = "−"
         end
-    end)
-    
-    -- 关闭按钮点击事件
-    closeBtn.MouseButton1Click:Connect(function()
-        windowData:Close()
     end)
     
     -- 创建 Tab 函数
