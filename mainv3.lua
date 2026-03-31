@@ -33,444 +33,636 @@ end
 local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
 
 -- ============ 创建主窗口 ============
-local mainWindow = ChronixUI:CreateWindow({
-    Title = "ChronixHub V3",
-    ShowIntro = true,           -- 是否显示开场动画
-    IntroText = "ChronixHub V3", -- 开场动画文字
-    IntroDuration = 2.5        -- 开场动画时长
+local MainWindow = ChronixUI:MakeWindow({
+    Name = "ChronixHub V3",
+    ConfigFolder = "ChronixHubConfig",
+    SaveConfig = true,
+    IntroEnabled = true,
+    IntroText = "ChronixHub V3",
+    ShowIcon = true,
+    Icon = "rbxassetid://8834748103",
+    HidePremium = false,
+    CloseCallback = function()
+        print("[ChronixUI] 窗口已关闭，正在清理...")
+        -- 在这里添加你的清理代码
+        -- 例如：PlayerESP:unload()
+        -- 例如：AntiVoid:unload()
+    end
 })
 
--- ============ 自动创建设置标签页（包含快捷键设置） ============
-mainWindow:CreateSettingsTab()
+-- ============ 玩家标签页 ============
+local PlayerTab = MainWindow:MakeTab({
+    Name = "玩家",
+    Icon = "rbxassetid://3944703587"
+})
 
--- ============ 创建功能标签页 ============
+-- 视觉功能分区
+local VisualSection = PlayerTab:AddSection("视觉功能")
 
--- 标签页1：玩家功能
-local playerTab = mainWindow:CreateTab({Name = "玩家", Icon = "👤"})
-
--- 标签页2：世界功能
-local worldTab = mainWindow:CreateTab({Name = "世界", Icon = "🌍"})
-
--- 标签页3：杂项功能
-local miscTab = mainWindow:CreateTab({Name = "杂项", Icon = "🔧"})
-
--- ============================================================
--- 玩家标签页 - 所有控件示例
--- ============================================================
-
--- 分区1：视觉功能
-local visualSection = playerTab:CreateSection("视觉功能")
-
--- 1. 开关 (Toggle)
-local espToggle = playerTab:AddToggle({
-    Parent = visualSection,
+-- 开关 - 玩家透视
+local espToggle = PlayerTab:AddToggle({
+    Parent = VisualSection,
     Name = "玩家透视",
     Default = false,
     Flag = "PlayerESP",
-    Callback = function(value)
-        print("[玩家透视] 状态:", value)
-        if value then
-            -- 这里写开启透视的代码
+    Save = true,
+    Callback = function(Value)
+        print("[玩家透视] 状态:", Value)
+        if Value then
+            -- 开启透视的代码
+            -- PlayerESP:enable()
         else
-            -- 这里写关闭透视的代码
+            -- 关闭透视的代码
+            -- PlayerESP:disable()
         end
     end
 })
 
--- 2. 颜色选择器 (Colorpicker)
-local espColor = playerTab:AddColorpicker({
-    Parent = visualSection,
+-- 颜色选择器 - 透视颜色
+local espColor = PlayerTab:AddColorpicker({
+    Parent = VisualSection,
     Name = "透视颜色",
     Default = Color3.fromRGB(100, 100, 180),
     Flag = "ESPColor",
-    Callback = function(color)
-        print("[透视颜色] R:", color.R * 255, "G:", color.G * 255, "B:", color.B * 255)
-        -- 这里写修改透视颜色的代码
+    Save = true,
+    Callback = function(Color)
+        print("[透视颜色] R:", Color.R * 255, "G:", Color.G * 255, "B:", Color.B * 255)
+        -- 修改透视颜色的代码
     end
 })
 
--- 3. 滑块 (Slider)
-local espSize = playerTab:AddSlider({
-    Parent = visualSection,
-    Name = "透视大小",
-    Min = 1,
-    Max = 10,
-    Default = 5,
-    Flag = "ESPSize",
-    Callback = function(value)
-        print("[透视大小] 值:", value)
-        -- 这里写修改透视大小的代码
+-- 滑块 - 透视透明度
+local espAlpha = PlayerTab:AddSlider({
+    Parent = VisualSection,
+    Name = "透视透明度",
+    Min = 0,
+    Max = 100,
+    Increment = 5,
+    Default = 50,
+    ValueName = "%",
+    Flag = "ESPAlpha",
+    Save = true,
+    Callback = function(Value)
+        print("[透视透明度] 值:", Value, "%")
+        -- 修改透明度的代码
     end
 })
 
--- 分区2：移动功能
-local movementSection = playerTab:CreateSection("移动功能")
+-- 移动功能分区
+local MovementSection = PlayerTab:AddSection("移动功能")
 
--- 4. 滑块 - 移动速度
-local speedSlider = playerTab:AddSlider({
-    Parent = movementSection,
+-- 滑块 - 移动速度
+local walkSpeed = PlayerTab:AddSlider({
+    Parent = MovementSection,
     Name = "移动速度",
     Min = 16,
     Max = 100,
+    Increment = 1,
     Default = 16,
+    ValueName = "studs/s",
     Flag = "WalkSpeed",
-    Callback = function(value)
-        print("[移动速度] 值:", value)
-        -- 这里写修改移动速度的代码
-        -- 例如: game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+    Save = true,
+    Callback = function(Value)
+        print("[移动速度] 值:", Value)
+        -- 修改移动速度的代码
+        -- game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
     end
 })
 
--- 5. 滑块 - 跳跃高度
-local jumpSlider = playerTab:AddSlider({
-    Parent = movementSection,
+-- 滑块 - 跳跃高度
+local jumpPower = PlayerTab:AddSlider({
+    Parent = MovementSection,
     Name = "跳跃高度",
     Min = 50,
     Max = 200,
+    Increment = 5,
     Default = 50,
+    ValueName = "",
     Flag = "JumpPower",
-    Callback = function(value)
-        print("[跳跃高度] 值:", value)
-        -- 这里写修改跳跃高度的代码
+    Save = true,
+    Callback = function(Value)
+        print("[跳跃高度] 值:", Value)
+        -- 修改跳跃高度的代码
+        -- game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
     end
 })
 
--- 6. 开关 - 无限跳跃
-local infJumpToggle = playerTab:AddToggle({
-    Parent = movementSection,
+-- 开关 - 无限跳跃
+local infiniteJump = PlayerTab:AddToggle({
+    Parent = MovementSection,
     Name = "无限跳跃",
     Default = false,
     Flag = "InfiniteJump",
-    Callback = function(value)
-        print("[无限跳跃] 状态:", value)
-        -- 这里写无限跳跃的代码
+    Save = true,
+    Callback = function(Value)
+        print("[无限跳跃] 状态:", Value)
+        if Value then
+            -- 开启无限跳跃的代码
+        else
+            -- 关闭无限跳跃的代码
+        end
     end
 })
 
--- 7. 开关 - 穿墙模式
-local noclipToggle = playerTab:AddToggle({
-    Parent = movementSection,
+-- 开关 - 穿墙模式
+local noclip = PlayerTab:AddToggle({
+    Parent = MovementSection,
     Name = "穿墙模式",
     Default = false,
     Flag = "Noclip",
-    Callback = function(value)
-        print("[穿墙模式] 状态:", value)
-        -- 这里写穿墙模式的代码
+    Save = true,
+    Callback = function(Value)
+        print("[穿墙模式] 状态:", Value)
+        if Value then
+            -- 开启穿墙的代码
+        else
+            -- 关闭穿墙的代码
+        end
     end
 })
 
--- 分区3：战斗功能
-local combatSection = playerTab:CreateSection("战斗功能")
+-- 战斗功能分区
+local CombatSection = PlayerTab:AddSection("战斗功能")
 
--- 8. 开关 - 自动瞄准
-local aimbotToggle = playerTab:AddToggle({
-    Parent = combatSection,
+-- 开关 - 自动瞄准
+local aimbot = PlayerTab:AddToggle({
+    Parent = CombatSection,
     Name = "自动瞄准",
     Default = false,
     Flag = "Aimbot",
-    Callback = function(value)
-        print("[自动瞄准] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[自动瞄准] 状态:", Value)
     end
 })
 
--- 9. 下拉菜单 - 瞄准部位
-local aimPart = playerTab:AddDropdown({
-    Parent = combatSection,
+-- 下拉菜单 - 瞄准部位
+local aimPart = PlayerTab:AddDropdown({
+    Parent = CombatSection,
     Name = "瞄准部位",
     Options = {"头部", "胸部", "腿部"},
     Default = "头部",
     Flag = "AimPart",
-    Callback = function(value)
-        print("[瞄准部位] 选中:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[瞄准部位] 选中:", Value)
     end
 })
 
--- 10. 滑块 - 瞄准范围
-local aimFOV = playerTab:AddSlider({
-    Parent = combatSection,
+-- 滑块 - 瞄准范围
+local aimFov = PlayerTab:AddSlider({
+    Parent = CombatSection,
     Name = "瞄准范围",
     Min = 0,
     Max = 360,
+    Increment = 5,
     Default = 180,
+    ValueName = "°",
     Flag = "AimFOV",
-    Callback = function(value)
-        print("[瞄准范围] 值:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[瞄准范围] 值:", Value)
     end
 })
 
--- 11. 开关 - 自动开枪
-local triggerbotToggle = playerTab:AddToggle({
-    Parent = combatSection,
+-- 开关 - 自动开枪
+local triggerbot = PlayerTab:AddToggle({
+    Parent = CombatSection,
     Name = "自动开枪",
     Default = false,
     Flag = "Triggerbot",
-    Callback = function(value)
-        print("[自动开枪] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[自动开枪] 状态:", Value)
     end
 })
 
--- 分区4：其他功能
-local otherSection = playerTab:CreateSection("其他功能")
+-- 按键绑定 - 自动瞄准快捷键
+local aimbotKey = PlayerTab:AddBind({
+    Parent = CombatSection,
+    Name = "自动瞄准快捷键",
+    Default = Enum.KeyCode.X,
+    Hold = false,
+    Flag = "AimbotKey",
+    Save = true,
+    Callback = function(Key)
+        print("[自动瞄准快捷键] 按下:", Key)
+        -- 切换自动瞄准状态
+        aimbot:Set(not aimbot.Value)
+    end
+})
 
--- 12. 按钮 (Button)
-local refreshBtn = playerTab:AddButton({
-    Parent = otherSection,
+-- 其他功能分区
+local OtherSection = PlayerTab:AddSection("其他功能")
+
+-- 按钮 - 刷新ESP
+PlayerTab:AddButton({
+    Parent = OtherSection,
     Name = "刷新ESP",
     Callback = function()
-        print("[按钮] 刷新ESP被点击")
-        ChronixUI:NotifySuccess("成功", "ESP已刷新", 2)
+        print("[按钮] 刷新ESP")
+        ChronixUI:MakeNotification({
+            Name = "成功",
+            Content = "ESP已刷新",
+            Time = 3
+        })
     end
 })
 
--- 13. 文本框 (Input)
-local commandInput = playerTab:AddInput({
-    Parent = otherSection,
+-- 按钮 - 传送至出生点
+PlayerTab:AddButton({
+    Parent = OtherSection,
+    Name = "传送至出生点",
+    Callback = function()
+        print("[按钮] 传送至出生点")
+        -- 传送代码
+        ChronixUI:MakeNotification({
+            Name = "提示",
+            Content = "已传送至出生点",
+            Time = 2
+        })
+    end
+})
+
+-- 文本框 - 执行命令
+local commandBox = PlayerTab:AddTextbox({
+    Parent = OtherSection,
     Name = "执行命令",
-    Placeholder = "输入命令...",
-    Flag = "Command",
-    Callback = function(text)
-        print("[文本框] 输入内容:", text)
-        -- 这里写执行命令的代码
+    Default = "",
+    TextDisappear = true,
+    Callback = function(Text)
+        print("[文本框] 输入:", Text)
+        -- 执行命令的代码
+        if Text ~= "" then
+            loadstring(Text)()
+        end
     end
 })
 
--- 14. 标签 (Label)
-local infoLabel = playerTab:AddLabel({
-    Parent = otherSection,
-    Text = "提示：点击下方按钮可保存配置"
+-- 标签 - 提示信息
+PlayerTab:AddLabel("提示：部分功能需要管理员权限")
+
+-- 段落 - 说明
+PlayerTab:AddParagraph("关于本菜单", "ChronixHub V3 是一个功能强大的辅助工具。使用前请确保了解相关风险。")
+
+-- ============ 世界标签页 ============
+local WorldTab = MainWindow:MakeTab({
+    Name = "世界",
+    Icon = "rbxassetid://3944703590"
 })
 
--- 15. 按钮 - 保存配置
-local saveBtn = playerTab:AddButton({
-    Parent = otherSection,
-    Name = "保存当前配置",
-    Callback = function()
-        print("[按钮] 保存配置被点击")
-        ChronixUI:SaveConfig()
-        ChronixUI:NotifySuccess("配置已保存", "所有设置已保存到本地", 2)
-    end
-})
+-- 环境设置分区
+local EnvironmentSection = WorldTab:AddSection("环境设置")
 
--- 16. 按钮 - 加载配置
-local loadBtn = playerTab:AddButton({
-    Parent = otherSection,
-    Name = "加载上次配置",
-    Callback = function()
-        print("[按钮] 加载配置被点击")
-        ChronixUI:LoadConfig()
-        ChronixUI:NotifySuccess("配置已加载", "已加载上次保存的设置", 2)
-    end
-})
-
--- ============================================================
--- 世界标签页
--- ============================================================
-
--- 分区1：环境设置
-local environmentSection = worldTab:CreateSection("环境设置")
-
--- 17. 下拉菜单 - 天气效果
-local weatherDropdown = worldTab:AddDropdown({
-    Parent = environmentSection,
+-- 下拉菜单 - 天气效果
+local weather = WorldTab:AddDropdown({
+    Parent = EnvironmentSection,
     Name = "天气效果",
-    Options = {"晴天", "雨天", "雾天", "暴风雪"},
+    Options = {"晴天", "雨天", "雾天", "暴风雪", "雷电"},
     Default = "晴天",
     Flag = "Weather",
-    Callback = function(value)
-        print("[天气效果] 选中:", value)
-        -- 这里写修改天气的代码
+    Save = true,
+    Callback = function(Value)
+        print("[天气效果] 选中:", Value)
+        -- 修改天气的代码
     end
 })
 
--- 18. 滑块 - 时间设置
-local timeSlider = worldTab:AddSlider({
-    Parent = environmentSection,
+-- 滑块 - 游戏时间
+local gameTime = WorldTab:AddSlider({
+    Parent = EnvironmentSection,
     Name = "游戏时间",
     Min = 0,
     Max = 24,
+    Increment = 0.5,
     Default = 14,
+    ValueName = ":00",
     Flag = "GameTime",
-    Callback = function(value)
-        print("[游戏时间] 值:", value)
-        -- 这里写修改游戏时间的代码
-        -- game:GetService("Lighting").ClockTime = value
+    Save = true,
+    Callback = function(Value)
+        print("[游戏时间] 值:", Value)
+        -- 修改游戏时间的代码
+        -- game:GetService("Lighting").ClockTime = Value
     end
 })
 
--- 19. 开关 - 黑夜模式
-local nightMode = worldTab:AddToggle({
-    Parent = environmentSection,
+-- 开关 - 强制黑夜
+local nightMode = WorldTab:AddToggle({
+    Parent = EnvironmentSection,
     Name = "强制黑夜",
     Default = false,
     Flag = "NightMode",
-    Callback = function(value)
-        print("[强制黑夜] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[强制黑夜] 状态:", Value)
+        if Value then
+            -- game:GetService("Lighting").ClockTime = 0
+        else
+            -- game:GetService("Lighting").ClockTime = 14
+        end
     end
 })
 
--- 分区2：物品收集
-local itemSection = worldTab:CreateSection("物品收集")
+-- 开关 - 彩虹灯光
+local rainbowLight = WorldTab:AddToggle({
+    Parent = EnvironmentSection,
+    Name = "彩虹灯光",
+    Default = false,
+    Flag = "RainbowLight",
+    Save = true,
+    Callback = function(Value)
+        print("[彩虹灯光] 状态:", Value)
+    end
+})
 
--- 20. 开关 - 自动收集
-local autoCollect = worldTab:AddToggle({
-    Parent = itemSection,
+-- 物品收集分区
+local LootSection = WorldTab:AddSection("物品收集")
+
+-- 开关 - 自动收集
+local autoCollect = WorldTab:AddToggle({
+    Parent = LootSection,
     Name = "自动收集物品",
     Default = false,
     Flag = "AutoCollect",
-    Callback = function(value)
-        print("[自动收集] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[自动收集] 状态:", Value)
     end
 })
 
--- 21. 滑块 - 收集范围
-local collectRange = worldTab:AddSlider({
-    Parent = itemSection,
+-- 滑块 - 收集范围
+local collectRange = WorldTab:AddSlider({
+    Parent = LootSection,
     Name = "收集范围",
     Min = 10,
     Max = 100,
+    Increment = 5,
     Default = 30,
+    ValueName = "studs",
     Flag = "CollectRange",
-    Callback = function(value)
-        print("[收集范围] 值:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[收集范围] 值:", Value)
     end
 })
 
--- 22. 按钮 - 传送至所有物品
-local teleportItems = worldTab:AddButton({
-    Parent = itemSection,
+-- 按钮 - 传送至所有物品
+WorldTab:AddButton({
+    Parent = LootSection,
     Name = "传送至最近物品",
     Callback = function()
         print("[按钮] 传送至最近物品")
-        ChronixUI:NotifyInfo("提示", "正在寻找最近物品...", 2)
+        ChronixUI:MakeNotification({
+            Name = "提示",
+            Content = "正在寻找最近物品...",
+            Time = 2
+        })
     end
 })
 
--- ============================================================
--- 杂项标签页
--- ============================================================
+-- ============ 武器标签页 ============
+local WeaponTab = MainWindow:MakeTab({
+    Name = "武器",
+    Icon = "rbxassetid://3944703592"
+})
 
--- 分区1：UI设置
-local uiSection = miscTab:CreateSection("界面设置")
+-- 武器修改分区
+local WeaponModSection = WeaponTab:AddSection("武器修改")
 
--- 23. 开关 - 显示FPS
-local showFPS = miscTab:AddToggle({
-    Parent = uiSection,
+-- 开关 - 无限弹药
+local infiniteAmmo = WeaponTab:AddToggle({
+    Parent = WeaponModSection,
+    Name = "无限弹药",
+    Default = false,
+    Flag = "InfiniteAmmo",
+    Save = true,
+    Callback = function(Value)
+        print("[无限弹药] 状态:", Value)
+    end
+})
+
+-- 开关 - 无后坐力
+local noRecoil = WeaponTab:AddToggle({
+    Parent = WeaponModSection,
+    Name = "无后坐力",
+    Default = false,
+    Flag = "NoRecoil",
+    Save = true,
+    Callback = function(Value)
+        print("[无后坐力] 状态:", Value)
+    end
+})
+
+-- 开关 - 快速射击
+local rapidFire = WeaponTab:AddToggle({
+    Parent = WeaponModSection,
+    Name = "快速射击",
+    Default = false,
+    Flag = "RapidFire",
+    Save = true,
+    Callback = function(Value)
+        print("[快速射击] 状态:", Value)
+    end
+})
+
+-- 滑块 - 伤害倍率
+local damageMultiplier = WeaponTab:AddSlider({
+    Parent = WeaponModSection,
+    Name = "伤害倍率",
+    Min = 1,
+    Max = 10,
+    Increment = 0.5,
+    Default = 1,
+    ValueName = "x",
+    Flag = "DamageMultiplier",
+    Save = true,
+    Callback = function(Value)
+        print("[伤害倍率] 值:", Value)
+    end
+})
+
+-- ============ 杂项标签页 ============
+local MiscTab = MainWindow:MakeTab({
+    Name = "杂项",
+    Icon = "rbxassetid://3944703594"
+})
+
+-- UI设置分区
+local UISection = MiscTab:AddSection("界面设置")
+
+-- 开关 - 显示FPS
+local showFPS = MiscTab:AddToggle({
+    Parent = UISection,
     Name = "显示FPS计数器",
     Default = false,
     Flag = "ShowFPS",
-    Callback = function(value)
-        print("[显示FPS] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[显示FPS] 状态:", Value)
     end
 })
 
--- 24. 开关 - 显示Ping
-local showPing = miscTab:AddToggle({
-    Parent = uiSection,
+-- 开关 - 显示Ping
+local showPing = MiscTab:AddToggle({
+    Parent = UISection,
     Name = "显示网络延迟",
     Default = false,
     Flag = "ShowPing",
-    Callback = function(value)
-        print("[显示Ping] 状态:", value)
+    Save = true,
+    Callback = function(Value)
+        print("[显示Ping] 状态:", Value)
     end
 })
 
--- 25. 按钮 - 重置窗口位置
-local resetWindow = miscTab:AddButton({
-    Parent = uiSection,
+-- 按钮 - 重置窗口位置
+MiscTab:AddButton({
+    Parent = UISection,
     Name = "重置窗口位置",
     Callback = function()
         print("[按钮] 重置窗口位置")
-        mainWindow.mainFrame.Position = UDim2.new(0.5, -mainWindow.theme.WindowWidth/2, 0.5, -mainWindow.theme.WindowHeight/2)
-        ChronixUI:NotifySuccess("窗口位置已重置", "", 1.5)
+        ChronixUI:MakeNotification({
+            Name = "提示",
+            Content = "窗口位置已重置",
+            Time = 2
+        })
     end
 })
 
--- 分区2：脚本控制
-local scriptSection = miscTab:CreateSection("脚本控制")
+-- 快捷键设置分区
+local KeybindSection = MiscTab:AddSection("快捷键设置")
 
--- 26. 按键绑定 (Bind)
-local menuBind = miscTab:AddBind({
-    Parent = scriptSection,
-    Name = "打开/关闭菜单",
-    Default = "RightShift",
+-- 按键绑定 - 菜单开关
+MiscTab:AddBind({
+    Parent = KeybindSection,
+    Name = "菜单开关",
+    Default = Enum.KeyCode.RightShift,
     Hold = false,
-    Flag = "MenuBind",
-    Callback = function(key)
-        print("[按键绑定] 按下了:", key)
-        -- 注意：这个回调是在按键被按下时触发
-        -- 实际的隐藏/显示功能已经在主窗口中实现了
+    Flag = "MenuKey",
+    Save = true,
+    Callback = function(Key)
+        print("[菜单开关] 按下了:", Key)
+        -- 注意：实际隐藏/显示功能已经在库内部实现了
     end
 })
 
--- 27. 按钮 - 重新加载脚本
-local reloadBtn = miscTab:AddButton({
-    Parent = scriptSection,
+-- 按键绑定 - 飞行模式
+local flyBind = MiscTab:AddBind({
+    Parent = KeybindSection,
+    Name = "飞行模式",
+    Default = Enum.KeyCode.F,
+    Hold = true,
+    Flag = "FlyKey",
+    Save = true,
+    Callback = function(State)
+        if State then
+            print("[飞行模式] 按住开启")
+            -- 开启飞行
+        else
+            print("[飞行模式] 松开关闭")
+            -- 关闭飞行
+        end
+    end
+})
+
+-- 脚本控制分区
+local ScriptSection = MiscTab:AddSection("脚本控制")
+
+-- 按钮 - 保存配置
+MiscTab:AddButton({
+    Parent = ScriptSection,
+    Name = "保存当前配置",
+    Callback = function()
+        print("[按钮] 保存配置")
+        -- 配置已在内部自动保存，这里只是显示通知
+        ChronixUI:MakeNotification({
+            Name = "成功",
+            Content = "配置已保存",
+            Time = 2
+        })
+    end
+})
+
+-- 按钮 - 加载配置
+MiscTab:AddButton({
+    Parent = ScriptSection,
+    Name = "加载配置",
+    Callback = function()
+        print("[按钮] 加载配置")
+        ChronixUI:MakeNotification({
+            Name = "提示",
+            Content = "配置已加载",
+            Time = 2
+        })
+    end
+})
+
+-- 按钮 - 重新加载脚本
+MiscTab:AddButton({
+    Parent = ScriptSection,
     Name = "重新加载脚本",
     Callback = function()
         print("[按钮] 重新加载脚本")
-        ChronixUI:NotifyWarning("警告", "重新加载功能需要手动实现", 2)
+        ChronixUI:MakeNotification({
+            Name = "警告",
+            Content = "此功能需要手动实现",
+            Time = 3
+        })
     end
 })
 
--- 28. 按钮 - 卸载脚本
-local unloadBtn = miscTab:AddButton({
-    Parent = scriptSection,
+-- 按钮 - 卸载脚本
+MiscTab:AddButton({
+    Parent = ScriptSection,
     Name = "卸载所有功能",
     Callback = function()
         print("[按钮] 卸载脚本")
-        ChronixUI:Unload()
+        ChronixUI:Destroy()
+        -- 清理其他模块
+        -- PlayerESP:unload()
+        -- AntiVoid:unload()
     end
 })
 
--- 分区3：关于
-local aboutSection = miscTab:CreateSection("关于")
-
--- 29. 标签 - 版本信息
-local versionLabel = miscTab:AddLabel({
-    Parent = aboutSection,
-    Text = "ChronixHub V2 - 版本 1.0.0"
+-- ============ Premium标签页（演示） ============
+local PremiumTab = MainWindow:MakeTab({
+    Name = "高级",
+    Icon = "rbxassetid://3944703596",
+    PremiumOnly = true  -- 这个标签页会被锁住，显示"Premium Features"
 })
 
--- 30. 标签 - 作者信息
-local authorLabel = miscTab:AddLabel({
-    Parent = aboutSection,
-    Text = "作者: Furrycalin"
+-- 这些控件在 PremiumOnly 模式下不会显示，而是显示锁屏界面
+local PremiumSection = PremiumTab:AddSection("高级功能")
+
+PremiumTab:AddToggle({
+    Parent = PremiumSection,
+    Name = "高级透视",
+    Default = false,
+    Flag = "AdvancedESP",
+    Callback = function(Value)
+        print("[高级透视] 状态:", Value)
+    end
 })
 
--- 31. 按钮 - 显示通知测试
-local testNotifBtn = miscTab:AddButton({
-    Parent = aboutSection,
-    Name = "测试通知系统",
+PremiumTab:AddButton({
+    Parent = PremiumSection,
+    Name = "高级功能",
     Callback = function()
-        print("[按钮] 测试通知")
-        ChronixUI:NotifySuccess("成功通知", "这是成功类型的通知", 3)
-        task.wait(0.5)
-        ChronixUI:NotifyError("错误通知", "这是错误类型的通知", 3)
-        task.wait(0.5)
-        ChronixUI:NotifyInfo("信息通知", "这是普通信息通知", 3)
+        print("[高级功能] 按钮被点击")
     end
 })
 
--- ============================================================
--- 配置保存与加载
--- ============================================================
-
--- 设置配置文件夹（可选，用于保存用户设置）
-ChronixUI:SetupConfig("ChronixHubConfig")
-
--- 自动加载上次保存的配置
-task.wait(0.5)
-ChronixUI:LoadConfig()
-
--- 启动完成通知
-ChronixUI:NotifySuccess("ChronixHub V2", "加载完成！共加载 30+ 个控件示例", 3)
+-- ============ 启动完成通知 ============
+task.wait(1)
+ChronixUI:MakeNotification({
+    Name = "ChronixHub V3",
+    Content = "菜单加载完成！共加载 30+ 个功能",
+    Time = 3
+})
 
 print("========================================")
-print("ChronixUI 示例窗口已启动")
-print("所有控件都已添加，你可以根据需求修改")
+print("ChronixHub V3 示例菜单已启动")
+print("所有控件类型已展示，可根据需求修改")
 print("========================================")
 
-mainWindow:SetCloseCallback(function()
-    print("窗口正在关闭，执行清理...")
-    -- 卸载你的其他模块
-end)
+-- 可选：自动加载上次保存的配置
+-- 配置已通过 SaveConfig = true 自动保存/加载
