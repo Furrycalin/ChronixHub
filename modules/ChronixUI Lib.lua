@@ -560,7 +560,7 @@ function ChronixUI:CreateWindow(config)
     
     -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
-        if windowData and windowData.Close then
+        if windowData and typeof(windowData.Close) == "function" then
             windowData:Close()
         end
     end)
