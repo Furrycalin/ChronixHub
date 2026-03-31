@@ -235,12 +235,6 @@ CreateElement("Frame", function(Color)
     return Create("Frame", { BackgroundColor3 = Color or Color3.fromRGB(255, 255, 255), BorderSizePixel = 0 })
 end)
 
-CreateElement("RoundFrame", function(Color, Scale, Offset)
-    return Create("Frame", { BackgroundColor3 = Color or Color3.fromRGB(255, 255, 255), BorderSizePixel = 0 }, {
-        Create("UICorner", { CornerRadius = UDim.new(Scale, Offset) })
-    })
-end)
-
 CreateElement("Button", function()
     return Create("TextButton", { Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0 })
 end)
@@ -307,13 +301,16 @@ function ChronixUI:MakeNotification(NotificationConfig)
             Parent = NotificationHolder
         })
 
-        local NotificationFrame = SetChildren(SetProps(MakeElement("RoundFrame", Theme.SidebarBg, 0, 10), {
+        local NotificationFrame = SetChildren(SetProps(MakeElement("Frame"), {
+            BackgroundColor3 = Theme.SidebarBg,
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
             Parent = NotificationParent,
             Size = UDim2.new(1, 0, 0, 0),
             Position = UDim2.new(1, -55, 0, 0),
-            BackgroundTransparency = 0,
             AutomaticSize = Enum.AutomaticSize.Y
         }), {
+            Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
             MakeElement("Stroke", Theme.AccentColor, 1),
             MakeElement("Padding", 12, 12, 12, 12),
             SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
@@ -338,7 +335,9 @@ function ChronixUI:MakeNotification(NotificationConfig)
         wait(NotificationConfig.Time - 0.88)
         TweenService:Create(NotificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.6 }):Play()
         wait(0.3)
-        TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), { Transparency = 0.9 }):Play()
+        if NotificationFrame:FindFirstChild("UIStroke") then
+            TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), { Transparency = 0.9 }):Play()
+        end
         TweenService:Create(NotificationFrame.Title, TweenInfo.new(0.6, Enum.EasingStyle.Quint), { TextTransparency = 0.4 }):Play()
         TweenService:Create(NotificationFrame.Content, TweenInfo.new(0.6, Enum.EasingStyle.Quint), { TextTransparency = 0.5 }):Play()
         wait(0.05)
@@ -346,14 +345,6 @@ function ChronixUI:MakeNotification(NotificationConfig)
         wait(1.35)
         NotificationFrame:Destroy()
     end)
-end
-
--- ============ 加载动画 ============
-
-local function PlayLoadingAnimation(config)
-    config = config or {}
-    local duration = config.Duration or 2.5
-    task.wait(duration)
 end
 
 -- ============ 主窗口 ============
@@ -379,19 +370,24 @@ function ChronixUI:MakeWindow(WindowConfig)
         end
     end
 
-    -- 开场动画
-    if WindowConfig.IntroEnabled ~= false then
-        local LoadAnimation = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
+    -- 加载动画（保持原颜色，强制等待 2.1 秒）
+    local LoadAnimation = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
+    if LoadAnimation then
         LoadAnimation:LoadAnimation(2.5, {
             titleText = WindowConfig.Name,
             loadingText = "加载中... ",
-            backgroundColor = Color3.new(0.95, 0.92, 1),
-            textColor = Theme.TextColor,
+            backgroundColor = Color3.new(0.102, 0.098, 0.102), -- 保持原颜色
+            textColor = Color3.new(1, 1, 1),
             language = "zh",
-            onComplete = function() end,
+            onComplete = function(isCancelled)
+                if isCancelled then
+                    -- 如果取消，不加载UI
+                end
+            end,
             showCancelButton = true
         })
-        task.wait(2.5)
+        -- 强制等待 2.1 秒再继续
+        task.wait(2.1)
     end
 
     -- 创建 GUI
@@ -455,13 +451,24 @@ function ChronixUI:MakeWindow(WindowConfig)
     })
 
     -- 按钮容器
-    local ButtonContainer = Create("RoundFrame", Theme.SidebarBg, 0, 7, {
+    local ButtonContainer = Create("Frame", {
+        BackgroundColor3 = Theme.SidebarBg,
+        BackgroundTransparency = 0,
         Size = UDim2.new(0, 70, 0, 30),
         Position = UDim2.new(1, -90, 0, 10),
         Parent = TopBar
     }, {
-        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 }),
-        Create("Frame", { Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(0.5, 0, 0, 0), BackgroundColor3 = Theme.AccentColor, BackgroundTransparency = 0.5 })
+        Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+        Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 })
+    })
+
+    -- 分割线
+    local DividerLine = Create("Frame", {
+        BackgroundColor3 = Theme.AccentColor,
+        BackgroundTransparency = 0.5,
+        Size = UDim2.new(0, 1, 1, 0),
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Parent = ButtonContainer
     })
 
     -- 关闭按钮
@@ -496,11 +503,14 @@ function ChronixUI:MakeWindow(WindowConfig)
     })
 
     -- 左侧栏（不透明）
-    local Sidebar = Create("RoundFrame", Theme.SidebarBg, 0, 0, {
+    local Sidebar = Create("Frame", {
+        BackgroundColor3 = Theme.SidebarBg,
+        BackgroundTransparency = 0,
         Size = UDim2.new(0, Theme.SidebarWidth, 1, -50),
         Position = UDim2.new(0, 0, 0, 50),
         Parent = MainWindow
     }, {
+        Create("UICorner", { CornerRadius = UDim.new(0, 0) }),
         Create("UIStroke", { Color = Theme.AccentColor, Thickness = 1, Transparency = 0.5 })
     })
 
