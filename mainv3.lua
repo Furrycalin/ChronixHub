@@ -728,6 +728,6 @@ local function unloadchronixhub()
     script:Destroy()
 end
 
-mainWindow:SetCloseCallback(function()
+mainWindow:OnClose(function()
     unloadChronixHub()
 end)
