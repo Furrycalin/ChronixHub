@@ -25,7 +25,7 @@
 loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/mainv3.lua"))()
 ```
 **描述**  
-> 第三次重新编写UI，重构大部分功能，进行模块化和现代化设计，抛弃V2的不成熟UI体系，保证兼容性和功能性最大化。  
+> 第三次重构UI和代码体系，进行模块化和现代化设计，抛弃V2的不成熟体系，保证兼容性和功能性最大化。  
 
 **支持的游戏：**  
 - ✅ **Deathball**（死亡球）  
