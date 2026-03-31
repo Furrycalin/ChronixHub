@@ -2,624 +2,732 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
+if _G.ChronixHubisLoaded then
+    warn("⛔ ChronixHub Already loaded! Please do not repeat the execution.")
+    return
+end
+
+_G.ChronixHubisLoaded = true
 _G.SA_FASTLOADING = true
 
--- if _G.ChronixHubisLoaded then
---     warn("⛔ ChronixHub Already loaded! Please do not repeat the execution.")
---     return
--- end
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local HttpService = game:GetService("HttpService")
+local ScriptContext = game:GetService("ScriptContext")
+local TeleportService = game:GetService("TeleportService")
 
--- _G.ChronixHubisLoaded = true
+local LoadAnimationModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
+local tpWalk = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/tpWalk.lua"))()
+local StandRecovery = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/StandRecovery.lua"))()
+local HighlightModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/HighlightModule.lua"))()
+local PlayerLightModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerLightModule.lua"))()
+local SpectatorModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SpectatorModule.lua"))()
+local FreecamModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/FreecamModule.lua"))()
+local LandingEffect = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/LandingEffect.lua"))()
+local NameTagModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/NameTagModule.lua"))()
+local PlayerVisibleModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerVisibleModule.lua"))()
+local movementModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MovementModule.lua"))()
+local MouseUnlockModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MouseUnlockModule.lua"))()
+local DeathballScripts = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/DeathBallScripts.lua"))()
+local ZoomModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ZoomModule.lua"))()
+local FlingDetector = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/FlingDetector.lua"))()
+local SystemNotification = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SystemNotification.lua"))()
+local PlayerESP = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerESP.lua"))()
+local MovableHighlighter_NM = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MovableHighlighter-NM.lua"))()
+local GameTeleport = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/GameTeleport.lua"))()
+local AntiVoidModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/AntiVoid.lua"))()
+local ChatSpy = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChatSpy.lua"))()
+local ChatControl = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/chat_test.lua"))()
 
--- local CoreGui = game:GetService("CoreGui")
--- local UserInputService = game:GetService("UserInputService")
--- local TweenService = game:GetService("TweenService")
--- local Players = game:GetService("Players")
--- local LocalPlayer = Players.LocalPlayer
--- local RunService = game:GetService("RunService")
--- local TweenService = game:GetService("TweenService")
--- local SoundService = game:GetService("SoundService")
--- local Lighting = game:GetService("Lighting")
--- local MarketplaceService = game:GetService("MarketplaceService")
--- local Workspace = game:GetService("Workspace")
--- local player = Players.LocalPlayer
--- local character = player.Character or player.CharacterAdded:Wait()
--- local humanoid = character:WaitForChild("Humanoid")
--- local HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
--- local VirtualInputManager = game:GetService("VirtualInputManager")
--- local StarterGui = game:GetService("StarterGui")
--- local ReplicatedStorage = game:GetService("ReplicatedStorage")
--- local TextChatService = game:GetService("TextChatService")
--- local HttpService = game:GetService("HttpService")
+--=============================================================================================
+
+LoadAnimationModule:LoadAnimation(2, {
+    titleText = "ChronixHub V3",
+    loadingText = "加载中... ",
+    backgroundColor = Color3.new(0, 0, 0),
+    textColor = Color3.new(1, 1, 1),
+    language = "zh",
+    onComplete = function(isCancelled)
+        if isCancelled then
+            iscancel = true
+        end
+    end,
+    showCancelButton = false
+})
+
+wait(2.1)
+
+-- 防挂机
+local bb = game:service'VirtualUser'
+local cc = game:service'Players'.LocalPlayer.Idled:connect(function()bb:CaptureController()bb:ClickButton2(Vector2.new())end)
+
+local function GetDeviceType()
+    if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+        return "Mobile" -- 移动端
+    elseif UserInputService.MouseEnabled and not UserInputService.TouchEnabled then
+        return "Desktop" -- 桌面端
+    elseif UserInputService.GamepadEnabled then
+        return "Console" -- 控制台
+    else
+        return "Unknown" -- 未知设备
+    end
+end
+
+
+local getGameNameNotSuccess = false
+
+-- 获取游戏名
+local function getGameName(universeId)
+    local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
+    local success, response = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if success then
+        local data = HttpService:JSONDecode(response)
+        if data.data and #data.data > 0 then
+            return data.data[1]
+        else
+            warn("未找到游戏信息")
+            print(data)
+            getGameNameNotSuccess = true
+            return nil
+        end
+    else
+        warn("获取游戏名失败:", response)
+        getGameNameNotSuccess = true
+        return nil
+    end
+end
+
+local data = {
+    basicdata = {
+        player = {
+            name = LocalPlayer.Name,
+            displayname = LocalPlayer.DisplayName,
+            userid = LocalPlayer.UserId,
+            isPremium = (LocalPlayer.MembershipType == Enum.MembershipType.Premium),
+            avatar = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100),
+            appearanceInfo = Players:GetCharacterAppearanceInfoAsync(LocalPlayer.UserId),
+            deviceType = GetDeviceType(),
+            gameInfo = getGameName(game.GameId), -- .name
+            ---
+            speed = LocalPlayer.Character.Humanoid.WalkSpeed, islockspeed = false,
+            jump = LocalPlayer.Character.Humanoid.JumpPower, islockjump = false,
+            maxhealth = LocalPlayer.Character.Humanoid.MaxHealth, islockmaxhealth = false,
+            health = LocalPlayer.Character.Humanoid.Health, islockhealth = false,
+            gravity = game.Workspace.Gravity, islockgravity = false,
+        },
+        releasetools = {
+            zoom = ZoomModule.new(),
+            Lantern = PlayerLightModule.new({ Brightness = 3, Range = 20, Color = Color3.fromRGB(255, 165, 0), Shadows = true }),
+            SuperLighter = PlayerLightModule.new({ Brightness = 2, Range = 1000 }),
+            noclip = false,
+            infjump = false,
+            antifall = false,
+            antidead = false,
+        },
+        otherdata = {
+            daySettings = {
+                ClockTime = 14, -- 白天时间（14:00）
+                GeographicLatitude = 41.73, -- 纬度（影响太阳高度）
+            },
+            nightSettings = {
+                ClockTime = 2, -- 黑夜时间（02:00）
+                GeographicLatitude = 41.73, -- 纬度
+            }
+        }
+    },
+    scriptlist = {
+        {
+            name = "高级聊天系统",
+            link = "https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/customChatSystem.lua"
+        },
+        {
+            name = "飞行V4",
+            link = "https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/FlyV4.lua"
+        },
+        {
+            name = "超高画质",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Graphics.lua"
+        },
+        {
+            name = "光影",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Shader.lua"
+        },
+        {
+            name = "通用自瞄",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Zimiao.lua"
+        },
+        {
+            name = "IY5.5.9(指令挂)",
+            link = "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+        },
+        {
+            name = "Dex",
+            link = "https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"
+        },
+        {
+            name = "DexDark",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DexDark.lua"
+        },
+        {
+            name = "OldMSPaint",
+            link = "https://raw.githubusercontent.com/notpoiu/mspaint/main/main.lua"
+        },
+        {
+            name = "Doors变身脚本",
+            link = "https://raw.githubusercontent.com/ChronoAccelerator/Public-Scripts/main/Morphing/MorphScript.lua"
+        },
+        {
+            name = "Doors扫描器",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DoorsNVC3000.lua"
+        },
+        {
+            name = "Doors剪刀",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/shears_done.lua"
+        },
+        {
+            name = "Doors紫色手电筒",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/PurpleFlashlightScript.lua"
+        },
+        {
+            name = "Doors巧克力罐",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/ChocolateBar.lua"
+        },
+        {
+            name = "通用ESP",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/ESP.lua"
+        },
+        {
+            name = "冬凌中心",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DongLingLobby.lua"
+        },
+        {
+            name = "玩家控制",
+            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/PlayerControl.lua"
+        },
+        {
+            name = "吃掉世界",
+            link = "https://raw.githubusercontent.com/AppleScript001/Eat_World_Simulator/main/README.md"
+        },
+        {
+            name = "收养我吧",
+            link = "https://raw.githubusercontent.com/lf4d7/daphie/main/ame.lua"
+        },
+        {
+            name = "动画中心",
+            link = "https://raw.githubusercontent.com/GamingScripter/Animation-Hub/main/Animation%20Gui"
+        },
+        {
+            name = "阿尔宙斯",
+            link = "https://raw.githubusercontent.com/AZYsGithub/chillz-workshop/main/Arceus%20X%20V3"
+        },
+        {
+            name = "VChine V2",
+            link = "https://pastebin.com/raw/SuDKzFKD"
+        }
+    }
+}
+
+local function rejoinCurrentGame()
+    local placeId1 = game.PlaceId          -- 当前游戏的地图ID
+    local jobId1 = game.JobId              -- 当前游戏服务器的唯一ID
+
+    if jobId1 and jobId1 ~= "" then
+        -- 传送到同一实例
+        TeleportService:TeleportToPlaceInstance(placeId1, jobId1, player)
+    else
+        -- 如果没有 JobId（极少情况），则退而求其次使用普通传送（可能随机分配到其他服务器）
+        warn("无法获取 JobId，将使用普通传送，可能不会回到同一个房间。")
+        TeleportService:Teleport(placeId1, player)
+    end
+end
+
+-- 切换为白天
+local function setDay()
+    for property, value in pairs(data.basicdata.otherdata.daySettings) do
+        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(Lighting, tweenInfo, { [property] = value })
+        tween:Play()
+    end
+end
+
+-- 切换为黑夜
+local function setNight()
+    for property, value in pairs(data.basicdata.otherdata.nightSettings) do
+        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(Lighting, tweenInfo, { [property] = value })
+        tween:Play()
+    end
+end
+
+--=============================================================================================
 
 local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
 
--- ============ 创建主窗口 ============
-local MainWindow = ChronixUI:MakeWindow({
-    Name = "ChronixHub V3",
-    ConfigFolder = "ChronixHubConfig",
-    SaveConfig = true,
-    HidePremium = false,
-    CloseCallback = function()
-        print("[ChronixUI] 窗口已关闭")
-        -- 在这里添加你的清理代码
-        -- 例如：PlayerESP:unload()
-    end
+local mainWindow = ChronixUI:CreateWindow({
+    Name = "ChronixHubv3",
+    Size = UDim2.new(0, 680, 0, 420)
 })
 
--- ============ 玩家标签页 ============
-local PlayerTab = MainWindow:MakeTab({
-    Name = "玩家",
-    PremiumOnly = false
+local basicTab = mainWindow:CreateTab({ Name = "基础设置" })
+
+basicTab:AddTitle("基础数据修改")
+
+basicTab:AddSlider({
+    Label = "玩家移速",
+    Min = 0, Max = 1000, Default = data.basicdata.player.speed,
+    Callback = function(v) LocalPlayer.Character.Humanoid.WalkSpeed = v; data.basicdata.player.speed = v end
 })
 
--- 视觉功能分区
-local VisualSection = PlayerTab:AddSection("视觉功能")
-
--- 开关 - 玩家透视
-local espToggle = PlayerTab:AddToggle({
-    Parent = VisualSection,
-    Name = "玩家透视",
+basicTab:AddToggle({
+    Label = "锁定玩家移速",
     Default = false,
-    Flag = "PlayerESP",
-    Save = true,
-    Callback = function(Value)
-        print("[玩家透视] 状态:", Value)
-        if Value then
-            -- 开启透视的代码
-            -- PlayerESP:enable()
+    Callback = function(v) data.basicdata.player.islockspeed = v end
+})
+
+basicTab:AddSlider({
+    Label = "跳跃力量",
+    Min = 0, Max = 100, Default = data.basicdata.player.jump,
+    Callback = function(v) LocalPlayer.Character.Humanoid.JumpPower = v; data.basicdata.player.jump = v end
+})
+
+basicTab:AddToggle({
+    Label = "锁定跳跃力量",
+    Default = false,
+    Callback = function(v) data.basicdata.player.islockjump = v end
+})
+
+basicTab:AddSlider({
+    Label = "最大血量",
+    Min = 0, Max = 1000, Default = data.basicdata.player.maxhealth,
+    Callback = function(v) LocalPlayer.Character.Humanoid.MaxHealth = v; data.basicdata.player.maxhealth = v end
+})
+
+basicTab:AddToggle({
+    Label = "锁定最大血量",
+    Default = false,
+    Callback = function(v) data.basicdata.player.islockmaxhealth = v end
+})
+
+basicTab:AddSlider({
+    Label = "当前血量",
+    Min = 0, Max = 1000, Default = data.basicdata.player.health,
+    Callback = function(v) LocalPlayer.Character.Humanoid.Health = v; data.basicdata.player.health = v end
+})
+
+basicTab:AddToggle({
+    Label = "锁定当前血量",
+    Default = false,
+    Callback = function(v) data.basicdata.player.islockhealth = v end
+})
+
+basicTab:AddSlider({
+    Label = "世界重力",
+    Min = 0, Max = 1000, Default = data.basicdata.player.gravity,
+    Callback = function(v) LocalPlayer.Character.Humanoid.Gravity = v; data.basicdata.player.gravity = v end
+})
+
+basicTab:AddToggle({
+    Label = "锁定世界重力",
+    Default = false,
+    Callback = function(v) data.basicdata.player.islockgravity = v end
+})
+
+local ToolsTab = mainWindow:CreateTab({ Name = "工具" })
+
+ToolsTab:AddTitle("各种实用工具")
+
+ToolsTab:AddButton({ Text = "回满血", Callback = function() LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth end })
+
+ToolsTab:AddButton({ Text = "自杀", Callback = function() LocalPlayer.Character.Humanoid.Health = 0 end })
+
+ToolsTab:AddButton({ Text = "获得点击传送工具", Callback = function() mouse = game.Players.LocalPlayer:GetMouse() tool = Instance.new("Tool") tool.RequiresHandle = false tool.Name = "手持点击传送" tool.Activated:connect(function() local pos = mouse.Hit+Vector3.new(0,2.5,0) pos = CFrame.new(pos.X,pos.Y,pos.Z) game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pos end) tool.Parent = game.Players.LocalPlayer.Backpack end })
+
+ToolsTab:AddToggle({
+    Label = "TPWalk",
+    Default = false,
+    Callback = function(v) tpWalk:Enabled(v) end
+})
+
+ToolsTab:AddToggle({
+    Label = "鼠标解锁",
+    Default = false,
+    Callback = function(v)
+        if v then
+            MouseUnlockModule.Enable()
+            ChronixUI:Notify({ Title = "提示", Content = "按下K+L组合键开关解锁鼠标", Type = "success", Duration = 5 })
         else
-            -- 关闭透视的代码
-            -- PlayerESP:disable()
+            MouseUnlockModule.Disable()
         end
     end
 })
 
--- 颜色选择器 - 透视颜色
-local espColor = PlayerTab:AddColorpicker({
-    Parent = VisualSection,
-    Name = "透视颜色",
-    Default = Color3.fromRGB(150, 120, 200),
-    Flag = "ESPColor",
-    Save = true,
-    Callback = function(Color)
-        print("[透视颜色] R:", Color.R * 255, "G:", Color.G * 255, "B:", Color.B * 255)
-        -- 修改透视颜色的代码
-    end
-})
-
--- 滑块 - 透视透明度
-local espAlpha = PlayerTab:AddSlider({
-    Parent = VisualSection,
-    Name = "透视透明度",
-    Min = 0,
-    Max = 100,
-    Default = 50,
-    Flag = "ESPAlpha",
-    Save = true,
-    Callback = function(Value)
-        print("[透视透明度] 值:", Value, "%")
-    end
-})
-
--- 移动功能分区
-local MovementSection = PlayerTab:AddSection("移动功能")
-
--- 滑块 - 移动速度
-local walkSpeed = PlayerTab:AddSlider({
-    Parent = MovementSection,
-    Name = "移动速度",
-    Min = 16,
-    Max = 100,
-    Default = 16,
-    Flag = "WalkSpeed",
-    Save = true,
-    Callback = function(Value)
-        print("[移动速度] 值:", Value)
-        -- game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-    end
-})
-
--- 滑块 - 跳跃高度
-local jumpPower = PlayerTab:AddSlider({
-    Parent = MovementSection,
-    Name = "跳跃高度",
-    Min = 50,
-    Max = 200,
-    Default = 50,
-    Flag = "JumpPower",
-    Save = true,
-    Callback = function(Value)
-        print("[跳跃高度] 值:", Value)
-        -- game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
-    end
-})
-
--- 开关 - 无限跳跃
-local infiniteJump = PlayerTab:AddToggle({
-    Parent = MovementSection,
-    Name = "无限跳跃",
+ToolsTab:AddToggle({
+    Label = "望远镜",
     Default = false,
-    Flag = "InfiniteJump",
-    Save = true,
-    Callback = function(Value)
-        print("[无限跳跃] 状态:", Value)
+    Callback = function(v)
+        if v then
+            data.basicdata.releasetools.zoom:Enable()
+            ChronixUI:Notify({ Title = "提示", Content = "按住C放大", Type = "success", Duration = 5 })
+        else
+            data.basicdata.releasetools.zoom:Disable()
+        end
     end
 })
 
--- 开关 - 穿墙模式
-local noclip = PlayerTab:AddToggle({
-    Parent = MovementSection,
-    Name = "穿墙模式",
+ToolsTab:AddToggle({
+    Label = "隐身",
     Default = false,
-    Flag = "Noclip",
-    Save = true,
-    Callback = function(Value)
-        print("[穿墙模式] 状态:", Value)
+    Callback = function(v)
+        if v then
+            PlayerVisibleModule.enable()
+        else
+            PlayerVisibleModule.disable()
+        end
     end
 })
 
--- 战斗功能分区
-local CombatSection = PlayerTab:AddSection("战斗功能")
-
--- 开关 - 自动瞄准
-local aimbot = PlayerTab:AddToggle({
-    Parent = CombatSection,
-    Name = "自动瞄准",
+ToolsTab:AddToggle({
+    Label = "落地特效",
     Default = false,
-    Flag = "Aimbot",
-    Save = true,
-    Callback = function(Value)
-        print("[自动瞄准] 状态:", Value)
+    Callback = function(v)
+        if v then
+            LandingEffect.enable()
+        else
+            LandingEffect.disable()
+        end
     end
 })
 
--- 下拉菜单 - 瞄准部位
-local aimPart = PlayerTab:AddDropdown({
-    Parent = CombatSection,
-    Name = "瞄准部位",
-    Options = {"头部", "胸部", "腿部"},
-    Default = "头部",
-    Flag = "AimPart",
-    Save = true,
-    Callback = function(Value)
-        print("[瞄准部位] 选中:", Value)
-    end
-})
-
--- 滑块 - 瞄准范围
-local aimFov = PlayerTab:AddSlider({
-    Parent = CombatSection,
-    Name = "瞄准范围",
-    Min = 0,
-    Max = 360,
-    Default = 180,
-    Flag = "AimFOV",
-    Save = true,
-    Callback = function(Value)
-        print("[瞄准范围] 值:", Value)
-    end
-})
-
--- 开关 - 自动开枪
-local triggerbot = PlayerTab:AddToggle({
-    Parent = CombatSection,
-    Name = "自动开枪",
+ToolsTab:AddToggle({
+    Label = "夜视",
     Default = false,
-    Flag = "Triggerbot",
-    Save = true,
-    Callback = function(Value)
-        print("[自动开枪] 状态:", Value)
+    Callback = function(v)
+        if v then
+            game.Lighting.Ambient = Color3.new(1, 1, 1)
+        else
+            game.Lighting.Ambient = Color3.new(0, 0, 0)
+        end
     end
 })
 
--- 按键绑定 - 自动瞄准快捷键
-local aimbotKey = PlayerTab:AddBind({
-    Parent = CombatSection,
-    Name = "自动瞄准快捷键",
-    Default = "X",
-    Hold = false,
-    Flag = "AimbotKey",
-    Save = true,
-    Callback = function(Key)
-        print("[自动瞄准快捷键] 按下:", Key)
-        -- 切换自动瞄准状态
-        aimbot:Set(not aimbot:Get())
+ToolsTab:AddToggle({
+    Label = "随身灯笼",
+    Default = false,
+    Callback = function(v) data.basicdata.releasetools.Lantern.enable = v end
+})
+
+ToolsTab:AddToggle({
+    Label = "超级光明",
+    Default = false,
+    Callback = function(v) data.basicdata.releasetools.SuperLighter.enable = v end
+})
+
+ToolsTab:AddToggle({
+    Label = "灵魂出窍",
+    Default = false,
+    Callback = function(v) FreecamModule.freecamenable = v end
+})
+
+ToolsTab:AddToggle({
+    Label = "平移",
+    Default = false,
+    Callback = function(v)
+        if v then
+            movementModule.Enable()
+            ChronixUI:Notify({ Title = "提示", Content = "按下↑↓←→键进行平移", Type = "success", Duration = 5 })
+        else
+            movementModule.Disable()
+        end
     end
 })
 
--- 其他功能分区
-local OtherSection = PlayerTab:AddSection("其他功能")
-
--- 按钮 - 刷新ESP
-PlayerTab:AddButton({
-    Parent = OtherSection,
-    Name = "刷新ESP",
-    Callback = function()
-        print("[按钮] 刷新ESP")
-        ChronixUI:MakeNotification({
-            Name = "成功",
-            Content = "ESP已刷新",
-            Time = 3
-        })
-    end
-})
-
--- 按钮 - 传送至出生点
-PlayerTab:AddButton({
-    Parent = OtherSection,
-    Name = "传送至出生点",
-    Callback = function()
-        print("[按钮] 传送至出生点")
-        ChronixUI:MakeNotification({
-            Name = "提示",
-            Content = "已传送至出生点",
-            Time = 2
-        })
-    end
-})
-
--- 文本框 - 执行命令
-local commandBox = PlayerTab:AddTextbox({
-    Parent = OtherSection,
-    Name = "执行命令",
-    Placeholder = "输入Lua代码...",
-    Default = "",
-    Flag = "Command",
-    Save = false,
-    Callback = function(Text)
-        print("[文本框] 输入:", Text)
-        if Text ~= "" then
-            local success, err = pcall(function()
-                loadstring(Text)()
-            end)
-            if not success then
-                ChronixUI:MakeNotification({
-                    Name = "错误",
-                    Content = "执行失败: " .. tostring(err),
-                    Time = 3
-                })
+ToolsTab:AddToggle({
+    Label = "穿墙",
+    Default = false,
+    Callback = function(v)
+        data.basicdata.releasetools.noclip = v
+        Stepped = game:GetService("RunService").Stepped:Connect(function()
+            if not data.basicdata.releasetools.noclip == false then
+                for a, b in pairs(Workspace:GetChildren()) do
+                    if b.Name == Players.LocalPlayer.Name then
+                        for i, v in pairs(Workspace[Players.LocalPlayer.Name]:GetChildren()) do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = false
+                            end end end end
+            else
+                for a, b in pairs(Workspace:GetChildren()) do
+                    if b.Name == Players.LocalPlayer.Name then
+                        for i, v in pairs(Workspace[Players.LocalPlayer.Name]:GetChildren()) do
+                            if v:IsA("BasePart") then
+                                v.CanCollide = true
+                            end end end end
+            Stepped:Disconnect()
             end
-        end
+        end)
     end
 })
 
--- 标签 - 提示信息
-PlayerTab:AddLabel("提示：部分功能需要管理员权限")
-
--- 段落 - 说明
-PlayerTab:AddParagraph("关于本菜单", "ChronixHub V3 是一个功能强大的辅助工具。使用前请确保了解相关风险，请勿用于破坏游戏平衡。")
-
--- ============ 世界标签页 ============
-local WorldTab = MainWindow:MakeTab({
-    Name = "世界"
-})
-
--- 环境设置分区
-local EnvironmentSection = WorldTab:AddSection("环境设置")
-
--- 下拉菜单 - 天气效果
-local weather = WorldTab:AddDropdown({
-    Parent = EnvironmentSection,
-    Name = "天气效果",
-    Options = {"晴天", "雨天", "雾天", "暴风雪", "雷电"},
-    Default = "晴天",
-    Flag = "Weather",
-    Save = true,
-    Callback = function(Value)
-        print("[天气效果] 选中:", Value)
-    end
-})
-
--- 滑块 - 游戏时间
-local gameTime = WorldTab:AddSlider({
-    Parent = EnvironmentSection,
-    Name = "游戏时间",
-    Min = 0,
-    Max = 24,
-    Default = 14,
-    Flag = "GameTime",
-    Save = true,
-    Callback = function(Value)
-        print("[游戏时间] 值:", Value)
-        -- game:GetService("Lighting").ClockTime = Value
-    end
-})
-
--- 开关 - 强制黑夜
-local nightMode = WorldTab:AddToggle({
-    Parent = EnvironmentSection,
-    Name = "强制黑夜",
+ToolsTab:AddToggle({
+    Label = "连跳",
     Default = false,
-    Flag = "NightMode",
-    Save = true,
-    Callback = function(Value)
-        print("[强制黑夜] 状态:", Value)
+    Callback = function(v)
+        data.basicdata.releasetools.infjump = v
+        JR = game:GetService("UserInputService").JumpRequest:Connect(function()
+            if not data.basicdata.releasetools.infjump then
+                JR:Disconnect()
+            end
+            if data.basicdata.releasetools.infjump then
+                local c = LocalPlayer.Character
+                if c and c.Parent then
+                    local hum = c:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum:ChangeState("Jumping")
+                    end
+                end
+            end
+        end)
     end
 })
 
--- 开关 - 彩虹灯光
-local rainbowLight = WorldTab:AddToggle({
-    Parent = EnvironmentSection,
-    Name = "彩虹灯光",
+ToolsTab:AddToggle({
+    Label = "玩家透视",
     Default = false,
-    Flag = "RainbowLight",
-    Save = true,
-    Callback = function(Value)
-        print("[彩虹灯光] 状态:", Value)
-    end
-})
-
--- 物品收集分区
-local LootSection = WorldTab:AddSection("物品收集")
-
--- 开关 - 自动收集
-local autoCollect = WorldTab:AddToggle({
-    Parent = LootSection,
-    Name = "自动收集物品",
-    Default = false,
-    Flag = "AutoCollect",
-    Save = true,
-    Callback = function(Value)
-        print("[自动收集] 状态:", Value)
-    end
-})
-
--- 滑块 - 收集范围
-local collectRange = WorldTab:AddSlider({
-    Parent = LootSection,
-    Name = "收集范围",
-    Min = 10,
-    Max = 100,
-    Default = 30,
-    Flag = "CollectRange",
-    Save = true,
-    Callback = function(Value)
-        print("[收集范围] 值:", Value)
-    end
-})
-
--- 按钮 - 传送至最近物品
-WorldTab:AddButton({
-    Parent = LootSection,
-    Name = "传送至最近物品",
-    Callback = function()
-        print("[按钮] 传送至最近物品")
-        ChronixUI:MakeNotification({
-            Name = "提示",
-            Content = "正在寻找最近物品...",
-            Time = 2
-        })
-    end
-})
-
--- ============ 武器标签页 ============
-local WeaponTab = MainWindow:MakeTab({
-    Name = "武器"
-})
-
--- 武器修改分区
-local WeaponModSection = WeaponTab:AddSection("武器修改")
-
--- 开关 - 无限弹药
-local infiniteAmmo = WeaponTab:AddToggle({
-    Parent = WeaponModSection,
-    Name = "无限弹药",
-    Default = false,
-    Flag = "InfiniteAmmo",
-    Save = true,
-    Callback = function(Value)
-        print("[无限弹药] 状态:", Value)
-    end
-})
-
--- 开关 - 无后坐力
-local noRecoil = WeaponTab:AddToggle({
-    Parent = WeaponModSection,
-    Name = "无后坐力",
-    Default = false,
-    Flag = "NoRecoil",
-    Save = true,
-    Callback = function(Value)
-        print("[无后坐力] 状态:", Value)
-    end
-})
-
--- 开关 - 快速射击
-local rapidFire = WeaponTab:AddToggle({
-    Parent = WeaponModSection,
-    Name = "快速射击",
-    Default = false,
-    Flag = "RapidFire",
-    Save = true,
-    Callback = function(Value)
-        print("[快速射击] 状态:", Value)
-    end
-})
-
--- 滑块 - 伤害倍率
-local damageMultiplier = WeaponTab:AddSlider({
-    Parent = WeaponModSection,
-    Name = "伤害倍率",
-    Min = 1,
-    Max = 10,
-    Default = 1,
-    Flag = "DamageMultiplier",
-    Save = true,
-    Callback = function(Value)
-        print("[伤害倍率] 值:", Value, "x")
-    end
-})
-
--- ============ 杂项标签页 ============
-local MiscTab = MainWindow:MakeTab({
-    Name = "杂项"
-})
-
--- UI设置分区
-local UISection = MiscTab:AddSection("界面设置")
-
--- 开关 - 显示FPS
-local showFPS = MiscTab:AddToggle({
-    Parent = UISection,
-    Name = "显示FPS计数器",
-    Default = false,
-    Flag = "ShowFPS",
-    Save = true,
-    Callback = function(Value)
-        print("[显示FPS] 状态:", Value)
-    end
-})
-
--- 开关 - 显示Ping
-local showPing = MiscTab:AddToggle({
-    Parent = UISection,
-    Name = "显示网络延迟",
-    Default = false,
-    Flag = "ShowPing",
-    Save = true,
-    Callback = function(Value)
-        print("[显示Ping] 状态:", Value)
-    end
-})
-
--- 按钮 - 重置窗口位置
-MiscTab:AddButton({
-    Parent = UISection,
-    Name = "重置窗口位置",
-    Callback = function()
-        print("[按钮] 重置窗口位置")
-        -- 重置窗口位置逻辑
-        ChronixUI:MakeNotification({
-            Name = "提示",
-            Content = "窗口位置已重置",
-            Time = 2
-        })
-    end
-})
-
--- 快捷键设置分区
-local KeybindSection = MiscTab:AddSection("快捷键设置")
-
--- 按键绑定 - 飞行模式（按住模式）
-local flyBind = MiscTab:AddBind({
-    Parent = KeybindSection,
-    Name = "飞行模式",
-    Default = "F",
-    Hold = true,
-    Flag = "FlyKey",
-    Save = true,
-    Callback = function(State)
-        if State then
-            print("[飞行模式] 按住开启")
-            -- 开启飞行
+    Callback = function(v)
+        if v then
+            PlayerESP.enable()
         else
-            print("[飞行模式] 松开关闭")
-            -- 关闭飞行
+            PlayerESP.disable()
         end
     end
 })
 
--- 按键绑定 - 快速传送
-local teleportBind = MiscTab:AddBind({
-    Parent = KeybindSection,
-    Name = "快速传送",
-    Default = "Mouse2",
-    Hold = false,
-    Flag = "TeleportKey",
-    Save = true,
-    Callback = function(Key)
-        print("[快速传送] 按下:", Key)
-        -- 传送到鼠标指向的位置
-    end
-})
-
--- 脚本控制分区
-local ScriptSection = MiscTab:AddSection("脚本控制")
-
--- 按钮 - 保存配置
-MiscTab:AddButton({
-    Parent = ScriptSection,
-    Name = "保存配置",
-    Callback = function()
-        print("[按钮] 保存配置")
-        ChronixUI:MakeNotification({
-            Name = "成功",
-            Content = "配置已保存",
-            Time = 2
-        })
-    end
-})
-
--- 按钮 - 加载配置
-MiscTab:AddButton({
-    Parent = ScriptSection,
-    Name = "加载配置",
-    Callback = function()
-        print("[按钮] 加载配置")
-        ChronixUI:MakeNotification({
-            Name = "提示",
-            Content = "配置已加载",
-            Time = 2
-        })
-    end
-})
-
--- 按钮 - 卸载脚本
-MiscTab:AddButton({
-    Parent = ScriptSection,
-    Name = "卸载所有功能",
-    Callback = function()
-        print("[按钮] 卸载脚本")
-        ChronixUI:Destroy()
-    end
-})
-
--- ============ Premium标签页（演示锁定功能） ============
-local PremiumTab = MainWindow:MakeTab({
-    Name = "高级",
-    PremiumOnly = true  -- 这个标签页会被锁定，显示 Premium 提示
-})
-
--- 这些控件在 PremiumOnly 模式下不会显示，而是显示锁屏界面
-local PremiumSection = PremiumTab:AddSection("高级功能")
-
-PremiumTab:AddToggle({
-    Parent = PremiumSection,
-    Name = "高级透视",
+ToolsTab:AddToggle({
+    Label = "旁观模式",
     Default = false,
-    Flag = "AdvancedESP",
-    Callback = function(Value)
-        print("[高级透视] 状态:", Value)
+    Callback = function(v)
+        if v then
+            SpectatorModule.start()
+        else
+            SpectatorModule.close()
+        end
     end
 })
 
-PremiumTab:AddButton({
-    Parent = PremiumSection,
-    Name = "高级功能",
-    Callback = function()
-        print("[高级功能] 按钮被点击")
+ToolsTab:AddToggle({
+    Label = "防击倒",
+    Default = false,
+    Callback = function(v) data.basicdata.releasetools.antifall = v end
+})
+
+ToolsTab:AddToggle({
+    Label = "晕厥康复",
+    Default = false,
+    Callback = function(v)
+        if v then
+            StandRecovery:enableDetection()
+        else
+            StandRecovery:disableDetection()
+        end
     end
 })
 
--- ============ 测试通知系统 ============
--- 启动完成通知
-task.wait(1)
-ChronixUI:MakeNotification({
-    Name = "ChronixHub V3",
-    Content = "菜单加载完成！共加载 30+ 个功能",
-    Time = 3
+ToolsTab:AddToggle({
+    Label = "防甩飞",
+    Default = false,
+    Callback = function(v)
+        if v then
+            FlingDetector.enable()
+        else
+            FlingDetector.disable()
+        end
+    end
 })
 
--- 测试其他类型的通知
-task.wait(0.5)
-ChronixUI:MakeNotification({
-    Name = "提示",
-    Content = "按 RightShift 可隐藏/显示菜单",
-    Time = 4
+ToolsTab:AddToggle({
+    Label = "防甩飞",
+    Default = false,
+    Callback = function(v)
+        if v then
+            FlingDetector.enable()
+        else
+            FlingDetector.disable()
+        end
+    end
 })
 
-print("========================================")
-print("ChronixHub V3 示例菜单已启动")
-print("所有控件类型已展示，可根据需求修改")
-print("========================================")
+ToolsTab:AddToggle({
+    Label = "反物理劫持",
+    Default = false,
+    Callback = function(v)
+        if v then
+            AntiVoidModule.enable()
+        else
+            AntiVoidModule.disable()
+        end
+    end
+})
+
+ToolsTab:AddToggle({
+    Label = "防死亡",
+    Default = false,
+    Callback = function(v)
+        if v then
+            AntiVoidModule.enable()
+        else
+            AntiVoidModule.disable()
+        end
+    end
+})
+
+ToolsTab:AddToggle({
+    Label = "聊天偷听",
+    Default = false,
+    Callback = function(v)
+        if v then
+            ChatSpy.enable()
+        else
+            ChatSpy.disable()
+        end
+    end
+})
+
+ToolsTab:AddButton({ Text = "重新加入当前房间(服务器)", Callback = function() rejoinCurrentGame() end })
+ToolsTab:AddButton({ Text = "切换时间为白天", Callback = function() setDay() end })
+ToolsTab:AddButton({ Text = "切换时间为黑夜", Callback = function() setNight() end })
+ToolsTab:AddButton({ Text = "优化世界光效", Callback = function() loadstring(game:HttpGet("https://raw.gitcode.com/Furrycalin/ChronixHub/raw/main/modules/WorldShader.lua"))() end })
+ToolsTab:AddButton({ Text = "打印眼前实例名到控制台", Callback = function()
+    -- 使用已有的 player 和 character，从 character 获取 head
+    local head = character:WaitForChild("Head")
+
+    -- 混淆变量名
+    local _p = RaycastParams.new()
+    _p.FilterDescendantsInstances = {character}
+    _p.FilterType = Enum.RaycastFilterType.Blacklist
+    
+    local _o = head.Position
+    local _d = head.CFrame.LookVector * 100
+    
+    local _r = workspace:Raycast(_o, _d, _p)
+    
+    if _r then
+        local _h = _r.Instance
+        print("面前实例名称：", _h.Name)
+        print("完整路径：", _h:GetFullName())
+    else
+        print("面前没有检测到实例")
+    end
+end })
+ToolsTab:AddButton({ Text = "打印当前玩家坐标到控制台", Callback = function()
+    -- 防止跟现有的重复导致冲突
+    local rootPart1 = character:WaitForChild("HumanoidRootPart")
+    local position1 = rootPart1.Position
+    print(string.format("玩家坐标: (%.2f, %.2f, %.2f)", position1.X, position1.Y, position1.Z))
+end })
+
+local scripthubTab = mainWindow:CreateTab({ Name = "脚本中心" })
+scripthubTab:AddTitle("各种脚本")
+local function addscripts(name, link)
+    scripthubTab:AddButton({ Text = name, Callback = function()
+        ChronixUI:Notify({ Title = "提示", Content = name .. "正在启动，请耐心等待。", Type = "success", Duration = 5 })
+        loadstring(game:HttpGet(link))()
+        ChronixUI:Notify({ Title = "提示", Content = name .. "启动成功。", Type = "success", Duration = 5 })
+    end })
+end
+for index, scriptInfo in ipairs(data.scriptlist) do
+    addscripts(scriptInfo.name, scriptInfo.link)
+end
+
+local playerteleporterTab = mainWindow:CreateTab({ Name = "玩家传送" })
+
+
+local infoTab = mainWindow:CreateTab({ Name = "信息" })
+infoTab:AddParagraph({
+    Title = "关于 Chronix UI",
+    Content = "Chronix UI v1.5\n\n一个完整的 OrionLib 风格 UI 框架\n支持所有常用控件\n\n功能列表:\n• 按钮\n• 下拉框\n• 滑块\n• 开关\n• 输入框\n• 按键绑定（带回调）\n• 颜色选择器\n• 段落文字\n• 分隔线\n\n按 RightShift 隐藏/显示菜单"
+})
+
+--======================================================================================
+
+-- 监听状态变化
+local hscc = humanoid.StateChanged:Connect(function(oldState, newState)
+    if data.basicdata.releasetools.antifall then
+        if newState == Enum.HumanoidStateType.FallingDown or newState == Enum.HumanoidStateType.Ragdoll or newState == Enum.HumanoidStateType.Freefall then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) -- 强制恢复站立状态
+            ChronixUI:Notify({ Title = "提示", Content = "检测到被击倒，已恢复站立状态", Type = "success", Duration = 5 })
+        end
+    end
+end)
+
+local gsr = game:GetService("RunService").Stepped:Connect(function()
+    if data.basicdata.player.islockspeed then LocalPlayer.Character.Humanoid.WalkSpeed = data.basicdata.player.speed end
+    if data.basicdata.player.islockjump then LocalPlayer.Character.Humanoid.JumpPower = data.basicdata.player.jump end
+    if data.basicdata.player.islockmaxhealth then LocalPlayer.Character.Humanoid.MaxHealth = data.basicdata.player.maxhealth end
+    if data.basicdata.player.islockhealth then LocalPlayer.Character.Humanoid.Health = data.basicdata.player.health end
+    if data.basicdata.player.islockgravity then game.Workspace.Gravity = data.basicdata.player.gravity end
+    if data.basicdata.releasetools.antidead then Humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end
+end)
+
+--======================================================================================
+
+SystemNotification.Rainbow("ChronixHubV2 Already Success Loaded!\nWelcome " .. data.basicdata.player.displayname)
+ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
+
+local function unloadchronixhub()
+    SystemNotification.UnloadedGradient("ChronixHubv2 Already Unload!")
+    print("ChronixHubv2 已卸载。")
+    _G.ChronixHubisLoaded = false
+    data.basicdata.releasetools.noclip = false
+    data.basicdata.releasetools.infjump = false
+    PlayerVisibleModule.unload()
+    NameTagModule.unload()
+    LandingEffect.unload()
+    FreecamModule.unload()
+    SpectatorModule.unload()
+    PlayerLightModule:unload()
+    HighlightModule.unload()
+    StandRecovery:unload()
+    _G.DeathBallScript:Unload()
+    data.tools.zoom:Unload()
+    FlingDetector.unload()
+    PlayerESP.unload()
+    MovableHighlighter_NM.unloadAll()
+    AntiVoidModule.unload()
+    ChatSpy.unload()
+    -- musicbox:Stop()
+    -- musicbox:Destroy()
+    -- chatcheck:Disconnect()
+    -- offce:Disconnect()
+    -- al:Disconnect()
+    -- ds:Disconnect()
+    -- Stepped6:Disconnect()
+    cc:Disconnect()
+    gsr:Disconnect()
+    hscc:Disconnect()
+    -- toggleFeature(false)
+    -- mainFrame:Destroy()
+    script:Destroy()
+end
+
+mainWindow:SetCloseCallback(function()
+    unloadChronixHub()
+end)
