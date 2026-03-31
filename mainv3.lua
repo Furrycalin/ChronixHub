@@ -83,8 +83,6 @@ local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/Ch
 -- -- 卸载（可选）
 -- -- ChronixUI:Unload()
 
-local ChronixUI = loadstring(game:HttpGet("你的脚本链接"))()
-
 -- 创建窗口
 local mainWindow = ChronixUI:CreateWindow({
     Title = "ChronixHub V2"
