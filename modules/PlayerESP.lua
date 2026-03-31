@@ -8,12 +8,18 @@ local labels = {}          -- 玩家 -> BillboardGui
 local connections = {}     -- 玩家 -> {CharacterAdded连接, CharacterRemoving连接}
 local playerAddedConn = nil
 local playerRemovingConn = nil
--- 在 DEFAULT_CONFIG 上方添加
+
+-- 颜色定义
 local FRIEND_COLOR = Color3.new(0, 1, 0)  -- 绿色
 local NON_FRIEND_COLOR = Color3.new(1, 0, 0) -- 红色
+local MARKED_COLOR = Color3.new(1, 1, 1) -- 白色（被标记的玩家）
 
--- 本地玩家
+-- 本地玩家与输入服务
 local localPlayer = game.Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+-- 存储被标记的玩家（键为玩家对象，值为 true）
+local markedPlayers = {}
 
 -- 默认配置（不可修改）
 local DEFAULT_CONFIG = {
@@ -28,39 +34,63 @@ local DEFAULT_CONFIG = {
     textColor = Color3.new(1, 1, 1),
 }
 
+-- 获取玩家应该显示的颜色（优先级：标记 > 好友 > 普通）
+local function getPlayerColor(player)
+    if markedPlayers[player] then
+        return MARKED_COLOR
+    elseif player:IsFriendsWith(localPlayer.UserId) then
+        return FRIEND_COLOR
+    else
+        return NON_FRIEND_COLOR
+    end
+end
+
+-- 更新单个玩家的高亮颜色（根据当前状态重新设置）
+local function updatePlayerColor(player)
+    local highlight = highlights[player]
+    if not highlight then return end
+    
+    local color = getPlayerColor(player)
+    highlight.FillColor = color
+    highlight.OutlineColor = color
+end
+
 -- 添加高亮
 local function addHighlight(player, character)
     if player == localPlayer or not character then return end
-    
-    -- 【新增】判断是否为好友
-    local isFriend = player:IsFriendsWith(localPlayer.UserId)
-    local fillColor = isFriend and FRIEND_COLOR or NON_FRIEND_COLOR
-    local outlineColor = fillColor -- 让轮廓颜色与填充色相同，你也可以单独设置
 
+    local color = getPlayerColor(player)
+    
     local highlight = Instance.new("Highlight")
     highlight.Adornee = character
-    highlight.FillColor = fillColor          -- 使用动态颜色
+    highlight.FillColor = color
     highlight.FillTransparency = DEFAULT_CONFIG.fillTransparency
-    highlight.OutlineColor = outlineColor    -- 使用动态轮廓色
+    highlight.OutlineColor = color
     highlight.OutlineTransparency = DEFAULT_CONFIG.outlineTransparency
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Parent = character
-    
+
     if DEFAULT_CONFIG.onlyOutline then
         highlight.FillTransparency = 1
     end
     highlights[player] = highlight
 end
 
--- 添加名字标签
+-- 添加名字标签（被标记的玩家名字前加 [★] 标识）
 local function addLabel(player, character)
     if player == localPlayer or not character then return end
     local head = character:WaitForChild("Head", 5)
     if not head then return end
 
-    -- 【新增】判断是否为好友
+    local isMarked = markedPlayers[player]
     local isFriend = player:IsFriendsWith(localPlayer.UserId)
-    local prefix = isFriend and "⭐ " or ""  -- 好友名字前加星标
+    local prefix = ""
+    
+    if isMarked then
+        prefix = "📍 "  -- 被标记的玩家显示特殊标记
+    elseif isFriend then
+        prefix = "⭐ "  -- 好友显示星标
+    end
 
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = head
@@ -72,7 +102,7 @@ local function addLabel(player, character)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     if player.DisplayName == player.Name then
-        label.Text = prefix .. player.DisplayName  -- 应用前缀
+        label.Text = prefix .. player.DisplayName
     else
         label.Text = prefix .. player.DisplayName .. " (@" .. player.Name .. ")"
     end
@@ -120,14 +150,14 @@ local function setupPlayer(player)
         addLabel(player, character)
     end
 
-    -- 角色添加时
+    -- 角色添加时（重生后重新应用效果，且保留标记状态）
     local charAdded = player.CharacterAdded:Connect(function(newChar)
         removePlayerEffects(player)   -- 移除旧效果
-        addHighlight(player, newChar)
-        addLabel(player, newChar)
+        addHighlight(player, newChar) -- 重新添加高亮（会自动应用标记色）
+        addLabel(player, newChar)     -- 重新添加标签
     end)
 
-    -- 角色移除时（可选，但有助于及时清理）
+    -- 角色移除时清理
     local charRemoving = player.CharacterRemoving:Connect(function()
         removePlayerEffects(player)
     end)
@@ -166,6 +196,52 @@ local function stopGlobalListeners()
     end
 end
 
+-- 处理鼠标中键点击（标记/取消标记玩家）
+local function setupMouseClickHandler()
+    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+        if gameProcessedEvent then return end  -- 忽略聊天输入等场景
+        if not enabled then return end         -- 仅在 ESP 开启时生效
+        
+        -- 检查是否为鼠标中键
+        if input.UserInputType == Enum.UserInputType.MouseButton3 then
+            -- 获取鼠标指向的玩家
+            local mouse = localPlayer:GetMouse()
+            local target = mouse.Target
+            if not target then return end
+            
+            -- 向上查找玩家角色
+            local character = target:FindFirstAncestorOfClass("Model")
+            if not character then return end
+            
+            local player = game.Players:GetPlayerFromCharacter(character)
+            if not player or player == localPlayer then return end
+            
+            -- 切换标记状态
+            if markedPlayers[player] then
+                -- 已标记 → 取消标记
+                markedPlayers[player] = nil
+            else
+                -- 未标记 → 添加标记
+                markedPlayers[player] = true
+            end
+            
+            -- 更新该玩家的高亮颜色（如果存在）
+            updatePlayerColor(player)
+            -- 同时更新标签（让前缀也变化）
+            local label = labels[player]
+            if label then
+                -- 简单粗暴：重新生成标签（或者只改文本，为了代码简洁，直接重建）
+                local characterNow = player.Character
+                if characterNow then
+                    removePlayerEffects(player)
+                    addHighlight(player, characterNow)
+                    addLabel(player, characterNow)
+                end
+            end
+        end
+    end)
+end
+
 -- 公开函数：开启ESP
 function EspSimple.enable()
     if enabled then return end
@@ -175,16 +251,20 @@ function EspSimple.enable()
     for _, player in ipairs(game.Players:GetPlayers()) do
         setupPlayer(player)
     end
+    -- 设置鼠标中键监听（整个生命周期只设置一次，但内部会检查 enabled）
+    if not mouseClickHandlerSet then
+        setupMouseClickHandler()
+        mouseClickHandlerSet = true
+    end
 end
 
--- 公开函数：关闭ESP（清除所有效果，但仍保持监听，下次开启时自动恢复）
+-- 公开函数：关闭ESP（清除所有效果，但不清除标记记录）
 function EspSimple.disable()
     if not enabled then return end
     enabled = false
     clearAll()
-    -- 注意：全局监听仍保留，但setupPlayer内部会检查enabled，所以不会添加效果
-    -- 但为了彻底，也可以停止监听，不过enable时还要重新建立。我们选择保留监听，因为监听代价很小
-    -- 但disable后玩家加入不会有任何效果，直到再次enable
+    -- 注意：标记记录 markedPlayers 不清空，但此时 ESP 已关闭，用户看不到效果
+    -- 如果再次 enable，会重新读取 markedPlayers 并应用白色高亮
 end
 
 -- 公开函数：完全卸载（彻底销毁，不能再被启用）
@@ -192,6 +272,8 @@ function EspSimple.unload()
     enabled = false
     clearAll()
     stopGlobalListeners()
+    -- 清空标记记录
+    markedPlayers = {}
     -- 清空所有表，防止再次调用
     highlights = nil
     labels = nil
@@ -201,5 +283,8 @@ function EspSimple.unload()
     EspSimple.disable = nil
     EspSimple.unload = nil
 end
+
+-- 初始化鼠标中键处理器的标记（避免重复设置）
+local mouseClickHandlerSet = false
 
 return EspSimple
