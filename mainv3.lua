@@ -2,6 +2,8 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 
+_G.SA_FASTLOADING = true
+
 -- if _G.ChronixHubisLoaded then
 --     warn("⛔ ChronixHub Already loaded! Please do not repeat the execution.")
 --     return
@@ -31,6 +33,8 @@ end
 -- local HttpService = game:GetService("HttpService")
 
 local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
+
+wait(2.1)
 
 -- ============ 创建主窗口 ============
 local MainWindow = ChronixUI:MakeWindow({
