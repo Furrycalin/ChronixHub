@@ -1,8 +1,8 @@
--- ChronixUI v1.6
+-- ChronixUI v1.7
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "1.6.0"
+ChronixUI.Version = "1.7.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -292,7 +292,7 @@ function ChronixUI:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Chronix UI"
     local windowSize = config.Size or UDim2.new(0, 680, 0, 420)
-    local closeCallback = config.OnClose or function() end  -- 外部关闭回调
+    local closeCallback = config.OnClose or function() end  -- 初始回调
     
     local gui = Instance.new("ScreenGui")
     gui.Name = "ChronixUI_" .. tostring(#self.Windows + 1)
@@ -500,10 +500,16 @@ function ChronixUI:CreateWindow(config)
         SettingsTabContent = nil,
         Minimized = false,
         UpdatePlayerInfo = UpdatePlayerInfo,
-        -- 添加关闭窗口的方法，可供外部调用
+        -- 动态设置关闭回调的方法
+        SetCloseCallback = function(callback)
+            windowData.CloseCallback = callback
+        end,
+        -- 关闭窗口的方法
         Close = function()
             PlayClickSound()
-            closeCallback()
+            if windowData.CloseCallback then
+                windowData.CloseCallback()
+            end
             ContextActionService:UnbindAction(toggleActionName)
             gui:Destroy()
             for i, window in pairs(self.Windows) do
