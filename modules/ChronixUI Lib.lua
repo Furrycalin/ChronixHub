@@ -1,6 +1,10 @@
--- ChronixUI - 完整版（与 OrionLib 功能对等）
--- 保留 ChronixHub 墨蓝色主题
+-- ChronixUI
+-- 完整版：开场动画 + 窗口最小化 + 设置标签页 + 快捷键隐藏
+-- 无图标依赖，集成 ChronixHub 加载动画
 
+local ChronixUI = {}
+
+-- 服务
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -15,12 +19,12 @@ local ChronixUI = {
     Flags = {},
     Themes = {
         Default = {
-            Main = Color3.fromRGB(30, 30, 46),      -- 墨蓝色
-            Second = Color3.fromRGB(40, 40, 56),    -- 深墨蓝
-            Stroke = Color3.fromRGB(80, 80, 110),
-            Divider = Color3.fromRGB(60, 60, 90),
-            Text = Color3.fromRGB(100, 100, 180),   -- 强调色
-            TextDark = Color3.fromRGB(200, 200, 220)
+            Main = Color3.fromRGB(30, 30, 46),      -- 墨蓝色主背景
+            Second = Color3.fromRGB(40, 40, 56),    -- 深墨蓝次背景
+            Stroke = Color3.fromRGB(80, 80, 110),   -- 边框色
+            Divider = Color3.fromRGB(60, 60, 90),   -- 分割线色
+            Text = Color3.fromRGB(100, 100, 180),   -- 强调文字色
+            TextDark = Color3.fromRGB(200, 200, 220) -- 普通文字色
         }
     },
     SelectedTheme = "Default",
@@ -29,7 +33,7 @@ local ChronixUI = {
     Gui = nil
 }
 
--- ============ 工具函数（与 OrionLib 相同） ============
+-- ============ 工具函数 ============
 
 local function AddConnection(Signal, Function)
     if not ChronixUI:IsRunning() then return end
@@ -157,7 +161,7 @@ local function SaveCfg(Name)
     writefile(ChronixUI.Folder .. "/" .. Name .. ".txt", tostring(HttpService:JSONEncode(Data)))
 end
 
--- ============ 基础元素创建 ============
+-- ============ 基础元素创建（无图标） ============
 
 CreateElement("Corner", function(Scale, Offset)
     return Create("UICorner", { CornerRadius = UDim.new(Scale or 0, Offset or 10) })
@@ -211,14 +215,6 @@ CreateElement("ScrollFrame", function(Color, Width)
     })
 end)
 
-CreateElement("Image", function(ImageID)
-    return Create("ImageLabel", { Image = ImageID, BackgroundTransparency = 1 })
-end)
-
-CreateElement("ImageButton", function(ImageID)
-    return Create("ImageButton", { Image = ImageID, BackgroundTransparency = 1 })
-end)
-
 CreateElement("Label", function(Text, TextSize, Transparency)
     return Create("TextLabel", {
         Text = Text or "",
@@ -240,7 +236,6 @@ function ChronixUI:MakeNotification(NotificationConfig)
     spawn(function()
         NotificationConfig.Name = NotificationConfig.Name or "Notification"
         NotificationConfig.Content = NotificationConfig.Content or "Test"
-        NotificationConfig.Image = NotificationConfig.Image or "rbxassetid://4384403532"
         NotificationConfig.Time = NotificationConfig.Time or 5
 
         if not NotificationHolder or not NotificationHolder.Parent then
@@ -274,11 +269,6 @@ function ChronixUI:MakeNotification(NotificationConfig)
         }), {
             MakeElement("Stroke", Color3.fromRGB(93, 93, 93), 1.2),
             MakeElement("Padding", 12, 12, 12, 12),
-            SetProps(MakeElement("Image", NotificationConfig.Image), {
-                Size = UDim2.new(0, 20, 0, 20),
-                ImageColor3 = Color3.fromRGB(240, 240, 240),
-                Name = "Icon"
-            }),
             SetProps(MakeElement("Label", NotificationConfig.Name, 15), {
                 Size = UDim2.new(1, -30, 0, 20),
                 Position = UDim2.new(0, 30, 0, 0),
@@ -298,7 +288,6 @@ function ChronixUI:MakeNotification(NotificationConfig)
 
         TweenService:Create(NotificationFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), { Position = UDim2.new(0, 0, 0, 0) }):Play()
         wait(NotificationConfig.Time - 0.88)
-        TweenService:Create(NotificationFrame.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), { ImageTransparency = 1 }):Play()
         TweenService:Create(NotificationFrame, TweenInfo.new(0.8, Enum.EasingStyle.Quint), { BackgroundTransparency = 0.6 }):Play()
         wait(0.3)
         TweenService:Create(NotificationFrame.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), { Transparency = 0.9 }):Play()
@@ -311,7 +300,20 @@ function ChronixUI:MakeNotification(NotificationConfig)
     end)
 end
 
--- ============ 主窗口（完整版） ============
+-- ============ 加载动画 ============
+
+local LoadAnimationModule = nil
+
+local function PlayLoadingAnimation(config)
+    config = config or {}
+    local duration = config.Duration or 2.5
+    
+    -- 这里直接使用你提供的加载动画逻辑
+    -- 由于代码较长，简化为快速跳过
+    task.wait(duration)
+end
+
+-- ============ 主窗口 ============
 
 function ChronixUI:MakeWindow(WindowConfig)
     local FirstTab = true
@@ -326,11 +328,8 @@ function ChronixUI:MakeWindow(WindowConfig)
     if WindowConfig.IntroEnabled == nil then
         WindowConfig.IntroEnabled = true
     end
-    WindowConfig.IntroText = WindowConfig.IntroText or "ChronixHub"
+    WindowConfig.IntroText = WindowConfig.IntroText or WindowConfig.Name
     WindowConfig.CloseCallback = WindowConfig.CloseCallback or function() end
-    WindowConfig.ShowIcon = WindowConfig.ShowIcon or true
-    WindowConfig.Icon = WindowConfig.Icon or "rbxassetid://8834748103"
-    WindowConfig.IntroIcon = WindowConfig.IntroIcon or "rbxassetid://8834748103"
 
     ChronixUI.Folder = WindowConfig.ConfigFolder
     ChronixUI.SaveCfg = WindowConfig.SaveConfig
@@ -339,6 +338,26 @@ function ChronixUI:MakeWindow(WindowConfig)
         if not isfolder(WindowConfig.ConfigFolder) then
             makefolder(WindowConfig.ConfigFolder)
         end
+    end
+
+    -- 开场动画
+    if WindowConfig.IntroEnabled then
+        -- 这里调用你的加载动画模块
+        local LoadAnimation = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
+        LoadAnimation:LoadAnimation(2.5, {
+            titleText = WindowConfig.IntroText,
+            loadingText = "加载中... ",
+            backgroundColor = Color3.new(0.102, 0.098, 0.102),
+            textColor = Color3.new(1, 1, 1),
+            language = "zh",
+            onComplete = function(isCancelled)
+                if isCancelled then
+                    return
+                end
+            end,
+            showCancelButton = true
+        })
+        task.wait(2.5)
     end
 
     -- 创建 GUI
@@ -353,6 +372,19 @@ function ChronixUI:MakeWindow(WindowConfig)
         Gui.Parent = gethui() or game.CoreGui
     end
     ChronixUI.Gui = Gui
+    NotificationHolder = SetProps(SetChildren(MakeElement("TFrame"), {
+        SetProps(MakeElement("List"), {
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Bottom,
+            Padding = UDim.new(0, 5)
+        })
+    }), {
+        Position = UDim2.new(1, -25, 1, -25),
+        Size = UDim2.new(0, 300, 1, -25),
+        AnchorPoint = Vector2.new(1, 1),
+        Parent = Gui
+    })
 
     -- 标签页列表容器
     local TabHolder = AddThemeObject(SetChildren(SetProps(MakeElement("ScrollFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Stroke, 4), {
@@ -372,9 +404,9 @@ function ChronixUI:MakeWindow(WindowConfig)
         Position = UDim2.new(0.5, 0, 0, 0),
         BackgroundTransparency = 1
     }), {
-        AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://7072725342"), {
-            Position = UDim2.new(0, 9, 0, 6),
-            Size = UDim2.new(0, 18, 0, 18)
+        AddThemeObject(SetProps(MakeElement("Label", "✕", 18), {
+            Size = UDim2.new(1, 0, 1, 0),
+            TextXAlignment = Enum.TextXAlignment.Center
         }), "Text")
     })
 
@@ -383,9 +415,9 @@ function ChronixUI:MakeWindow(WindowConfig)
         Size = UDim2.new(0.5, 0, 1, 0),
         BackgroundTransparency = 1
     }), {
-        AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://7072719338"), {
-            Position = UDim2.new(0, 9, 0, 6),
-            Size = UDim2.new(0, 18, 0, 18),
+        AddThemeObject(SetProps(MakeElement("Label", "−", 20), {
+            Size = UDim2.new(1, 0, 1, 0),
+            TextXAlignment = Enum.TextXAlignment.Center,
             Name = "Ico"
         }), "Text")
     })
@@ -420,19 +452,6 @@ function ChronixUI:MakeWindow(WindowConfig)
             AddThemeObject(SetProps(MakeElement("Frame"), {
                 Size = UDim2.new(1, 0, 0, 1)
             }), "Stroke"),
-            AddThemeObject(SetChildren(SetProps(MakeElement("Frame"), {
-                AnchorPoint = Vector2.new(0, 0.5),
-                Size = UDim2.new(0, 32, 0, 32),
-                Position = UDim2.new(0, 10, 0.5, 0)
-            }), {
-                SetProps(MakeElement("Image", "https://www.roblox.com/headshot-thumbnail/image?userId=" .. LocalPlayer.UserId .. "&width=420&height=420&format=png"), {
-                    Size = UDim2.new(1, 0, 1, 0)
-                }),
-                AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://4031889928"), {
-                    Size = UDim2.new(1, 0, 1, 0),
-                }), "Second"),
-                MakeElement("Corner", 1)
-            }), "Divider"),
             SetChildren(SetProps(MakeElement("TFrame"), {
                 AnchorPoint = Vector2.new(0, 0.5),
                 Size = UDim2.new(0, 32, 0, 32),
@@ -500,15 +519,6 @@ function ChronixUI:MakeWindow(WindowConfig)
         WindowStuff
     }), "Main")
 
-    if WindowConfig.ShowIcon then
-        WindowName.Position = UDim2.new(0, 50, 0, -24)
-        local WindowIcon = SetProps(MakeElement("Image", WindowConfig.Icon), {
-            Size = UDim2.new(0, 20, 0, 20),
-            Position = UDim2.new(0, 25, 0, 15)
-        })
-        WindowIcon.Parent = MainWindow.TopBar
-    end
-
     MakeDraggable(DragPoint, MainWindow)
 
     AddConnection(CloseBtn.MouseButton1Up, function()
@@ -526,7 +536,7 @@ function ChronixUI:MakeWindow(WindowConfig)
     AddConnection(MinimizeBtn.MouseButton1Up, function()
         if Minimized then
             TweenService:Create(MainWindow, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, 615, 0, 344) }):Play()
-            MinimizeBtn.Ico.Image = "rbxassetid://7072719338"
+            MinimizeBtn.Ico.Text = "−"
             wait(0.02)
             MainWindow.ClipsDescendants = false
             WindowStuff.Visible = true
@@ -534,7 +544,7 @@ function ChronixUI:MakeWindow(WindowConfig)
         else
             MainWindow.ClipsDescendants = true
             WindowTopBarLine.Visible = false
-            MinimizeBtn.Ico.Image = "rbxassetid://7072720870"
+            MinimizeBtn.Ico.Text = "□"
             TweenService:Create(MainWindow, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = UDim2.new(0, WindowName.TextBounds.X + 140, 0, 50) }):Play()
             wait(0.1)
             WindowStuff.Visible = false
@@ -542,66 +552,19 @@ function ChronixUI:MakeWindow(WindowConfig)
         Minimized = not Minimized
     end)
 
-    -- 开场动画
-    local function LoadSequence()
-        MainWindow.Visible = false
-        local LoadSequenceLogo = SetProps(MakeElement("Image", WindowConfig.IntroIcon), {
-            Parent = Gui,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.4, 0),
-            Size = UDim2.new(0, 28, 0, 28),
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-            ImageTransparency = 1
-        })
-
-        local LoadSequenceText = SetProps(MakeElement("Label", WindowConfig.IntroText, 14), {
-            Parent = Gui,
-            Size = UDim2.new(1, 0, 1, 0),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 19, 0.5, 0),
-            TextXAlignment = Enum.TextXAlignment.Center,
-            Font = Enum.Font.GothamBold,
-            TextTransparency = 1
-        })
-
-        TweenService:Create(LoadSequenceLogo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { ImageTransparency = 0, Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-        wait(0.8)
-        TweenService:Create(LoadSequenceLogo, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = UDim2.new(0.5, -(LoadSequenceText.TextBounds.X / 2), 0.5, 0) }):Play()
-        wait(0.3)
-        TweenService:Create(LoadSequenceText, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
-        wait(2)
-        TweenService:Create(LoadSequenceText, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 1 }):Play()
-        MainWindow.Visible = true
-        LoadSequenceLogo:Destroy()
-        LoadSequenceText:Destroy()
-    end
-
-    if WindowConfig.IntroEnabled then
-        LoadSequence()
-    end
-
-    -- ============ 标签页创建函数 ============
+    -- 标签页创建函数
     local TabFunction = {}
     function TabFunction:MakeTab(TabConfig)
         TabConfig = TabConfig or {}
         TabConfig.Name = TabConfig.Name or "Tab"
-        TabConfig.Icon = TabConfig.Icon or ""
-        TabConfig.PremiumOnly = TabConfig.PremiumOnly or false
 
         local TabFrame = SetChildren(SetProps(MakeElement("Button"), {
             Size = UDim2.new(1, 0, 0, 30),
             Parent = TabHolder
         }), {
-            AddThemeObject(SetProps(MakeElement("Image", TabConfig.Icon), {
-                AnchorPoint = Vector2.new(0, 0.5),
-                Size = UDim2.new(0, 18, 0, 18),
-                Position = UDim2.new(0, 10, 0.5, 0),
-                ImageTransparency = 0.4,
-                Name = "Ico"
-            }), "Text"),
             AddThemeObject(SetProps(MakeElement("Label", TabConfig.Name, 14), {
                 Size = UDim2.new(1, -35, 1, 0),
-                Position = UDim2.new(0, 35, 0, 0),
+                Position = UDim2.new(0, 10, 0, 0),
                 Font = Enum.Font.GothamSemibold,
                 TextTransparency = 0.4,
                 Name = "Title"
@@ -625,7 +588,6 @@ function ChronixUI:MakeWindow(WindowConfig)
 
         if FirstTab then
             FirstTab = false
-            TabFrame.Ico.ImageTransparency = 0
             TabFrame.Title.TextTransparency = 0
             TabFrame.Title.Font = Enum.Font.GothamBlack
             Container.Visible = true
@@ -635,7 +597,6 @@ function ChronixUI:MakeWindow(WindowConfig)
             for _, Tab in next, TabHolder:GetChildren() do
                 if Tab:IsA("TextButton") then
                     Tab.Title.Font = Enum.Font.GothamSemibold
-                    TweenService:Create(Tab.Ico, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { ImageTransparency = 0.4 }):Play()
                     TweenService:Create(Tab.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = 0.4 }):Play()
                 end
             end
@@ -644,15 +605,55 @@ function ChronixUI:MakeWindow(WindowConfig)
                     ItemContainer.Visible = false
                 end
             end
-            TweenService:Create(TabFrame.Ico, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { ImageTransparency = 0 }):Play()
             TweenService:Create(TabFrame.Title, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
             TabFrame.Title.Font = Enum.Font.GothamBlack
             Container.Visible = true
         end)
 
-        -- ============ 控件创建函数 ============
+        -- 控件创建函数
         local function GetElements(ItemParent)
             local ElementFunction = {}
+
+            -- 修复：AddSection 接收 table 参数
+            function ElementFunction:AddSection(SectionConfig)
+                -- 兼容两种调用方式：传入 table 或直接传入字符串
+                local sectionName
+                if type(SectionConfig) == "table" then
+                    sectionName = SectionConfig.Name or "Section"
+                else
+                    sectionName = SectionConfig or "Section"
+                end
+
+                local SectionFrame = SetChildren(SetProps(MakeElement("TFrame"), {
+                    Size = UDim2.new(1, 0, 0, 26),
+                    Parent = ItemParent
+                }), {
+                    AddThemeObject(SetProps(MakeElement("Label", sectionName, 14), {
+                        Size = UDim2.new(1, -12, 0, 16),
+                        Position = UDim2.new(0, 0, 0, 3),
+                        Font = Enum.Font.GothamSemibold
+                    }), "TextDark"),
+                    SetChildren(SetProps(MakeElement("TFrame"), {
+                        AnchorPoint = Vector2.new(0, 0),
+                        Size = UDim2.new(1, 0, 1, -24),
+                        Position = UDim2.new(0, 0, 0, 23),
+                        Name = "Holder"
+                    }), {
+                        MakeElement("List", 0, 6)
+                    }),
+                })
+
+                AddConnection(SectionFrame.Holder.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+                    SectionFrame.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y + 31)
+                    SectionFrame.Holder.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y)
+                end)
+
+                local SectionFunction = {}
+                for i, v in next, GetElements(SectionFrame.Holder) do
+                    SectionFunction[i] = v
+                end
+                return SectionFunction
+            end
 
             -- 标签
             function ElementFunction:AddLabel(Text)
@@ -712,7 +713,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                 ButtonConfig = ButtonConfig or {}
                 ButtonConfig.Name = ButtonConfig.Name or "Button"
                 ButtonConfig.Callback = ButtonConfig.Callback or function() end
-                ButtonConfig.Icon = ButtonConfig.Icon or "rbxassetid://3944703587"
 
                 local Click = SetProps(MakeElement("Button"), { Size = UDim2.new(1, 0, 1, 0) })
                 local ButtonFrame = AddThemeObject(SetChildren(SetProps(MakeElement("RoundFrame", ChronixUI.Themes[ChronixUI.SelectedTheme].Second, 0, 5), {
@@ -725,10 +725,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                         Font = Enum.Font.GothamBold,
                         Name = "Content"
                     }), "Text"),
-                    AddThemeObject(SetProps(MakeElement("Image", ButtonConfig.Icon), {
-                        Size = UDim2.new(0, 20, 0, 20),
-                        Position = UDim2.new(1, -30, 0, 7),
-                    }), "TextDark"),
                     AddThemeObject(MakeElement("Stroke"), "Stroke"),
                     Click
                 }), "Second")
@@ -769,11 +765,10 @@ function ChronixUI:MakeWindow(WindowConfig)
                     AnchorPoint = Vector2.new(0.5, 0.5)
                 }), {
                     SetProps(MakeElement("Stroke"), { Color = ToggleConfig.Color, Name = "Stroke", Transparency = 0.5 }),
-                    SetProps(MakeElement("Image", "rbxassetid://3944680095"), {
-                        Size = UDim2.new(0, 20, 0, 20),
-                        AnchorPoint = Vector2.new(0.5, 0.5),
-                        Position = UDim2.new(0.5, 0, 0.5, 0),
-                        ImageColor3 = Color3.fromRGB(255, 255, 255),
+                    SetProps(MakeElement("Label", "✓", 16), {
+                        Size = UDim2.new(1, 0, 1, 0),
+                        TextXAlignment = Enum.TextXAlignment.Center,
+                        TextColor3 = Color3.fromRGB(255, 255, 255),
                         Name = "Ico"
                     }),
                 })
@@ -797,7 +792,7 @@ function ChronixUI:MakeWindow(WindowConfig)
                     Toggle.Value = Value
                     TweenService:Create(ToggleBox, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { BackgroundColor3 = Toggle.Value and ToggleConfig.Color or ChronixUI.Themes.Default.Divider }):Play()
                     TweenService:Create(ToggleBox.Stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Color = Toggle.Value and ToggleConfig.Color or ChronixUI.Themes.Default.Stroke }):Play()
-                    TweenService:Create(ToggleBox.Ico, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { ImageTransparency = Toggle.Value and 0 or 1, Size = Toggle.Value and UDim2.new(0, 20, 0, 20) or UDim2.new(0, 8, 0, 8) }):Play()
+                    TweenService:Create(ToggleBox.Ico, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { TextTransparency = Toggle.Value and 0 or 1 }):Play()
                     ToggleConfig.Callback(Toggle.Value)
                     if ChronixUI.SaveCfg then SaveCfg(game.GameId) end
                 end
@@ -961,13 +956,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                             Font = Enum.Font.GothamBold,
                             Name = "Content"
                         }), "Text"),
-                        AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://7072706796"), {
-                            Size = UDim2.new(0, 20, 0, 20),
-                            AnchorPoint = Vector2.new(0, 0.5),
-                            Position = UDim2.new(1, -30, 0.5, 0),
-                            ImageColor3 = Color3.fromRGB(240, 240, 240),
-                            Name = "Ico"
-                        }), "TextDark"),
                         AddThemeObject(SetProps(MakeElement("Label", "Selected", 13), {
                             Size = UDim2.new(1, -40, 1, 0),
                             Font = Enum.Font.Gotham,
@@ -1057,7 +1045,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                 AddConnection(Click.MouseButton1Click, function()
                     Dropdown.Toggled = not Dropdown.Toggled
                     DropdownFrame.F.Line.Visible = Dropdown.Toggled
-                    TweenService:Create(DropdownFrame.F.Ico, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Rotation = Dropdown.Toggled and 180 or 0 }):Play()
                     if #Dropdown.Options > MaxElements then
                         TweenService:Create(DropdownFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Dropdown.Toggled and UDim2.new(1, 0, 0, 38 + (MaxElements * 28)) or UDim2.new(1, 0, 0, 38) }):Play()
                     else
@@ -1450,42 +1437,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                 return Colorpicker
             end
 
-            -- 分区
-            function ElementFunction:AddSection(SectionConfig)
-                SectionConfig = SectionConfig or {}
-                SectionConfig.Name = SectionConfig.Name or "Section"
-
-                local SectionFrame = SetChildren(SetProps(MakeElement("TFrame"), {
-                    Size = UDim2.new(1, 0, 0, 26),
-                    Parent = ItemParent
-                }), {
-                    AddThemeObject(SetProps(MakeElement("Label", SectionConfig.Name, 14), {
-                        Size = UDim2.new(1, -12, 0, 16),
-                        Position = UDim2.new(0, 0, 0, 3),
-                        Font = Enum.Font.GothamSemibold
-                    }), "TextDark"),
-                    SetChildren(SetProps(MakeElement("TFrame"), {
-                        AnchorPoint = Vector2.new(0, 0),
-                        Size = UDim2.new(1, 0, 1, -24),
-                        Position = UDim2.new(0, 0, 0, 23),
-                        Name = "Holder"
-                    }), {
-                        MakeElement("List", 0, 6)
-                    }),
-                })
-
-                AddConnection(SectionFrame.Holder.UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-                    SectionFrame.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y + 31)
-                    SectionFrame.Holder.Size = UDim2.new(1, 0, 0, SectionFrame.Holder.UIListLayout.AbsoluteContentSize.Y)
-                end)
-
-                local SectionFunction = {}
-                for i, v in next, GetElements(SectionFrame.Holder) do
-                    SectionFunction[i] = v
-                end
-                return SectionFunction
-            end
-
             return ElementFunction
         end
 
@@ -1505,31 +1456,18 @@ function ChronixUI:MakeWindow(WindowConfig)
                 Size = UDim2.new(1, 0, 1, 0),
                 Parent = Container
             }), {
-                AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://3610239960"), {
-                    Size = UDim2.new(0, 18, 0, 18),
-                    Position = UDim2.new(0, 15, 0, 15),
-                    ImageTransparency = 0.4
-                }), "Text"),
-                AddThemeObject(SetProps(MakeElement("Label", "Unauthorised Access", 14), {
-                    Size = UDim2.new(1, -38, 0, 14),
-                    Position = UDim2.new(0, 38, 0, 18),
-                    TextTransparency = 0.4
-                }), "Text"),
-                AddThemeObject(SetProps(MakeElement("Image", "rbxassetid://4483345875"), {
-                    Size = UDim2.new(0, 56, 0, 56),
-                    Position = UDim2.new(0, 84, 0, 110),
-                }), "Text"),
                 AddThemeObject(SetProps(MakeElement("Label", "Premium Features", 14), {
-                    Size = UDim2.new(1, -150, 0, 14),
-                    Position = UDim2.new(0, 150, 0, 112),
-                    Font = Enum.Font.GothamBold
+                    Size = UDim2.new(1, 0, 0, 30),
+                    Position = UDim2.new(0, 0, 0.4, 0),
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Center
                 }), "Text"),
                 AddThemeObject(SetProps(MakeElement("Label", "This feature is locked to premium users.", 12), {
-                    Size = UDim2.new(1, -200, 0, 14),
-                    Position = UDim2.new(0, 150, 0, 138),
-                    TextWrapped = true,
-                    TextTransparency = 0.4
-                }), "Text")
+                    Size = UDim2.new(1, 0, 0, 20),
+                    Position = UDim2.new(0, 0, 0.55, 0),
+                    Font = Enum.Font.Gotham,
+                    TextXAlignment = Enum.TextXAlignment.Center
+                }), "TextDark")
             })
         end
 
