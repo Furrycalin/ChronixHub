@@ -1,5 +1,6 @@
 -- ChronixUI
--- 毛玻璃质感 + 白淡紫配色 + 会员名高亮
+-- 完整版：毛玻璃质感 + 白淡紫配色 + 会员名高亮
+-- 包含所有控件：按钮、开关、滑块、下拉菜单、文本框、按键绑定、颜色选择器、标签、段落
 
 local ChronixUI = {}
 
@@ -54,6 +55,26 @@ local Theme = {
 local activeWindows = {}
 local activeNotifications = {}
 local windowHideKey = Enum.KeyCode.RightShift
+
+-- 存储 Flags 和 ThemeObjects
+ChronixUI.Flags = {}
+ChronixUI.ThemeObjects = {}
+ChronixUI.Connections = {}
+ChronixUI.Elements = {}
+ChronixUI.Themes = {
+    Default = {
+        Main = Theme.MainBg,
+        Second = Theme.SidebarBg,
+        Stroke = Theme.AccentColor,
+        Divider = Theme.AccentColor,
+        Text = Theme.AccentColor,
+        TextDark = Theme.TextColor
+    }
+}
+ChronixUI.SelectedTheme = "Default"
+ChronixUI.Folder = nil
+ChronixUI.SaveCfg = false
+ChronixUI.Gui = nil
 
 -- ============ 工具函数 ============
 
@@ -346,6 +367,7 @@ function ChronixUI:MakeWindow(WindowConfig)
     WindowConfig.Name = WindowConfig.Name or "ChronixHub"
     WindowConfig.ConfigFolder = WindowConfig.ConfigFolder or WindowConfig.Name
     WindowConfig.SaveConfig = WindowConfig.SaveConfig or false
+    WindowConfig.HidePremium = WindowConfig.HidePremium or false
     WindowConfig.CloseCallback = WindowConfig.CloseCallback or function() end
 
     ChronixUI.Folder = WindowConfig.ConfigFolder
@@ -642,6 +664,7 @@ function ChronixUI:MakeWindow(WindowConfig)
     function TabFunction:MakeTab(TabConfig)
         TabConfig = TabConfig or {}
         TabConfig.Name = TabConfig.Name or "Tab"
+        TabConfig.PremiumOnly = TabConfig.PremiumOnly or false
 
         local TabBtn = Create("TextButton", {
             Text = TabConfig.Name,
@@ -704,6 +727,7 @@ function ChronixUI:MakeWindow(WindowConfig)
         local function GetElements(ItemParent)
             local ElementFunction = {}
 
+            -- 分区
             function ElementFunction:AddSection(SectionConfig)
                 local sectionName = type(SectionConfig) == "table" and SectionConfig.Name or SectionConfig or "Section"
 
@@ -748,6 +772,7 @@ function ChronixUI:MakeWindow(WindowConfig)
                 return SectionFunction
             end
 
+            -- 标签
             function ElementFunction:AddLabel(Text)
                 return Create("TextLabel", {
                     Text = Text,
@@ -760,6 +785,42 @@ function ChronixUI:MakeWindow(WindowConfig)
                 })
             end
 
+            -- 段落
+            function ElementFunction:AddParagraph(Title, Content)
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Parent = ItemParent
+                })
+
+                local titleLabel = Create("TextLabel", {
+                    Text = Title or "标题",
+                    TextColor3 = Theme.AccentColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.FontBold,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 25),
+                    Parent = container
+                })
+
+                local contentLabel = Create("TextLabel", {
+                    Text = Content or "内容",
+                    TextColor3 = Theme.TextSecondary,
+                    TextSize = Theme.TextSize - 2,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    TextWrapped = true,
+                    Position = UDim2.new(0, 0, 0, 25),
+                    Parent = container
+                })
+
+                return { Set = function(newContent) contentLabel.Text = newContent end }
+            end
+
+            -- 按钮
             function ElementFunction:AddButton(ButtonConfig)
                 ButtonConfig = ButtonConfig or {}
                 local btn = Create("TextButton", {
@@ -785,12 +846,14 @@ function ChronixUI:MakeWindow(WindowConfig)
                     if ButtonConfig.Callback then ButtonConfig.Callback() end
                 end)
 
-                return btn
+                return { Set = function(newText) btn.Text = newText end }
             end
 
+            -- 开关
             function ElementFunction:AddToggle(ToggleConfig)
                 ToggleConfig = ToggleConfig or {}
                 local toggled = ToggleConfig.Default or false
+                local flag = ToggleConfig.Flag
 
                 local container = Create("Frame", {
                     BackgroundTransparency = 1,
@@ -829,7 +892,9 @@ function ChronixUI:MakeWindow(WindowConfig)
                     toggleBtn.Text = toggled and "ON" or "OFF"
                     toggleBtn.BackgroundColor3 = toggled and Theme.AccentColor or Theme.SidebarBg
                     if ToggleConfig.Callback then ToggleConfig.Callback(toggled) end
-                    if ToggleConfig.Flag then ChronixUI.Flags[ToggleConfig.Flag] = { Value = toggled, Save = ToggleConfig.Save, Type = "Toggle", Set = update } end
+                    if flag then
+                        ChronixUI.Flags[flag] = { Value = toggled, Save = ToggleConfig.Save or false, Type = "Toggle", Set = update }
+                    end
                 end
 
                 toggleBtn.MouseButton1Click:Connect(function() update(not toggled) end)
@@ -837,11 +902,13 @@ function ChronixUI:MakeWindow(WindowConfig)
                 return { Set = update, Get = function() return toggled end }
             end
 
+            -- 滑块
             function ElementFunction:AddSlider(SliderConfig)
                 SliderConfig = SliderConfig or {}
                 local min = SliderConfig.Min or 0
                 local max = SliderConfig.Max or 100
                 local value = SliderConfig.Default or min
+                local flag = SliderConfig.Flag
 
                 local container = Create("Frame", {
                     BackgroundTransparency = 1,
@@ -904,6 +971,9 @@ function ChronixUI:MakeWindow(WindowConfig)
                     thumb.Position = UDim2.new(percent, -8, 0, -6)
                     valueLabel.Text = tostring(math.floor(value))
                     if SliderConfig.Callback then SliderConfig.Callback(value) end
+                    if flag then
+                        ChronixUI.Flags[flag] = { Value = value, Save = SliderConfig.Save or false, Type = "Slider", Set = update }
+                    end
                 end
 
                 thumb.MouseButton1Down:Connect(function(input)
@@ -928,11 +998,14 @@ function ChronixUI:MakeWindow(WindowConfig)
                 return { Set = update, Get = function() return value end }
             end
 
+            -- 下拉菜单
             function ElementFunction:AddDropdown(DropdownConfig)
                 DropdownConfig = DropdownConfig or {}
                 local options = DropdownConfig.Options or {}
                 local selected = DropdownConfig.Default or options[1]
+                local flag = DropdownConfig.Flag
                 local isOpen = false
+                local dropdownList = nil
 
                 local container = Create("Frame", {
                     BackgroundTransparency = 1,
@@ -963,8 +1036,6 @@ function ChronixUI:MakeWindow(WindowConfig)
                     AnchorPoint = Vector2.new(0, 0.5),
                     Parent = container
                 }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
-
-                local dropdownList = nil
 
                 local function closeList()
                     if dropdownList then
@@ -1015,6 +1086,9 @@ function ChronixUI:MakeWindow(WindowConfig)
                             selected = opt
                             dropdownBtn.Text = selected
                             if DropdownConfig.Callback then DropdownConfig.Callback(selected) end
+                            if flag then
+                                ChronixUI.Flags[flag] = { Value = selected, Save = DropdownConfig.Save or false, Type = "Dropdown", Set = function(v) selected = v; dropdownBtn.Text = v end }
+                            end
                             closeList()
                         end)
                         totalHeight = totalHeight + 34
@@ -1041,8 +1115,11 @@ function ChronixUI:MakeWindow(WindowConfig)
                 return { Set = function(val) selected = val; dropdownBtn.Text = val end, Get = function() return selected end }
             end
 
+            -- 文本框
             function ElementFunction:AddTextbox(TextboxConfig)
                 TextboxConfig = TextboxConfig or {}
+                local flag = TextboxConfig.Flag
+
                 local container = Create("Frame", {
                     BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 38),
@@ -1076,9 +1153,323 @@ function ChronixUI:MakeWindow(WindowConfig)
 
                 input.FocusLost:Connect(function()
                     if TextboxConfig.Callback then TextboxConfig.Callback(input.Text) end
+                    if flag then
+                        ChronixUI.Flags[flag] = { Value = input.Text, Save = TextboxConfig.Save or false, Type = "Textbox", Set = function(v) input.Text = v end }
+                    end
                 end)
 
                 return input
+            end
+
+            -- 按键绑定
+            function ElementFunction:AddBind(BindConfig)
+                BindConfig = BindConfig or {}
+                local currentKey = BindConfig.Default or "None"
+                local holdMode = BindConfig.Hold or false
+                local flag = BindConfig.Flag
+                local isBinding = false
+                local isHolding = false
+
+                local BlacklistedKeys = {
+                    Unknown = true, W = true, A = true, S = true, D = true,
+                    Up = true, Left = true, Down = true, Right = true,
+                    Tab = true, Backspace = true, Escape = true
+                }
+
+                local function getKeyName(key)
+                    if key.UserInputType == Enum.UserInputType.Keyboard then
+                        return key.KeyCode.Name
+                    elseif key.UserInputType == Enum.UserInputType.MouseButton1 then
+                        return "Mouse1"
+                    elseif key.UserInputType == Enum.UserInputType.MouseButton2 then
+                        return "Mouse2"
+                    elseif key.UserInputType == Enum.UserInputType.MouseButton3 then
+                        return "Mouse3"
+                    end
+                    return "None"
+                end
+
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 38),
+                    Parent = ItemParent
+                })
+
+                local label = Create("TextLabel", {
+                    Text = BindConfig.Name or "Bind",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 12, 0, 0),
+                    Size = UDim2.new(0.5, 0, 1, 0),
+                    Parent = container
+                })
+
+                local bindBtn = Create("TextButton", {
+                    Text = tostring(currentKey),
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundColor3 = Theme.SidebarBg,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(0.4, -15, 0, 28),
+                    Position = UDim2.new(0.6, 5, 0.5, -14),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+
+                local function updateKey(key)
+                    currentKey = key
+                    bindBtn.Text = tostring(currentKey)
+                    if BindConfig.Callback then BindConfig.Callback(currentKey) end
+                    if flag then
+                        ChronixUI.Flags[flag] = { Value = currentKey, Save = BindConfig.Save or false, Type = "Bind", Set = updateKey }
+                    end
+                end
+
+                bindBtn.MouseButton1Click:Connect(function()
+                    isBinding = true
+                    bindBtn.Text = "..."
+                end)
+
+                local inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                    if gameProcessed then return end
+                    if isBinding then
+                        local keyName = getKeyName(input)
+                        if keyName ~= "None" and not BlacklistedKeys[keyName] then
+                            isBinding = false
+                            updateKey(keyName)
+                        else
+                            isBinding = false
+                            bindBtn.Text = tostring(currentKey)
+                        end
+                    elseif not isBinding and currentKey ~= "None" then
+                        local pressedKey = getKeyName(input)
+                        if pressedKey == currentKey then
+                            if holdMode then
+                                isHolding = true
+                                if BindConfig.Callback then BindConfig.Callback(true) end
+                            else
+                                if BindConfig.Callback then BindConfig.Callback() end
+                            end
+                        end
+                    end
+                end)
+
+                UserInputService.InputEnded:Connect(function(input)
+                    if holdMode and isHolding then
+                        local releasedKey = getKeyName(input)
+                        if releasedKey == currentKey then
+                            isHolding = false
+                            if BindConfig.Callback then BindConfig.Callback(false) end
+                        end
+                    end
+                end)
+
+                return { Set = updateKey, Get = function() return currentKey end }
+            end
+
+            -- 颜色选择器
+            function ElementFunction:AddColorpicker(ColorpickerConfig)
+                ColorpickerConfig = ColorpickerConfig or {}
+                local color = ColorpickerConfig.Default or Color3.fromRGB(255, 255, 255)
+                local flag = ColorpickerConfig.Flag
+                local isOpen = false
+                local pickerFrame = nil
+
+                local container = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 38),
+                    Parent = ItemParent
+                })
+
+                local label = Create("TextLabel", {
+                    Text = ColorpickerConfig.Name or "Colorpicker",
+                    TextColor3 = Theme.TextColor,
+                    TextSize = Theme.TextSize,
+                    Font = Theme.Font,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 12, 0, 0),
+                    Size = UDim2.new(0.5, 0, 1, 0),
+                    Parent = container
+                })
+
+                local colorBtn = Create("TextButton", {
+                    Text = "",
+                    BackgroundColor3 = color,
+                    Size = UDim2.new(0, 40, 0, 28),
+                    Position = UDim2.new(1, -50, 0.5, -14),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    BorderSizePixel = 0,
+                    Parent = container
+                }, { Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+
+                local function updateColor(newColor)
+                    color = newColor
+                    colorBtn.BackgroundColor3 = color
+                    if ColorpickerConfig.Callback then ColorpickerConfig.Callback(color) end
+                    if flag then
+                        ChronixUI.Flags[flag] = { Value = color, Save = ColorpickerConfig.Save or false, Type = "Colorpicker", Set = updateColor }
+                    end
+                end
+
+                local function closePicker()
+                    if pickerFrame then
+                        TweenService:Create(pickerFrame, TweenInfo.new(0.2), { Size = UDim2.new(0.6, -15, 0, 0) }):Play()
+                        task.wait(0.2)
+                        pickerFrame:Destroy()
+                        pickerFrame = nil
+                    end
+                    isOpen = false
+                end
+
+                colorBtn.MouseButton1Click:Connect(function()
+                    if isOpen then closePicker() return end
+                    isOpen = true
+
+                    pickerFrame = Create("Frame", {
+                        BackgroundColor3 = Theme.SidebarBg,
+                        Size = UDim2.new(0.6, -15, 0, 0),
+                        Position = UDim2.new(0.4, 5, 0, 38),
+                        ClipsDescendants = true,
+                        Parent = container
+                    }, {
+                        Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+                    })
+
+                    local colorDisplay = Create("Frame", {
+                        BackgroundColor3 = color,
+                        Size = UDim2.new(1, -20, 0, 40),
+                        Position = UDim2.new(0, 10, 0, 10),
+                        BorderSizePixel = 0,
+                        Parent = pickerFrame
+                    }, { Create("UICorner", { CornerRadius = UDim.new(0, 5) }) })
+
+                    -- 简单 RGB 滑块
+                    local function createSlider(name, min, max, defaultVal, onUpdate)
+                        local sliderContainer = Create("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, -20, 0, 50),
+                            Position = UDim2.new(0, 10, 0, 60),
+                            Parent = pickerFrame
+                        })
+
+                        local sliderLabel = Create("TextLabel", {
+                            Text = name,
+                            TextColor3 = Theme.TextColor,
+                            TextSize = Theme.TextSize,
+                            Font = Theme.Font,
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(0.3, 0, 0, 25),
+                            Position = UDim2.new(0, 0, 0, 0),
+                            Parent = sliderContainer
+                        })
+
+                        local sliderValue = Create("TextLabel", {
+                            Text = tostring(defaultVal),
+                            TextColor3 = Theme.AccentColor,
+                            TextSize = Theme.TextSize,
+                            Font = Theme.FontBold,
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(0.2, 0, 0, 25),
+                            Position = UDim2.new(0.8, 0, 0, 0),
+                            Parent = sliderContainer
+                        })
+
+                        local track = Create("Frame", {
+                            BackgroundColor3 = Theme.SidebarBg,
+                            Size = UDim2.new(1, 0, 0, 4),
+                            Position = UDim2.new(0, 0, 0, 28),
+                            BorderSizePixel = 0,
+                            Parent = sliderContainer
+                        }, { Create("UICorner", { CornerRadius = UDim.new(0, 2) }) })
+
+                        local fill = Create("Frame", {
+                            BackgroundColor3 = Theme.AccentColor,
+                            Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0),
+                            BorderSizePixel = 0,
+                            Parent = track
+                        }, { Create("UICorner", { CornerRadius = UDim.new(0, 2) }) })
+
+                        local thumb = Create("TextButton", {
+                            Text = "",
+                            BackgroundColor3 = Theme.TextColor,
+                            Size = UDim2.new(0, 14, 0, 14),
+                            Position = UDim2.new((defaultVal - min) / (max - min), -7, 0, -5),
+                            BorderSizePixel = 0,
+                            Parent = sliderContainer
+                        }, { Create("UICorner", { CornerRadius = UDim.new(0, 7) }) })
+
+                        local dragging = false
+                        local currentVal = defaultVal
+
+                        local function update(val)
+                            currentVal = math.clamp(val, min, max)
+                            local percent = (currentVal - min) / (max - min)
+                            fill.Size = UDim2.new(percent, 0, 1, 0)
+                            thumb.Position = UDim2.new(percent, -7, 0, -5)
+                            sliderValue.Text = tostring(math.floor(currentVal))
+                            onUpdate(currentVal)
+                        end
+
+                        thumb.MouseButton1Down:Connect(function(input)
+                            dragging = true
+                            local percent = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                            update(min + (max - min) * percent)
+                        end)
+
+                        UserInputService.InputChanged:Connect(function(input)
+                            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                                local percent = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                                update(min + (max - min) * percent)
+                            end
+                        end)
+
+                        UserInputService.InputEnded:Connect(function(input)
+                            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                                dragging = false
+                            end
+                        end)
+
+                        return update
+                    end
+
+                    local r, g, b = color.R * 255, color.G * 255, color.B * 255
+                    local updateR = createSlider("红", 0, 255, r, function(val)
+                        updateColor(Color3.fromRGB(val, g, b))
+                        colorDisplay.BackgroundColor3 = color
+                    end)
+                    local updateG = createSlider("绿", 0, 255, g, function(val)
+                        updateColor(Color3.fromRGB(r, val, b))
+                        colorDisplay.BackgroundColor3 = color
+                    end)
+                    local updateB = createSlider("蓝", 0, 255, b, function(val)
+                        updateColor(Color3.fromRGB(r, g, val))
+                        colorDisplay.BackgroundColor3 = color
+                    end)
+
+                    updateR(r)
+                    updateG(g)
+                    updateB(b)
+
+                    pickerFrame.Size = UDim2.new(0.6, -15, 0, 220)
+
+                    local clickConn = UserInputService.InputBegan:Connect(function(input)
+                        if isOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            local mousePos = UserInputService:GetMouseLocation()
+                            local absPos = pickerFrame.AbsolutePosition
+                            local absSize = pickerFrame.AbsoluteSize
+                            if mousePos.X < absPos.X or mousePos.X > absPos.X + absSize.X or
+                               mousePos.Y < absPos.Y or mousePos.Y > absPos.Y + absSize.Y then
+                                closePicker()
+                                clickConn:Disconnect()
+                            end
+                        end
+                    end)
+                end)
+
+                return { Set = updateColor, Get = function() return color end }
             end
 
             return ElementFunction
@@ -1087,6 +1478,43 @@ function ChronixUI:MakeWindow(WindowConfig)
         local ElementFunction = {}
         for i, v in next, GetElements(Container) do
             ElementFunction[i] = v
+        end
+
+        -- Premium Only 处理
+        if TabConfig.PremiumOnly then
+            for i, v in next, ElementFunction do
+                ElementFunction[i] = function() end
+            end
+            for _, child in pairs(Container:GetChildren()) do
+                if child:IsA("UIListLayout") or child:IsA("UIPadding") then
+                    child:Destroy()
+                end
+            end
+            local premiumFrame = Create("Frame", {
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Parent = Container
+            })
+            Create("TextLabel", {
+                Text = "⭐ Premium Features",
+                TextColor3 = Theme.PremiumColor,
+                TextSize = 18,
+                Font = Theme.FontBold,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, -100, 0.4, 0),
+                Size = UDim2.new(0, 200, 0, 30),
+                Parent = premiumFrame
+            })
+            Create("TextLabel", {
+                Text = "This feature is locked to premium users.",
+                TextColor3 = Theme.TextSecondary,
+                TextSize = 12,
+                Font = Theme.Font,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, -150, 0.55, 0),
+                Size = UDim2.new(0, 300, 0, 20),
+                Parent = premiumFrame
+            })
         end
 
         return ElementFunction
