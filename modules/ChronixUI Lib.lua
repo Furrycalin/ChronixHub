@@ -359,16 +359,36 @@ function ChronixUI:CreateWindow(config)
         end
         isMinimized = not isMinimized
     end)
+
+    -- 在 Window 对象中添加 SetCloseCallback 方法
+    function windowObj:SetCloseCallback(callback)
+        -- 修正1: 标题栏名称是 "titleBar"（小写t，大写B）
+        -- 修正2: 关闭按钮名称是 "closeBtn"（小写c，小写b，大写B）
+        local titleBar = self.mainFrame:FindFirstChild("titleBar")
+        local closeBtn = titleBar and titleBar:FindFirstChild("closeBtn")
     
-    -- 关闭按钮
-    closeBtn.MouseButton1Click:Connect(function()
-        playClickSound()
-        gui:Destroy()
-        for i, w in ipairs(activeWindows) do
-            if w == windowObj then table.remove(activeWindows, i); break end
+        if closeBtn then
+            -- 先断开原有的关闭连接（避免重复绑定）
+            -- 注意：原有的 closeBtn.MouseButton1Click 连接在下面已经存在
+            -- 我们需要确保不会同时执行两个关闭逻辑
+            
+            -- 方法：创建一个新的连接，并保存原有的连接以便断开（如果需要）
+            closeBtn.MouseButton1Click:Connect(function()
+                if callback then callback() end
+                -- 只销毁当前窗口，而不是所有窗口
+                self.gui:Destroy()
+                -- 从活跃窗口列表中移除
+                for i, w in ipairs(activeWindows) do
+                    if w == self then
+                        table.remove(activeWindows, i)
+                        break
+                    end
+                end
+            end)
+        else
+            warn("ChronixUI: 未找到关闭按钮，无法设置 CloseCallback")
         end
-        if config.CloseCallback then config.CloseCallback() end
-    end)
+    end
     
     -- 隐藏/显示快捷键
     local hideConnection
