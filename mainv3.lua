@@ -1452,8 +1452,8 @@ audioCheckerTab:AddButton({
 })
 audioCheckerTab:AddDivider()
 audioCheckerTab:AddTitle("测试播放")
-local testIdLabel = audioCheckerTab:AddLabel("测试ID: 未选择")
-local testPlayButton = audioCheckerTab:AddButton({
+testIdLabel = audioCheckerTab:AddLabel("测试ID: 未选择")
+testPlayButton = audioCheckerTab:AddButton({
     Text = "🎵 尝试播放",
     Callback = function()
         if not data.basicdata.otherdata.audioData.currentSelectedId then
