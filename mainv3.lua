@@ -2019,3 +2019,10 @@ if mainWindow and mainWindow.SetCloseCallback then
 else
     warn("mainWindow not ready, cannot set close callback")
 end
+
+Stepped67 = game:GetService("RunService").Stepped:Connect(function()
+    if _G.UnloadChronixUI then
+        unloadChronixHub()
+        Stepped67:Disconnect()
+    end
+end)
