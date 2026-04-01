@@ -1445,6 +1445,8 @@ function ChronixUI:CreateWindow(config)
                     end
                     windowData.SettingsTabContent.Visible = true
                     windowData.CurrentTab = { Name = "设置" }
+                    -- 强制更新滚动区域尺寸
+                    updateContentCanvas()
                     break
                 end
             end
