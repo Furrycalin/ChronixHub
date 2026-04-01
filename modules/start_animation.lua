@@ -111,7 +111,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     chronixText.TextColor3 = Color3.new(1, 1, 1)
     chronixText.BackgroundTransparency = 1
     chronixText.Font = Enum.Font.SourceSansBold
-    chronixText.TextSize = 32
+    chronixText.TextSize = isMobile and 16 or 32
     chronixText.Parent = titleFrame
 
     -- V3 文本
@@ -122,7 +122,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     v3Text.TextColor3 = Color3.new(0.8, 1, 0.5)
     v3Text.BackgroundTransparency = 1
     v3Text.Font = Enum.Font.SourceSansBold
-    v3Text.TextSize = 32
+    v3Text.TextSize = isMobile and 16 or 32
     v3Text.Parent = titleFrame
 
     -- 加载文本
