@@ -32,6 +32,7 @@ local HttpService = game:GetService("HttpService")
 local ScriptContext = game:GetService("ScriptContext")
 local TeleportService = game:GetService("TeleportService")
 
+local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
 local LoadAnimationModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
 local tpWalk = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/tpWalk.lua"))()
 local StandRecovery = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/StandRecovery.lua"))()
@@ -143,6 +144,8 @@ local data = {
             infjump = false,
             antifall = false,
             antidead = false,
+            executecode = "",
+            nightvision = false,
         },
         otherdata = {
             musicbox = Instance.new("Sound"),
@@ -288,6 +291,61 @@ local data = {
         { gameid = 6996099240, name = "噩梦之行" },
         { gameid = 5265348926, name = "西部森林" },
         { gameid = 5429450445, name = "警笛头:遗产" },
+    },
+    othergamedata = {
+        west_wood = {
+            monster = NameTagModule.new("WendigoAI", "模糊", 20, true, "怪物")
+        },
+        sirenhead_legacy = {
+            cratemodule = HighlightModule.new("crate", "other", "item"),
+            cratenametagmodule = NameTagModule.new("crate", "模糊", 20, true, "盒子"),
+            berrymodule = HighlightModule.new("berry", "other", "item"),
+            berrynametagmodule = NameTagModule.new("berry", "模糊", 20, true, "浆果"),
+        },
+        nightmare_run = {
+            monster = MovableHighlighter_NM.new(),
+            HLCheese = HighlightModule.new("Cheese", "other", "item"),
+        },
+        project_transfur = {
+            bot = HighlightModule.new("Bot", "other", "item"),
+            botnt = NameTagModule.new("Bot", "模糊", 20, true, "Bot兽"),
+            smallsafe = HighlightModule.new("__BasicSmallSafe", "other", "item"),
+            smallsafent = NameTagModule.new("__BasicSmallSafe", "模糊", 20, true, "小保险箱"),
+            largesafe = HighlightModule.new("__BasicLargeSafe", "other", "item"),
+            largesafent = NameTagModule.new("__BasicLargeSafe", "模糊", 20, true, "大保险箱"),
+            goldensafe = HighlightModule.new("__LargeGoldenSafe", "other", "item"),
+            goldensafent = NameTagModule.new("__LargeGoldenSafe", "模糊", 20, true, "金保险箱"),
+            crate = HighlightModule.new("Surplus Crate", "other", "item"),
+            cratent = NameTagModule.new("Surplus Crate", "模糊", 20, true, "武器盒"),
+            sd = HighlightModule.new("SupplyDrop", "other", "item"),
+            sdnt = NameTagModule.new("SupplyDrop", "模糊", 20, true, "空投"),
+        },
+        delesions_office = {
+            entitywarning = false,
+            tipotherplayer = false,
+            auto013 = false,
+            entitys = {
+                NormalEntity = { name = "EN-001", tip = "立刻躲在柜子中！" },
+                NormalEntityType2 = { name = "EN-001-02", tip = "立刻躲在柜子中！" },
+                SnakeEntity = { name = "EN-002", tip = "多待在柜子里一会！" },
+                TrainEntity = { name = "EN-003", tip = "不要犹豫，立刻躲起来！" },
+                LateEntity = { name = "EN-004", tip = "稍后躲在柜子中！" },
+                ReboundingEntity = { name = "EN-005", tip = "把握住进柜子的时间，他会来回冲！" },
+                PeaceEntity = { name = "EN-006", tip = "千万不要躲在柜子中！" },
+                VisionEntity = { name = "EN-007", tip = "不要躲在墙壁后！" },
+                FocusEntity = { name = "EN-008", tip = "躲在柜子中，记住钥匙的位置！" },
+                ShadowEntity = { name = "EN-011", tip = "他在黑暗中，不要看他！" },
+                GhostEntity = { name = "EN-012", tip = "注意他的规则！" },
+                UnknownEntity = { name = "EN-013", tip = "快点输入 'staycalmstayfocused'"},
+                ChaserEntity = { name = "EN-015", tip = "快跑！" },
+                DelmonEntity = { name = "EN-0??", tip = "暂未收录该数据" },
+                DoorcamperEntity = { name = "EN-017", tip = "多注意门后！" }
+            }
+        },
+        grace = {
+            autolever = false,
+            deleteentity = false,
+        },
     }
 }
 data.basicdata.otherdata.musicbox.Volume = 0.5
@@ -328,9 +386,99 @@ local function setNight()
     end
 end
 
---=============================================================================================
+local function TeleportTo(x, y, z)
+	-- 验证输入是否为数字
+	if type(x) ~= "number" or type(y) ~= "number" or type(z) ~= "number" then
+		warn("[Teleport] 请传入三个数字：TeleportTo(x, y, z)")
+		return false
+	end
 
-local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
+	local character = player.Character
+	if not character then
+		character = player.CharacterAdded:Wait()
+	end
+
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		warn("[Teleport] 未找到 HumanoidRootPart")
+		return false
+	end
+
+	-- 执行传送
+	rootPart.CFrame = CFrame.new(Vector3.new(x, y, z))
+
+    ChronixUI:Notify({ Title = "提示", Content = string.format("✅ 已传送到 (%.1f, %.1f, %.1f)", x, y, z), Type = "success", Duration = 5 })
+	return true
+end
+
+local function TeleportToPresent(presentNumber)
+	if type(presentNumber) ~= "number" then
+		return false
+	end
+
+	local mainModel = Workspace:FindFirstChild("XMas_PresentHunt%") 
+		or Workspace:FindFirstChild("XMas_PresentHunt")
+	if not mainModel then
+		return false
+	end
+
+	local presents = mainModel:FindFirstChild("Presents")
+	if not presents then
+		return false
+	end
+
+	local gift = presents:FindFirstChild(tostring(presentNumber))
+	if not gift or not gift:IsA("Model") then
+		return false
+	end
+
+	-- 获取礼物位置（使用 GetPivot 获取整体中心）
+	local giftCFrame = gift:GetPivot()
+	local character = player.Character
+	if not character then
+		return false
+	end
+
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then
+		return false
+	end
+
+	local targetCFrame = CFrame.new(giftCFrame.Position + Vector3.new(0, 3, 0))
+	rootPart.CFrame = targetCFrame
+
+    ChronixUI:Notify({ Title = "提示", Content = string.format("✅ 已传送到礼物 #%d！", presentNumber), Type = "success", Duration = 5 })
+	return true
+end
+
+-- 检测新实例并匹配预定义列表
+local function detectEntity(instance)
+    if instance:IsA("BasePart") then
+        for entityName, entityInfo in pairs(data.othergamedata.delesions_office.entitys) do
+            if instance.Name == entityName then
+                if data.othergamedata.delesions_office.entitywarning then
+                    ChronixUI:Notify({ Title = "！警告！", Content = "实体" .. entityInfo.name .. "已生成！\n" .. entityInfo.tip, Type = "warning", Duration = 5 })
+                    if data.othergamedata.delesions_office.tipotherplayer then ChatControl:chat("警告！实体" .. entityInfo.name .. "已生成！" .. entityInfo.tip) end
+                end
+                if data.othergamedata.delesions_office.auto013 then
+                    if instance.Name == "UnknownEntity" then
+                        ChronixUI:Notify({ Title = "自动EN-013", Content = "正在自动键入'staycalmstayfocused'...", Type = "warning", Duration = 5 })
+                        wait(2)
+                        local str = "staycalmstayfocused"
+                        for i = 1, #str do
+                            local char = string.sub(str, i, i) -- 提取第 i 个字符
+                            VirtualInputManager:SendKeyEvent(true, char, false, game)
+                            wait(0.2)
+                        end
+                    end
+                end
+                break
+            end
+        end
+    end
+end
+
+--=============================================================================================
 
 local mainWindow = ChronixUI:CreateWindow({
     Name = "ChronixHubv3",
@@ -471,6 +619,7 @@ ToolsTab:AddToggle({
     Label = "夜视",
     Default = false,
     Callback = function(v)
+        data.basicdata.releasetools.nightvision = v
         if v then
             game.Lighting.Ambient = Color3.new(1, 1, 1)
         else
@@ -1411,10 +1560,302 @@ chatReceiverTab:AddDivider()
 chatReceiverTab:AddLabel("💡 提示：点击消息下方的按钮可复制该条消息")
 
 
+local executerTab = mainWindow:CreateTab({ Name = "执行器" })
+executerTab:AddTitle("执行器")
+executerTab:AddInput({
+Label = "请输入代码",
+    Placeholder = "",
+    Callback = function(text)
+        data.basicdata.releasetools.executecode = text
+    end
+})
+executerTab:AddButton({
+    Text = "执行",
+    Callback = function()
+        if data.basicdata.releasetools.executecode and data.basicdata.releasetools.executecode ~= "" then
+            -- 尝试执行脚本
+            local success, errorMessage = pcall(function()
+                loadstring(data.basicdata.releasetools.executecode)()
+            end)
+            if not success then
+                ChronixUI:Notify({ Title = "错误", Content = "脚本执行失败: " .. errorMessage, Type = "error", Duration = 5 })
+            else
+                ChronixUI:Notify({ Title = "提示", Content = "脚本执行成功!", Type = "success", Duration = 5 })
+            end
+        else
+            ChronixUI:Notify({ Title = "错误", Content = "请输入有效的脚本!", Type = "error", Duration = 5 })
+        end
+    end
+})
+
+
 local supportedgamesTab = mainWindow:CreateTab({ Name = "支持的游戏" })
+supportedgamesTab:AddTitle("支持的游戏")
 for _, GetgameInfo in ipairs(data.Supported_Games) do
     if GetgameInfo.gameid then
         supportedgamesTab:AddButton({ Text = GetgameInfo.name .. "(点击进入)", Callback = function() if game.GameId == GetgameInfo.gameid then ChronixUI:Notify({ Title = "提示", Content = "你已经在这个游戏里了。", Type = "success", Duration = 5 }) else GameTeleport.teleportByGameId(GetgameInfo.gameid) end end })
+    end
+end
+
+
+for _, GetgameInfo in ipairs(data.Supported_Games) do
+    if GetgameInfo.gameid == game.GameId then
+        if GetgameInfo.name == "死亡球" then
+            local deathballTab = mainWindow:CreateTab({ Name = "死亡球" })
+            deathballTab:AddTitle("死亡球")
+            deathballTab:AddToggle({
+                Label = "主功能和界面",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        _G.DeathBallScript:Enable()
+                    else
+                        _G.DeathBallScript:Disable()
+                    end
+                end
+            })
+        elseif GetgameInfo.name == "小屋角色扮演" then
+            local cabinroleplayTab = mainWindow:CreateTab({ Name = "小屋角色扮演" })
+            cabinroleplayTab:AddTitle("小屋角色扮演")
+            cabinroleplayTab:AddButton({ Text = "变正常", Callback = function() ChatControl:chat("/re") end })
+            cabinroleplayTab:AddButton({ Text = "变小孩", Callback = function() ChatControl:chat("/kid") end })
+            cabinroleplayTab:AddButton({ Text = "鲨鱼服装", Callback = function() ChatControl:chat("/shark") end })
+            cabinroleplayTab:AddButton({ Text = "修狗服装", Callback = function() ChatControl:chat("/dog") end })
+            cabinroleplayTab:AddButton({ Text = "修猫服装", Callback = function() ChatControl:chat("/cat") end })
+        elseif GetgameInfo.name == "南极探险队" then
+            local njtxdTab = mainWindow:CreateTab({ Name = "南极探险队" })
+            njtxdTab:AddTitle("南极探险队")
+            njtxdTab:AddLabel("基础操作")
+            njtxdTab:AddButton({ Text = "传送到 大本营", Callback = function() TeleportTo(-6015, -158, -35) end })
+            njtxdTab:AddButton({ Text = "传送到 营地1", Callback = function() TeleportTo(-3719, 226, 235) end })
+            njtxdTab:AddButton({ Text = "传送到 营地2", Callback = function() TeleportTo(1790, 106, -138) end })
+            njtxdTab:AddButton({ Text = "传送到 营地3", Callback = function() TeleportTo(5892, 321, -18) end })
+            njtxdTab:AddButton({ Text = "传送到 营地4", Callback = function() TeleportTo(8992, 596, 102) end })
+            njtxdTab:AddButton({ Text = "传送到 营地5", Callback = function() TeleportTo(10990, 550, 104) end })
+            njtxdTab:AddLabel("圣诞活动")
+            njtxdTab:AddButton({ Text = "获取所有礼物", Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
+            local njtx_giftnumber = 0
+            njtxdTab:AddInput({
+                Label = "礼物号",
+                Placeholder = "",
+                Callback = function(text)
+                    njtx_giftnumber = text
+                end
+            })
+            njtxdTab:AddButton({ Text = "传送到礼物", Callback = function() TeleportToPresent(tonumber(njtx_giftnumber)) end })
+        elseif GetgameInfo.name == "西部森林" then
+            local westwoodTab = mainWindow:CreateTab({ Name = "西部森林" })
+            westwoodTab:AddTitle("西部森林")
+            westwoodTab:AddToggle({
+                Label = "怪物标签",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.west_wood.monster:enable()
+                    else
+                        data.othergamedata.west_wood.monster:disable()
+                    end
+                end
+            })
+        elseif GetgameInfo.name == "警笛头:遗产" then
+            local shlTab = mainWindow:CreateTab({ Name = "警笛头:遗产" })
+            shlTab:AddTitle("警笛头:遗产")
+            shlTab:AddToggle({
+                Label = "透视盒子",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.sirenhead_legacy.cratemodule.apply()
+                        data.othergamedata.sirenhead_legacy.cratenametagmodule:enable()
+                    else
+                        data.othergamedata.sirenhead_legacy.cratemodule.destroy()
+                        data.othergamedata.sirenhead_legacy.cratenametagmodule:disable()
+                    end
+                end
+            })
+            shlTab:AddToggle({
+                Label = "透视浆果",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.sirenhead_legacy.berrymodule.apply()
+                        data.othergamedata.sirenhead_legacy.berrynametagmodule:enable()
+                    else
+                        data.othergamedata.sirenhead_legacy.berrymodule.destroy()
+                        data.othergamedata.sirenhead_legacy.berrynametagmodule:disable()
+                    end
+                end
+            })
+            shlTab:AddButton({ Text = "传送到树顶", Callback = function() TeleportTo(69, 206, -72) end })
+        elseif GetgameInfo.name == "噩梦之行" then
+            local nmrTab = mainWindow:CreateTab({ Name = "噩梦之行" })
+            nmrTab:AddTitle("噩梦之行")
+            nmrTab:AddToggle({
+                Label = "高亮怪物",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.nightmare_run.monster:enable()
+                    else
+                        data.othergamedata.nightmare_run.monster:disable()
+                    end
+                end
+            })
+            nmrTab:AddButton({ Text = "高亮芝士", Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
+            nmrTab:AddButton({ Text = "无敌(怪物不追不杀)", Callback = function()
+                -- 无敌实现
+                local ClientScripts = game.Players.LocalPlayer.PlayerGui.ClientScripts
+                if ClientScripts:FindFirstChild("SafeSpaceHandler") then
+                    ClientScripts.SafeSpaceHandler:Destroy() -- 删除安全区处理脚本、防止被持续监测到（注意：死亡后会重新生成）
+                end
+                local ReplicatedStorage_upvr = game:GetService("ReplicatedStorage")
+                local LocalPlayer_upvr = game.Players.LocalPlayer
+                local Events_upvr = ReplicatedStorage_upvr.Events
+                LocalPlayer_upvr:SetAttribute("Safe", true) -- 设置安全状态
+                Events_upvr.SetAttributeEvent:FireServer("Safe", true) -- 向服务端发送安全状态
+                ChronixUI:Notify({ Title = "提示", Content = "已设置玩家安全状态\n死亡前生效", Type = "success", Duration = 5 })
+            end })
+        elseif GetgameInfo.name == "兽化项目" then
+            local ptTab = mainWindow:CreateTab({ Name = "兽化项目" })
+            ptTab:AddTitle("兽化项目")
+            ptTab:AddLabel("基础操作")
+            ptTab:AddButton({ Text = "删除捕兽夹", Callback = function()
+                local deletedCount = 0
+                for _, model in ipairs(Workspace:GetDescendants()) do
+                    if model:IsA("Model") and model.Name == "__SnarePhysical" then
+                        model:Destroy()
+                        deletedCount = deletedCount + 1
+                    end
+                end
+                ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个捕兽夹", Type = "success", Duration = 10 })
+            end })
+            ptTab:AddButton({ Text = "删除地雷", Callback = function()
+                local deletedCount = 0
+                for _, model in ipairs(Workspace:GetDescendants()) do
+                    if model:IsA("Model") and model.Name == "Landmine" then
+                        model:Destroy()
+                        deletedCount = deletedCount + 1
+                    end
+                end
+                ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个地雷", Type = "success", Duration = 10 })
+            end })
+            ptTab:AddButton({ Text = "删除阔剑地雷", Callback = function()
+                local deletedCount = 0
+                for _, model in ipairs(Workspace:GetDescendants()) do
+                    if model:IsA("Model") and model.Name == "__ClaymorePhysical" then
+                        model:Destroy()
+                        deletedCount = deletedCount + 1
+                    end
+                end
+                ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个阔剑地雷", Type = "success", Duration = 10 })
+            end })
+            ptTab:AddLabel("透视功能")
+            ptTab:AddToggle({
+                Label = "Bot兽",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.bot.apply()
+                        data.othergamedata.project_transfur.botnt:enable()
+                    else
+                        data.othergamedata.project_transfur.bot.destroy()
+                        data.othergamedata.project_transfur.botnt:disable()
+                    end
+                end
+            })
+            ptTab:AddToggle({
+                Label = "小保险箱",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.smallsafe.apply()
+                        data.othergamedata.project_transfur.smallsafent:enable()
+                    else
+                        data.othergamedata.project_transfur.smallsafe.destroy()
+                        data.othergamedata.project_transfur.smallsafent:disable()
+                    end
+                end
+            })
+            ptTab:AddToggle({
+                Label = "大保险箱",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.largesafe.apply()
+                        data.othergamedata.project_transfur.largesafent:enable()
+                    else
+                        data.othergamedata.project_transfur.largesafe.destroy()
+                        data.othergamedata.project_transfur.largesafent:disable()
+                    end
+                end
+            })
+            ptTab:AddToggle({
+                Label = "金保险箱",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.goldensafe.apply()
+                        data.othergamedata.project_transfur.goldensafent:enable()
+                    else
+                        data.othergamedata.project_transfur.goldensafe.destroy()
+                        data.othergamedata.project_transfur.goldensafent:disable()
+                    end
+                end
+            })
+            ptTab:AddToggle({
+                Label = "武器盒",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.crate.apply()
+                        data.othergamedata.project_transfur.cratent:enable()
+                    else
+                        data.othergamedata.project_transfur.crate.destroy()
+                        data.othergamedata.project_transfur.cratent:disable()
+                    end
+                end
+            })
+            ptTab:AddToggle({
+                Label = "空投",
+                Default = false,
+                Callback = function(v)
+                    if v then
+                        data.othergamedata.project_transfur.sd.apply()
+                        data.othergamedata.project_transfur.sdnt:enable()
+                    else
+                        data.othergamedata.project_transfur.sd.destroy()
+                        data.othergamedata.project_transfur.sdnt:disable()
+                    end
+                end
+            })
+        elseif GetgameInfo.name == "妄想办公室" then
+            local doTab = mainWindow:CreateTab({ Name = "妄想办公室" })
+            doTab:AddTitle("妄想办公室")
+            doTab:AddToggle({
+                Label = "实体警告",
+                Default = false,
+                Callback = function(v) data.othergamedata.delesions_office.entitywarning = v end
+            })
+            doTab:AddToggle({
+                Label = "提醒他人",
+                Default = false,
+                Callback = function(v) data.othergamedata.delesions_office.tipotherplayer = v end
+            })
+            doTab:AddToggle({
+                Label = "自动EN-013",
+                Default = false,
+                Callback = function(v) data.othergamedata.delesions_office.auto013 = v end
+            })
+        elseif GetgameInfo.name == "格蕾丝" then
+            local graceTab = mainWindow:CreateTab({ Name = "格蕾丝" })
+            graceTab:AddTitle("格蕾丝")
+            graceTab:AddToggle({
+                Label = "自动拉杆",
+                Default = false,
+                Callback = function(v) data.othergamedata.grace.autolever = v end
+            })
+            graceTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
+        end
     end
 end
 
@@ -1453,6 +1894,67 @@ ChatControl:MessageReceiver(function(msgData)
     addChatMessage(msgData.sender, msgData.text)
 end)
 
+local offce = Workspace.DescendantAdded:Connect(detectEntity)
+
+local GGcount = 0
+
+al = workspace.DescendantAdded:Connect(function(descendant)
+    if descendant.Name == "base" and descendant:IsA("BasePart") and data.othergamedata.grace.autolever then
+        local player = game.Players.LocalPlayer
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            descendant.CFrame = player.Character.HumanoidRootPart.CFrame
+            GGcount = GGcount + 1
+            if GGcount >= 3 then
+                CreateNotification("Grace", "全部拉杆已被激活\n门已打开", 5, true)
+                GGcount = 0
+            end
+            task.wait(1)
+            descendant.CFrame = player.Character.HumanoidRootPart.CFrame
+        end
+    end
+end)
+
+local processedCharacters = {}
+
+ds = workspace.DescendantAdded:Connect(function(descendant)
+    if data.othergamedata.grace.deleteentity then
+        if descendant.Name == "eye" or descendant.Name == "elkman" or descendant.Name == "Rush" or descendant.Name == "Worm" or descendant.Name == "eyePrime" then
+            descendant:Destroy()
+        end
+    end
+end)
+
+Stepped6 = game:GetService("RunService").Stepped:Connect(function()
+    if data.othergamedata.grace.deleteentity then 
+    local RS = game:GetService("ReplicatedStorage")
+    RS.eyegui:Destroy()
+    RS.smilegui:Destroy()
+    RS.SendRush:Destroy()
+    RS.SendWorm:Destroy()
+    RS.SendSorrow:Destroy()
+    RS.SendGoatman:Destroy()
+    wait(0.1)
+    RS.Worm:Destroy()
+    RS.elkman:Destroy()
+    wait(0.1)
+    RS.QuickNotes.Eye:Destroy()
+    RS.QuickNotes.Rush:Destroy()
+    RS.QuickNotes.Sorrow:Destroy()
+    RS.QuickNotes.elkman:Destroy()  
+    RS.QuickNotes.EyePrime:Destroy()
+    RS.QuickNotes.SlugFish:Destroy()
+    RS.QuickNotes.FakeDoor:Destroy()
+    RS.QuickNotes.SleepyHead:Destroy()
+    local SmileGui = player:FindFirstChild("PlayerGui"):FindFirstChild("smilegui")
+    if SmileGui then
+        SmileGui:Destroy()
+    end
+    end
+    if data.basicdata.releasetools.nightvision then
+        game.Lighting.Ambient = Color3.new(1, 1, 1)
+    end
+end)
+
 --======================================================================================
 
 SystemNotification.Rainbow("ChronixHubV2 Already Success Loaded!\nWelcome " .. data.basicdata.player.displayname)
@@ -1488,6 +1990,10 @@ local function unloadchronixhub()
     data.basicdata.otherdata.musicbox:Destroy()
     data.basicdata.otherdata.testSound:Stop()
     data.basicdata.otherdata.testSound:Destroy()
+    al:Disconnect()
+    ds:Disconnect()
+    Stepped6:Disconnect()
+    offce:Disconnect()
     cc:Disconnect()
     gsr:Disconnect()
     hscc:Disconnect()
