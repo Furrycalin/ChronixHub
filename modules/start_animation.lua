@@ -118,7 +118,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     local v3Text = Instance.new("TextLabel")
     v3Text.Text = "V3"
     v3Text.Size = UDim2.new(0, 70, 0, 50)
-    v3Text.Position = isMobile and UDim2.new(0, 90, 0, 0) or UDim2.new(0, 180, 0, 0)
+    v3Text.Position = isMobile and UDim2.new(0, 130, 0, 0) or UDim2.new(0, 180, 0, 0)
     v3Text.TextColor3 = Color3.new(0.8, 1, 0.5)
     v3Text.BackgroundTransparency = 1
     v3Text.Font = Enum.Font.SourceSansBold
