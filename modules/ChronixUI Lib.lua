@@ -1038,6 +1038,7 @@ function ChronixUI:CreateWindow(config)
             local inputConfig = config or {}
             local label = inputConfig.Label or "输入框"
             local placeholder = inputConfig.Placeholder or "请输入..."
+            local default = inputConfig.Default or ""
             local callback = inputConfig.Callback or function() end
 
             local container = Instance.new("Frame")
@@ -1055,7 +1056,7 @@ function ChronixUI:CreateWindow(config)
             inputBox.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Input
             inputBox.PlaceholderText = placeholder
             inputBox.PlaceholderColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
-            inputBox.Text = ""
+            inputBox.Text = default or ""
             inputBox.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Text
             inputBox.TextSize = math.floor(14 * scale)
             inputBox.Font = Enum.Font.Gotham
