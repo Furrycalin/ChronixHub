@@ -484,9 +484,12 @@ end
 
 --=============================================================================================
 
+local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
+local windowSize = isMobile and UDim2.new(0, 476, 0, 294) or UDim2.new(0, 680, 0, 420)
+
 local mainWindow = ChronixUI:CreateWindow({
     Name = "ChronixHubv3",
-    Size = UDim2.new(0, 680, 0, 420)
+    Size = windowSize
 })
 
 local basicTab = mainWindow:CreateTab({ Name = "基础设置" })
