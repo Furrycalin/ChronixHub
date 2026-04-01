@@ -2021,15 +2021,6 @@ end)
 
 --======================================================================================
 
--- 启动成功提示
-local successMsg = "ChronixHub V3 Already Success Loaded!\nWelcome " .. displayName
-if SystemNotification and SystemNotification.Rainbow then
-    SystemNotification.Rainbow(successMsg)
-    print(successMsg)
-end
-
-ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
-
 -- 卸载函数
 local function unloadChronixHub()
     if SystemNotification and SystemNotification.UnloadedGradient then
@@ -2072,3 +2063,12 @@ Stepped67 = game:GetService("RunService").Stepped:Connect(function()
         Stepped67:Disconnect()
     end
 end)
+
+-- 启动成功提示
+ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
+
+local successMsg = "ChronixHub V3 Already Success Loaded!\nWelcome " .. displayName
+if SystemNotification and SystemNotification.Rainbow then
+    print(successMsg)
+    SystemNotification.Rainbow(successMsg)
+end
