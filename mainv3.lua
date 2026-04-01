@@ -933,18 +933,21 @@ local function refreshWaypointList()
             table.insert(elements, divider)
         end
 
-        -- 标题（安全处理 note）
-        local titleText = string.format("📍 路径点 #%d", waypoint.id)
+        -- 标题（确保 id 是数字，note 是字符串）
+        local idNum = tonumber(waypoint.id) or 0
         local noteStr = type(waypoint.note) == "string" and waypoint.note or tostring(waypoint.note)
+        local titleText = string.format("📍 路径点 #%d", idNum)
         if noteStr ~= "" then
             titleText = titleText .. " - " .. noteStr
         end
         local title = waypointTab:AddTitle(titleText)
         table.insert(elements, title)
 
-        -- 坐标显示
-        local coordLabel = waypointTab:AddLabel(string.format("坐标: X: %.1f, Y: %.1f, Z: %.1f", 
-            waypoint.position.X, waypoint.position.Y, waypoint.position.Z))
+        -- 坐标显示（确保 position 是 Vector3，并提取数字）
+        local pos = waypoint.position
+        local x, y, z = pos and pos.X or 0, pos and pos.Y or 0, pos and pos.Z or 0
+        local coordText = string.format("坐标: X: %.1f, Y: %.1f, Z: %.1f", x, y, z)
+        local coordLabel = waypointTab:AddLabel(coordText)
         table.insert(elements, coordLabel)
 
         -- 备注输入框
@@ -952,15 +955,14 @@ local function refreshWaypointList()
             Label = "备注",
             Placeholder = "输入备注信息...",
             Callback = function(text)
-                waypoint.note = text or ""   -- 确保是字符串
+                waypoint.note = text or ""
                 refreshWaypointList()
             end
         })
-        -- 设置初始备注文本（安全设置）
+        -- 设置初始备注文本
         local textBox = noteInput:FindFirstChildOfClass("TextBox")
         if textBox then
-            local currentNote = type(waypoint.note) == "string" and waypoint.note or tostring(waypoint.note)
-            textBox.Text = currentNote
+            textBox.Text = noteStr
         end
         table.insert(elements, noteInput)
 
@@ -968,9 +970,9 @@ local function refreshWaypointList()
         local teleportBtn = waypointTab:AddButton({
             Text = "🚀 传送到此路径点",
             Callback = function()
-                local character = game.Players.LocalPlayer.Character
-                if character and character:FindFirstChild("HumanoidRootPart") then
-                    character:SetPrimaryPartCFrame(CFrame.new(waypoint.position))
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char:SetPrimaryPartCFrame(CFrame.new(pos))
                     ChronixUI:Notify({
                         Title = "传送成功",
                         Content = string.format("已传送到 %s", noteStr ~= "" and noteStr or "路径点"),
@@ -1020,9 +1022,14 @@ local function refreshWaypointList()
     end
 end
 local function addWaypoint(position, note)
+    -- 确保 position 是 Vector3
+    local pos = position
+    if type(pos) ~= "Vector3" then
+        pos = Vector3.new(pos.X or 0, pos.Y or 0, pos.Z or 0)
+    end
     local waypoint = {
         id = #waypointsData + 1,
-        position = position,
+        position = pos,
         note = note or ""
     }
     table.insert(waypointsData, waypoint)
@@ -1960,8 +1967,8 @@ end)
 
 --======================================================================================
 
--- 修复后：
-local successMsg = "ChronixHub V3 已成功加载！\n欢迎 " .. displayName
+-- 启动成功提示
+local successMsg = "ChronixHub V3 Already Success Loaded!\nWelcome " .. displayName
 if SystemNotification and SystemNotification.Rainbow then
     SystemNotification.Rainbow(successMsg)
 else
@@ -1971,13 +1978,16 @@ end
 
 ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
 
--- 卸载函数定义（保持不变，但确保使用 windowData 的 SetCloseCallback）
+-- 卸载函数
 local function unloadChronixHub()
-    SystemNotification.UnloadedGradient("ChronixHub V3 已卸载！")
-    print("ChronixHub V3 已卸载。")
+    if SystemNotification and SystemNotification.UnloadedGradient then
+        SystemNotification.UnloadedGradient("ChronixHub V3 Already Unload!")
+    else
+        print("ChronixHub V3 已卸载。")
+    end
     _G.ChronixHubisLoaded = false
 
-    -- 清理所有资源
+    -- 清理所有资源（保持不变）
     data.basicdata.releasetools.noclip = false
     data.basicdata.releasetools.infjump = false
     PlayerVisibleModule.unload()
@@ -2003,5 +2013,9 @@ local function unloadChronixHub()
     script:Destroy()
 end
 
--- 设置关闭回调（注意：mainWindow 必须在前面已经创建）
-mainWindow:SetCloseCallback(unloadChronixHub)
+-- 设置关闭回调（确保 mainWindow 存在）
+if mainWindow and mainWindow.SetCloseCallback then
+    mainWindow:SetCloseCallback(unloadChronixHub)
+else
+    warn("mainWindow not ready, cannot set close callback")
+end
