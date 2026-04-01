@@ -1,8 +1,8 @@
--- ChronixUI v3.5 - 所有控件返回可销毁的包装对象
+-- ChronixUI v3.6 - 修复方法调用转发
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "3.5.0"
+ChronixUI.Version = "3.6.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -102,7 +102,7 @@ local function AddListLayout(parent, padding, order)
     return layout
 end
 
--- 包装 Instance，使其支持 :Destroy() 方法，同时属性访问转发给原始对象
+-- 包装 Instance，使其支持 :Destroy() 方法，同时方法调用正确转发
 local function wrapInstance(instance)
     local proxy = {
         _instance = instance,
@@ -115,7 +115,14 @@ local function wrapInstance(instance)
     return setmetatable(proxy, {
         __index = function(t, k)
             if k == "Destroy" then return t.Destroy end
-            return instance[k]
+            local value = instance[k]
+            if type(value) == "function" then
+                -- 方法：返回一个闭包，调用时传入原始实例
+                return function(...)
+                    return value(instance, ...)
+                end
+            end
+            return value
         end,
         __newindex = function(t, k, v)
             instance[k] = v
@@ -651,7 +658,7 @@ function ChronixUI:CreateWindow(config)
         -- UI 元素创建函数 - 所有控件返回包装对象
         local elements = {}
         
-        -- 包装函数，确保所有返回的控件都有 Destroy 方法
+        -- 包装函数
         local function wrap(obj)
             return wrapInstance(obj)
         end
