@@ -49,7 +49,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
 
     -- 使用固定的1030*605像素大小，总共缩小20%
-    local uiScale = isMobile and 0.25 or 0.75
+    local uiScale = isMobile and 0.35 or 0.75
     local uiWidth = 1030 * uiScale
     local uiHeight = 605 * uiScale
 
