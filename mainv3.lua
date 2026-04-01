@@ -1896,10 +1896,39 @@ infoTab:AddParagraph({
     .. "• 使用前请了解游戏规则"
 })
 
+
 local settingsContent = mainWindow.SettingsElements
-settingsContent:AddButton({ Text = "测试", Callback = function()
-    ChronixUI:Notify({ Title = "1", Content = "123", Type = "success", Duration = 10 })
-end })
+settingsContent:AddKeybind({
+    Label = "灵魂出窍",
+    Default = tostring(FreecamModule.getKeybind()):gsub("^Enum%.%w+%.", ""),
+    Callback = function(key)
+        local newKey = Enum.KeyCode[key]
+        if newKey then
+            FreecamModule.setKeybind(newKey)
+        end
+    end
+})
+settingsContent:AddKeybind({
+    Label = "望远镜",
+    Default = tostring(data.tools.zoom:GetBindKey()):gsub("^Enum%.%w+%.", ""),
+    Callback = function(key)
+        local newKey = Enum.KeyCode[key]
+        if newKey then
+            data.basicdata.releasetools.zoom:SetBindKey(newKey)
+        end
+    end
+})
+settingsContent:AddInput({
+    Label = "TPWalk距离",
+    Placeholder = "",
+    Default = tpWalk:GetSpeed(),
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then
+            tpWalk:SetSpeed(num)
+        end
+    end
+})
 
 --======================================================================================
 
