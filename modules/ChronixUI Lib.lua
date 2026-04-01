@@ -340,9 +340,6 @@ function ChronixUI:CreateWindow(config)
     local originalSize = windowSize
     local savedPosition = mainFrame.Position
     
-    -- 存储外部关闭回调函数
-    local externalCloseCallback = nil
-    
     -- 使用 ContextActionService 绑定快捷键
     local toggleActionName = "ChronixUIToggle_" .. tostring(#self.Windows + 1)
     ContextActionService:BindAction(toggleActionName, function(actionName, inputState, inputObject)
@@ -569,13 +566,6 @@ function ChronixUI:CreateWindow(config)
     closeBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         _G.UnloadChronixUI = true
-        -- 先执行外部回调（如果有）
-        if externalCloseCallback then
-            local success, err = pcall(externalCloseCallback)
-            if not success then
-                warn("Close callback error: ", err)
-            end
-        end
         -- 然后销毁UI
         ContextActionService:UnbindAction(toggleActionName)
         if gui then
@@ -599,12 +589,7 @@ function ChronixUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         SettingsTabContent = nil,
-        Minimized = false,
-        -- 设置关闭回调的方法
-        SetCloseCallback = function(callback)
-            externalCloseCallback = callback
-        end
-    }
+        Minimized = false
     
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
