@@ -1910,7 +1910,7 @@ settingsContent:AddKeybind({
 })
 settingsContent:AddKeybind({
     Label = "望远镜",
-    Default = tostring(data.tools.zoom:GetBindKey()):gsub("^Enum%.%w+%.", ""),
+    Default = tostring(data.basicdata.releasetools.zoom:GetBindKey()):gsub("^Enum%.%w+%.", ""),
     Callback = function(key)
         local newKey = Enum.KeyCode[key]
         if newKey then
