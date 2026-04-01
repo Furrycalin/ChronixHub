@@ -923,46 +923,47 @@ local function clearWaypointList()
 end
 local function refreshWaypointList()
     clearWaypointList()
-    
+
     for _, waypoint in ipairs(waypointsData) do
         local elements = {}
-        
+
         -- 添加分隔线（除了第一个）
         if waypoint.id > 1 then
             local divider = waypointTab:AddDivider()
             table.insert(elements, divider)
         end
-        
-        -- 标题
+
+        -- 标题（安全处理 note）
         local titleText = string.format("📍 路径点 #%d", waypoint.id)
-        if waypoint.note ~= "" then
-            titleText = titleText .. " - " .. waypoint.note
+        local noteStr = type(waypoint.note) == "string" and waypoint.note or tostring(waypoint.note)
+        if noteStr ~= "" then
+            titleText = titleText .. " - " .. noteStr
         end
         local title = waypointTab:AddTitle(titleText)
         table.insert(elements, title)
-        
+
         -- 坐标显示
         local coordLabel = waypointTab:AddLabel(string.format("坐标: X: %.1f, Y: %.1f, Z: %.1f", 
             waypoint.position.X, waypoint.position.Y, waypoint.position.Z))
         table.insert(elements, coordLabel)
-        
+
         -- 备注输入框
         local noteInput = waypointTab:AddInput({
             Label = "备注",
             Placeholder = "输入备注信息...",
             Callback = function(text)
-                waypoint.note = text
-                -- 刷新显示以更新标题
+                waypoint.note = text or ""   -- 确保是字符串
                 refreshWaypointList()
             end
         })
-        -- 设置初始备注文本
+        -- 设置初始备注文本（安全设置）
         local textBox = noteInput:FindFirstChildOfClass("TextBox")
-        if textBox and waypoint.note ~= "" then
-            textBox.Text = waypoint.note
+        if textBox then
+            local currentNote = type(waypoint.note) == "string" and waypoint.note or tostring(waypoint.note)
+            textBox.Text = currentNote
         end
         table.insert(elements, noteInput)
-        
+
         -- 传送按钮
         local teleportBtn = waypointTab:AddButton({
             Text = "🚀 传送到此路径点",
@@ -972,7 +973,7 @@ local function refreshWaypointList()
                     character:SetPrimaryPartCFrame(CFrame.new(waypoint.position))
                     ChronixUI:Notify({
                         Title = "传送成功",
-                        Content = string.format("已传送到 %s", waypoint.note ~= "" and waypoint.note or "路径点"),
+                        Content = string.format("已传送到 %s", noteStr ~= "" and noteStr or "路径点"),
                         Type = "success",
                         Duration = 2
                     })
@@ -987,7 +988,7 @@ local function refreshWaypointList()
             end
         })
         table.insert(elements, teleportBtn)
-        
+
         -- 删除按钮
         local deleteBtn = waypointTab:AddButton({
             Text = "🗑️ 删除此路径点",
@@ -1014,7 +1015,7 @@ local function refreshWaypointList()
             end
         })
         table.insert(elements, deleteBtn)
-        
+
         table.insert(waypointUIElements, elements)
     end
 end
@@ -1276,9 +1277,9 @@ local selectedIdLabel = nil
 local function getLoudSounds(threshold)
     local loudSounds = {}
     local allSounds = SoundService:GetDescendants()
-    
+
     for _, sound in ipairs(allSounds) do
-        if sound:IsA("Sound") and sound.IsPlaying and sound.PlaybackState == Enum.PlaybackState.Playing then
+        if sound:IsA("Sound") and sound.IsPlaying then   -- 使用 IsPlaying 代替 PlaybackState
             local volumeDB = sound.Volume * 100
             if volumeDB >= threshold then
                 table.insert(loudSounds, {
@@ -1291,7 +1292,7 @@ local function getLoudSounds(threshold)
             end
         end
     end
-    
+
     return loudSounds
 end
 local function clearAudioList()
