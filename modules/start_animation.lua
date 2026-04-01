@@ -46,8 +46,10 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     screenGui.Name = "LoadAnimationGui"
     screenGui.Parent = game.Players.LocalPlayer.PlayerGui
 
+    local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
+
     -- 使用固定的1030*605像素大小，总共缩小20%
-    local uiScale = 0.75
+    local uiScale = isMobile and 0.45 or 0.75
     local uiWidth = 1030 * uiScale
     local uiHeight = 605 * uiScale
 
