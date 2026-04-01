@@ -302,22 +302,30 @@ function ChronixUI:Notify(config)
     end
 end
 
--- 窗口拖动功能（支持鼠标和触摸）
+-- 窗口拖动功能（修复断开问题，使用全局 InputEnded 监听）
 local function MakeDraggable(frame, dragHandle)
     local dragging = false
     local dragStart, startPos
 
-    dragHandle.InputBegan:Connect(function(input)
+    local function beginDrag(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
         end
-    end)
+    end
 
-    dragHandle.InputEnded:Connect(function()
-        dragging = false
-    end)
+    local function endDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            dragStart = nil
+            startPos = nil
+        end
+    end
+
+    dragHandle.InputBegan:Connect(beginDrag)
+    -- 使用全局 InputEnded 确保无论鼠标/手指在何处松开都能正确结束拖动
+    UserInputService.InputEnded:Connect(endDrag)
 
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
