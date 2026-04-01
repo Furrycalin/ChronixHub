@@ -1930,6 +1930,8 @@ settingsContent:AddInput({
     end
 })
 
+mainWindow:RefreshContent()
+
 --======================================================================================
 
 -- 监听状态变化
@@ -2065,6 +2067,7 @@ end
 
 Stepped67 = game:GetService("RunService").Stepped:Connect(function()
     if _G.UnloadChronixUI then
+        _G.UnloadChronixUI = false
         unloadChronixHub()
         Stepped67:Disconnect()
     end
