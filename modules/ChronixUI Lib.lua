@@ -1426,6 +1426,7 @@ function ChronixUI:CreateWindow(config)
     })
     settingsElements:AddDivider()
     settingsElements:AddLabel("其他设置即将推出...")
+    windowData.SettingsElements = settingsElements
 
     settingsBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
