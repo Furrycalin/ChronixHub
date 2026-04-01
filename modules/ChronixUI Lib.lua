@@ -590,6 +590,7 @@ function ChronixUI:CreateWindow(config)
         CurrentTab = nil,
         SettingsTabContent = nil,
         Minimized = false
+    }
     
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
