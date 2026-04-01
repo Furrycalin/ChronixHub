@@ -488,27 +488,45 @@ function ChronixUI:CreateWindow(config)
                                          self.Themes[self.CurrentTheme].TextDark, math.floor(12 * scale), 12)
     playerInfoLabel.Name = "PlayerInfoLabel"
 
-    -- 安全获取玩家信息
-    local function safePlayerInfo()
-        local player = Players.LocalPlayer
-        if not player then return end
-        local isPremium = player.MembershipType == Enum.MembershipType.Premium
-        local infotitle = "用户"
-        local device = GetDeviceType()
-        if device == "Desktop" then infotitle = "电脑用户"
-        elseif device == "Mobile" then infotitle = "手机用户"
+        -- 获取游戏名的函数（需在 safePlayerInfo 前定义）
+        local gameInfoCache = nil
+        local function getGameName(universeId)
+            if gameInfoCache then return gameInfoCache end
+            local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
+            local success, response = pcall(function()
+                return game:HttpGet(url)
+            end)
+            if success then
+                local data = HttpService:JSONDecode(response)
+                if data.data and #data.data > 0 then
+                    gameInfoCache = data.data[1]
+                    return gameInfoCache
+                end
+            end
+            return nil
         end
-        local nameStr = "欢迎使用! " .. infotitle .. player.DisplayName .. " | ID:" .. player.UserId
-        if isPremium then nameStr = nameStr .. " | 已开通Premium" end
-        playerNameLabel.Text = nameStr
-
-        local gameInfo = getGameName(game.GameId)
-        if gameInfo then
-            playerInfoLabel.Text = "在玩: " .. gameInfo.name .. " | ID: " .. game.GameId
-        else
-            playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
+    
+        -- 安全获取玩家信息
+        local function safePlayerInfo()
+            local player = Players.LocalPlayer
+            if not player then return end
+            local isPremium = player.MembershipType == Enum.MembershipType.Premium
+            local infotitle = "用户"
+            local device = GetDeviceType()
+            if device == "Desktop" then infotitle = "电脑用户"
+            elseif device == "Mobile" then infotitle = "手机用户"
+            end
+            local nameStr = "欢迎使用! " .. infotitle .. player.DisplayName .. " | ID:" .. player.UserId
+            if isPremium then nameStr = nameStr .. " | 已开通Premium" end
+            playerNameLabel.Text = nameStr
+    
+            local gameInfo = getGameName(game.GameId)
+            if gameInfo then
+                playerInfoLabel.Text = "在玩: " .. gameInfo.name .. " | ID: " .. game.GameId
+            else
+                playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
+            end
         end
-    end
 
     local gameInfoCache = nil
     local function getGameName(universeId)
