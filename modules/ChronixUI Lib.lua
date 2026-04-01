@@ -1,5 +1,4 @@
 -- ChronixUI v3.7 - 手机端支持（UI 等比缩小 30%，触摸交互优化）
--- 完整的 OrionLib 风格 UI 框架
 
 _G.UnloadChronixUI = false
 local ChronixUI = {}
