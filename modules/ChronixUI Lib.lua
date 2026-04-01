@@ -194,18 +194,29 @@ function ChronixUI:Notify(config)
 
     if not initNotificationScreenGui() then return end
 
+    -- 手机端缩放因子（与主窗口一致）
+    local isMobile = (UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
+    local scale = isMobile and 0.7 or 1
+    local notifWidth = 320 * scale
+    local notifHeight = 85 * scale
+    local notifOffsetX = 20 * scale
+    local notifOffsetY = -95 * scale   -- 初始偏移（相对于右下角）
+    local padding = 12 * scale
+    local titleSize = 15 * scale
+    local contentSize = 12 * scale
+    local closeBtnSize = 20 * scale
+
     local colors = {
         info = self.Themes[self.CurrentTheme].Info,
         success = self.Themes[self.CurrentTheme].Success,
         warning = self.Themes[self.CurrentTheme].Warning,
         error = self.Themes[self.CurrentTheme].Error
     }
-
     local accentColor = colors[type] or colors.info
 
     local notificationFrame = Instance.new("Frame")
-    notificationFrame.Size = UDim2.new(0, 320, 0, 85)
-    notificationFrame.Position = UDim2.new(1, 20, 1, -95)
+    notificationFrame.Size = UDim2.new(0, notifWidth, 0, notifHeight)
+    notificationFrame.Position = UDim2.new(1, notifOffsetX, 1, notifOffsetY)
     notificationFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
     notificationFrame.BorderSizePixel = 0
     notificationFrame.ClipsDescendants = true
@@ -213,45 +224,45 @@ function ChronixUI:Notify(config)
     notificationFrame.Parent = notificationScreenGui
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 8 * scale)
     corner.Parent = notificationFrame
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(60, 60, 70)
-    stroke.Thickness = 1
+    stroke.Thickness = 1 * scale
     stroke.Parent = notificationFrame
 
     local colorBar = Instance.new("Frame")
-    colorBar.Size = UDim2.new(0, 4, 1, 0)
+    colorBar.Size = UDim2.new(0, 4 * scale, 1, 0)
     colorBar.BackgroundColor3 = accentColor
     colorBar.BorderSizePixel = 0
     colorBar.Parent = notificationFrame
 
     local contentContainer = Instance.new("Frame")
-    contentContainer.Size = UDim2.new(1, -4, 1, 0)
-    contentContainer.Position = UDim2.new(0, 4, 0, 0)
+    contentContainer.Size = UDim2.new(1, -4*scale, 1, 0)
+    contentContainer.Position = UDim2.new(0, 4*scale, 0, 0)
     contentContainer.BackgroundTransparency = 1
     contentContainer.Parent = notificationFrame
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -30, 0, 28)
-    titleLabel.Position = UDim2.new(0, 12, 0, 8)
+    titleLabel.Size = UDim2.new(1, -30*scale, 0, 28*scale)
+    titleLabel.Position = UDim2.new(0, 12*scale, 0, 8*scale)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title
     titleLabel.TextColor3 = self.Themes[self.CurrentTheme].Text
-    titleLabel.TextSize = 15
+    titleLabel.TextSize = titleSize
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.TextYAlignment = Enum.TextYAlignment.Top
     titleLabel.Parent = contentContainer
 
     local contentLabel = Instance.new("TextLabel")
-    contentLabel.Size = UDim2.new(1, -30, 0, 40)
-    contentLabel.Position = UDim2.new(0, 12, 0, 36)
+    contentLabel.Size = UDim2.new(1, -30*scale, 0, 40*scale)
+    contentLabel.Position = UDim2.new(0, 12*scale, 0, 36*scale)
     contentLabel.BackgroundTransparency = 1
     contentLabel.Text = content
     contentLabel.TextColor3 = self.Themes[self.CurrentTheme].TextDark
-    contentLabel.TextSize = 12
+    contentLabel.TextSize = contentSize
     contentLabel.Font = Enum.Font.Gotham
     contentLabel.TextXAlignment = Enum.TextXAlignment.Left
     contentLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -259,19 +270,19 @@ function ChronixUI:Notify(config)
     contentLabel.Parent = contentContainer
 
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 20, 0, 20)
-    closeBtn.Position = UDim2.new(1, -28, 0, 8)
+    closeBtn.Size = UDim2.new(0, closeBtnSize, 0, closeBtnSize)
+    closeBtn.Position = UDim2.new(1, -28*scale, 0, 8*scale)
     closeBtn.Text = "×"
     closeBtn.TextColor3 = self.Themes[self.CurrentTheme].TextDark
-    closeBtn.TextSize = 14
+    closeBtn.TextSize = 14 * scale
     closeBtn.BackgroundTransparency = 1
     closeBtn.BorderSizePixel = 0
     closeBtn.Parent = contentContainer
 
     notificationFrame.BackgroundTransparency = 0
-    notificationFrame.Position = UDim2.new(1, 20, 1, -95)
+    notificationFrame.Position = UDim2.new(1, notifOffsetX, 1, notifOffsetY)
     TweenService:Create(notificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-        Position = UDim2.new(1, -10, 1, -95)
+        Position = UDim2.new(1, -10*scale, 1, notifOffsetY)
     }):Play()
 
     local notificationData = { frame = notificationFrame }
@@ -287,7 +298,7 @@ function ChronixUI:Notify(config)
         end
 
         TweenService:Create(notificationFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            Position = UDim2.new(1, 20, 1, -95),
+            Position = UDim2.new(1, notifOffsetX, 1, notifOffsetY),
             BackgroundTransparency = 1
         }):Play()
         wait(0.3)
