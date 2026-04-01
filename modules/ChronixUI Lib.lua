@@ -455,18 +455,63 @@ function ChronixUI:CreateWindow(config)
     local imageCorner = Instance.new("UICorner")
     imageCorner.CornerRadius = UDim.new(0, 6)
     imageCorner.Parent = avatarImage
-    
-    local playerNameLabel = CreateLabel(playerBar, LocalPlayer.DisplayName, UDim2.new(0, 200, 0, 24), UDim2.new(0, 60, 0, 8),
-                                         self.Themes[self.CurrentTheme].Text, 16, Enum.Font.GothamBold)
-    
-    local playerInfoLabel = CreateLabel(playerBar, "等级 1 | 积分 0", UDim2.new(0, 200, 0, 20), UDim2.new(0, 60, 0, 30),
+ 
+    local function GetDeviceType() 
+        if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then 
+            return "Mobile" -- 移动端 
+        elseif UserInputService.MouseEnabled and not UserInputService.TouchEnabled then 
+            return "Desktop" -- 桌面端 
+        elseif UserInputService.GamepadEnabled then 
+            return "Console" -- 控制台 
+        else 
+            return "Unknown" -- 未知设备 
+        end 
+    end 
+    local isPremium = (LocalPlayer.MembershipType == Enum.MembershipType.Premium) 
+    local infotitle = "用户" 
+    if GetDeviceType() == "Desktop" then 
+        infotitle = "电脑用户" 
+    elseif GetDeviceType() == "Mobile" then 
+        infotitle = "手机用户" 
+    end 
+    -- 获取游戏名 
+    local function getGameName(universeId) 
+        local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId 
+        local success, response = pcall(function() 
+            return game:HttpGet(url) 
+        end) 
+
+
+        if success then 
+            local data = HttpService:JSONDecode(response) 
+            if data.data and #data.data > 0 then 
+                return data.data[1] 
+            else 
+                warn("未找到游戏信息") 
+                print(data) 
+                getGameNameNotSuccess = true 
+                return nil 
+            end 
+        else 
+            warn("获取游戏名失败:", response) 
+            getGameNameNotSuccess = true 
+            return nil 
+        end 
+    end 
+    local gameInfo = getGameName(game.GameId) 
+
+
+    -- 调试信息 
+    if getGameNameNotSuccess then 
+        print("游戏ID: " .. game.GameId) 
+    end 
+         
+    local playerNameLabel = CreateLabel(playerBar, isPremium and "欢迎使用! " .. infotitle .. LocalPlayer.DisplayName .. " | ID:" .. LocalPlayer.UserId .. " | 已开通Preminum" or "欢迎使用! " .. infotitle .. LocalPlayer.DisplayName .. " | ID:" .. LocalPlayer.UserId, UDim2.new(0, 200, 0, 24), UDim2.new(0, 60, 0, 8),	 
+                                         self.Themes[self.CurrentTheme].Text, 16, Enum.Font.GothamBold)	 
+         
+    local playerInfoLabel = CreateLabel(playerBar, getGameNameNotSuccess and "未找到游戏信息, 未找到游戏ID | Debug: InConsole" or "在玩: " .. gameInfo.name .. " | ID: " .. game.GameId, UDim2.new(0, 200, 0, 20), UDim2.new(0, 60, 0, 30),	 
                                          self.Themes[self.CurrentTheme].TextDark, 12)
     playerInfoLabel.Name = "PlayerInfoLabel"
-    
-    -- 玩家信息更新方法
-    local function UpdatePlayerInfo(level, points)
-        playerInfoLabel.Text = string.format("等级 %s | 积分 %s", tostring(level or "1"), tostring(points or "0"))
-    end
     
     -- 侧边栏
     local sidebar = CreateFrame(mainFrame, UDim2.new(0, 160, 1, -95), UDim2.new(0, 0, 0, 45),
@@ -553,7 +598,6 @@ function ChronixUI:CreateWindow(config)
         CurrentTab = nil,
         SettingsTabContent = nil,
         Minimized = false,
-        UpdatePlayerInfo = UpdatePlayerInfo,
         -- 设置关闭回调的方法
         SetCloseCallback = function(callback)
             externalCloseCallback = callback
