@@ -510,7 +510,7 @@ basicTab:AddToggle({
 
 basicTab:AddSlider({
     Label = "跳跃力量",
-    Min = 0, Max = 100, Default = data.basicdata.player.jump,
+    Min = 0, Max = 1000, Default = data.basicdata.player.jump,
     Callback = function(v) LocalPlayer.Character.Humanoid.JumpPower = v; data.basicdata.player.jump = v end
 })
 
