@@ -118,7 +118,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     local v3Text = Instance.new("TextLabel")
     v3Text.Text = "V3"
     v3Text.Size = UDim2.new(0, 70, 0, 50)
-    v3Text.Position = UDim2.new(0, 180, 0, 0)
+    v3Text.Position = isMobile and UDim2.new(0, 90, 0, 0) or UDim2.new(0, 180, 0, 0)
     v3Text.TextColor3 = Color3.new(0.8, 1, 0.5)
     v3Text.BackgroundTransparency = 1
     v3Text.Font = Enum.Font.SourceSansBold
@@ -133,13 +133,13 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     loadingText.TextColor3 = config.textColor
     loadingText.BackgroundTransparency = 1
     loadingText.Font = Enum.Font.SourceSans
-    loadingText.TextSize = 18
+    loadingText.TextSize = isMobile and 9 or 18
     loadingText.Parent = frame
 
     -- 创建进度条背景
     local progressBarBackground = Instance.new("Frame")
     progressBarBackground.Size = UDim2.new(0, uiWidth*0.8, 0, 6)
-    progressBarBackground.Position = UDim2.new(0, uiWidth*0.1, 0, uiHeight*0.6)
+    progressBarBackground.Position = isMobile and UDim2.new(0, uiWidth*0.1, 0, uiHeight*0.8) or UDim2.new(0, uiWidth*0.1, 0, uiHeight*0.6)
     progressBarBackground.BackgroundTransparency = 1
     progressBarBackground.ClipsDescendants = true
     progressBarBackground.Parent = frame
