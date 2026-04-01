@@ -1997,7 +1997,7 @@ local function unloadChronixHub()
     HighlightModule.unload()
     StandRecovery:unload()
     if _G.DeathBallScript then _G.DeathBallScript:Unload() end
-    if data.tools and data.tools.zoom then data.tools.zoom:Unload() end
+    data.basicdata.releasetools.zoom:Unload()
     FlingDetector.unload()
     PlayerESP.unload()
     MovableHighlighter_NM.unloadAll()
