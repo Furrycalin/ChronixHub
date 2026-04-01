@@ -1971,9 +1971,7 @@ end)
 local successMsg = "ChronixHub V3 Already Success Loaded!\nWelcome " .. displayName
 if SystemNotification and SystemNotification.Rainbow then
     SystemNotification.Rainbow(successMsg)
-else
     print(successMsg)
-    ChronixUI:Notify({ Title = "欢迎", Content = successMsg, Type = "success", Duration = 5 })
 end
 
 ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
@@ -2011,13 +2009,6 @@ local function unloadChronixHub()
     if hscc then hscc:Disconnect() end
 
     script:Destroy()
-end
-
--- 设置关闭回调（确保 mainWindow 存在）
-if mainWindow and mainWindow.SetCloseCallback then
-    mainWindow:SetCloseCallback(unloadChronixHub)
-else
-    warn("mainWindow not ready, cannot set close callback")
 end
 
 Stepped67 = game:GetService("RunService").Stepped:Connect(function()
