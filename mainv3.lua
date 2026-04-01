@@ -1875,11 +1875,31 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
 end
 
 
-local infoTab = mainWindow:CreateTab({ Name = "信息" })
+local infoTab = mainWindow:CreateTab({ Name = "关于" })
 infoTab:AddParagraph({
-    Title = "关于 Chronix UI",
-    Content = "Chronix UI v1.5\n\n一个完整的 OrionLib 风格 UI 框架\n支持所有常用控件\n\n功能列表:\n• 按钮\n• 下拉框\n• 滑块\n• 开关\n• 输入框\n• 按键绑定（带回调）\n• 颜色选择器\n• 段落文字\n• 分隔线\n\n按 RightShift 隐藏/显示菜单"
+    Title = "关于 ChronixHub V3",
+    Content = "ChronixHub V3 是一个功能强大的 Roblox 多功能工具集\n\n"
+    .. "主要特性:\n"
+    .. "• 完整的玩家属性修改系统 (移速、跳跃、血量等)\n"
+    .. "• 多种实用工具 (穿墙、无限跳、飞行、透视等)\n"
+    .. "• 支持多种热门游戏的专用功能\n"
+    .. "• 内置音乐播放器和音频检查器\n"
+    .. "• 脚本中心，集成多个第三方脚本\n"
+    .. "• 玩家传送和路径点系统\n"
+    .. "• 实用的执行器和聊天监控功能\n\n"
+    .. "开发者: Furrycalin\n"
+    .. "版本: V3\n"
+    .. "框架: 基于自定义 ChronixUI 库构建\n\n"
+    .. "注意事项:\n"
+    .. "• 请合理使用各项功能\n"
+    .. "• 部分功能可能在游戏中被检测\n"
+    .. "• 使用前请了解游戏规则"
 })
+
+local settingsContent = mainWindow.SettingsElements
+settingsContent:AddButton({ Text = "测试", Callback = function()
+    ChronixUI:Notify({ Title = "1", Content = "123", Type = "success", Duration = 10 })
+end })
 
 --======================================================================================
 
