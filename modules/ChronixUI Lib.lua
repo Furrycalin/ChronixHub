@@ -430,7 +430,7 @@ function ChronixUI:CreateWindow(config)
     local settingsBtn = Instance.new("TextButton")
     settingsBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
     settingsBtn.Position = UDim2.new(0, 0, 0.5, -btnSize/2)
-    settingsBtn.Text = "⚙️"
+    settingsBtn.Text = "≡"
     settingsBtn.TextColor3 = self.Themes[self.CurrentTheme].Text
     settingsBtn.TextSize = math.floor(20 * scale)
     settingsBtn.BackgroundColor3 = self.Themes[self.CurrentTheme].Card
