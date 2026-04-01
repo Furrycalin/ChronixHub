@@ -201,7 +201,6 @@ end
 -- 公开函数：完全卸载
 function ChatSpy.unload()
     ChatSpy.disable()
-    SystemNotification.UnloadedGradient("[SPY] - Unloaded")
     
     -- 清空模块方法
     ChatSpy.enable = nil
