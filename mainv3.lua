@@ -1,5 +1,5 @@
 if not game:IsLoaded() then
-	game.Loaded:Wait()
+    game.Loaded:Wait()
 end
 
 if _G.ChronixHubisLoaded then
@@ -91,10 +91,9 @@ local function GetDeviceType()
     end
 end
 
-
 local getGameNameNotSuccess = false
 
--- 获取游戏名
+-- 获取游戏名（修复：返回字符串而不是 table）
 local function getGameName(universeId)
     local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
     local success, response = pcall(function()
@@ -104,19 +103,24 @@ local function getGameName(universeId)
     if success then
         local data = HttpService:JSONDecode(response)
         if data.data and #data.data > 0 then
-            return data.data[1]
+            local gameInfo = data.data[1]
+            -- 返回游戏名称字符串
+            return gameInfo.name or "未知游戏"
         else
             warn("未找到游戏信息")
             print(data)
             getGameNameNotSuccess = true
-            return nil
+            return "未知游戏"
         end
     else
         warn("获取游戏名失败:", response)
         getGameNameNotSuccess = true
-        return nil
+        return "未知游戏"
     end
 end
+
+-- 定义 displayName（后面要用）
+local displayName = LocalPlayer.DisplayName
 
 local data = {
     basicdata = {
@@ -128,8 +132,8 @@ local data = {
             avatar = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100),
             appearanceInfo = Players:GetCharacterAppearanceInfoAsync(LocalPlayer.UserId),
             deviceType = GetDeviceType(),
-            gameInfo = getGameName(game.GameId), -- .name
-            ---
+            gameInfo = getGameName(game.GameId), -- 现在是字符串
+
             speed = LocalPlayer.Character.Humanoid.WalkSpeed, islockspeed = false,
             jump = LocalPlayer.Character.Humanoid.JumpPower, islockjump = false,
             maxhealth = LocalPlayer.Character.Humanoid.MaxHealth, islockmaxhealth = false,
@@ -1955,17 +1959,24 @@ end)
 
 --======================================================================================
 
-SystemNotification.Rainbow("ChronixHubV2 Already Success Loaded!\nWelcome " .. data.basicdata.player.displayname)
-if GetDeviceType() == "Desktop" then
-    ChronixUI:Notify({ Title = "欢迎使用，电脑用户" .. data.basicdata.player.displayname, Content = "ChronixHub 启动成功。\n反挂机系统已自动开启", Type = "success", Duration = 10 })
-elseif GetDeviceType() == "Mobile" then
-    ChronixUI:Notify({ Title = "欢迎使用，手机用户" .. data.basicdata.player.displayname, Content = "ChronixHub 启动成功。\n反挂机系统已自动开启", Type = "success", Duration = 10 })
+-- 修复后：
+local successMsg = "ChronixHub V3 已成功加载！\n欢迎 " .. displayName
+if SystemNotification and SystemNotification.Rainbow then
+    SystemNotification.Rainbow(successMsg)
+else
+    print(successMsg)
+    ChronixUI:Notify({ Title = "欢迎", Content = successMsg, Type = "success", Duration = 5 })
 end
 
-local function unloadchronixhub()
-    SystemNotification.UnloadedGradient("ChronixHubv2 Already Unload!")
-    print("ChronixHubv2 已卸载。")
+ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
+
+-- 卸载函数定义（保持不变，但确保使用 windowData 的 SetCloseCallback）
+local function unloadChronixHub()
+    SystemNotification.UnloadedGradient("ChronixHub V3 已卸载！")
+    print("ChronixHub V3 已卸载。")
     _G.ChronixHubisLoaded = false
+
+    -- 清理所有资源
     data.basicdata.releasetools.noclip = false
     data.basicdata.releasetools.infjump = false
     PlayerVisibleModule.unload()
@@ -1976,28 +1987,20 @@ local function unloadchronixhub()
     PlayerLightModule:unload()
     HighlightModule.unload()
     StandRecovery:unload()
-    _G.DeathBallScript:Unload()
-    data.basicdata.releasetools.zoom:Unload()
+    if _G.DeathBallScript then _G.DeathBallScript:Unload() end
+    if data.tools and data.tools.zoom then data.tools.zoom:Unload() end
     FlingDetector.unload()
     PlayerESP.unload()
     MovableHighlighter_NM.unloadAll()
     AntiVoidModule.unload()
     ChatSpy.unload()
-    AirWalk.unload()
-    data.basicdata.otherdata.musicbox:Stop()
-    data.basicdata.otherdata.musicbox:Destroy()
-    data.basicdata.otherdata.testSound:Stop()
-    data.basicdata.otherdata.testSound:Destroy()
-    al:Disconnect()
-    ds:Disconnect()
-    Stepped6:Disconnect()
-    offce:Disconnect()
-    cc:Disconnect()
-    gsr:Disconnect()
-    hscc:Disconnect()
-    pac:Disconnect()
-    prc:Disconnect()
+
+    if cc then cc:Disconnect() end
+    if gsr then gsr:Disconnect() end
+    if hscc then hscc:Disconnect() end
+
     script:Destroy()
 end
 
-mainWindow:SetCloseCallback(unloadchronixhub)
+-- 设置关闭回调（注意：mainWindow 必须在前面已经创建）
+mainWindow:SetCloseCallback(unloadChronixHub)
