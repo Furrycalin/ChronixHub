@@ -1,8 +1,8 @@
--- ChronixUI v3.3 - 修复 Destroy 方法（直接添加销毁函数）
+-- ChronixUI v3.4 - 修复所有 Destroy 方法
 -- 完整的 OrionLib 风格 UI 框架
 
 local ChronixUI = {}
-ChronixUI.Version = "3.3.0"
+ChronixUI.Version = "3.4.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -313,9 +313,6 @@ function ChronixUI:CreateWindow(config)
     
     -- 存储外部关闭回调函数
     local externalCloseCallback = nil
-    
-    -- 存储所有动态创建的控件，用于支持销毁
-    local createdElements = {}
     
     -- 使用 ContextActionService 绑定快捷键
     local toggleActionName = "ChronixUIToggle_" .. tostring(#self.Windows + 1)
@@ -630,25 +627,18 @@ function ChronixUI:CreateWindow(config)
         
         table.insert(windowData.Tabs, tabData)
         
-        -- UI 元素创建函数
+        -- UI 元素创建函数 - 所有控件都返回原始对象，并添加 Destroy 方法
         local elements = {}
         
-        -- 为任意对象添加销毁方法的辅助函数
-        local function addDestroyMethod(obj)
+        -- 为任何对象添加 Destroy 方法的辅助函数
+        local function addDestroy(obj)
+            -- 直接给对象添加一个 Destroy 函数，调用对象自身的 Destroy
             obj.Destroy = function()
                 if obj and obj.Parent then
                     obj:Destroy()
                 end
-                -- 从元素列表中移除
-                for i, e in ipairs(createdElements) do
-                    if e == obj then
-                        table.remove(createdElements, i)
-                        break
-                    end
-                end
                 updateContentCanvas()
             end
-            table.insert(createdElements, obj)
             return obj
         end
         
@@ -684,7 +674,7 @@ function ChronixUI:CreateWindow(config)
                 TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Card}):Play()
             end)
             
-            return addDestroyMethod(btn)
+            return addDestroy(btn)
         end
         
         function elements:AddDropdown(config)
@@ -783,7 +773,7 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddSlider(config)
@@ -881,7 +871,7 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddToggle(config)
@@ -931,7 +921,7 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddInput(config)
@@ -969,7 +959,7 @@ function ChronixUI:CreateWindow(config)
                 callback(inputBox.Text)
             end)
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddKeybind(config)
@@ -1026,7 +1016,7 @@ function ChronixUI:CreateWindow(config)
                 end)
             end)
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddColorPicker(config)
@@ -1231,7 +1221,7 @@ function ChronixUI:CreateWindow(config)
             ColorSquare.Visible = false
             HueBar.Visible = false
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddParagraph(config)
@@ -1253,7 +1243,7 @@ function ChronixUI:CreateWindow(config)
             contentLabel.TextWrapped = true
             contentLabel.AutomaticSize = Enum.AutomaticSize.Y
             
-            return addDestroyMethod(container)
+            return addDestroy(container)
         end
         
         function elements:AddDivider()
@@ -1263,21 +1253,21 @@ function ChronixUI:CreateWindow(config)
             divider.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Border
             divider.BorderSizePixel = 0
             
-            return addDestroyMethod(divider)
+            return addDestroy(divider)
         end
         
         function elements:AddTitle(text)
             local title = CreateLabel(tabContent, text, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 0),
                                        ChronixUI.Themes[ChronixUI.CurrentTheme].Accent, 20, Enum.Font.GothamBold)
             
-            return addDestroyMethod(title)
+            return addDestroy(title)
         end
         
         function elements:AddLabel(text)
             local label = CreateLabel(tabContent, text, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 0),
                                        ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14, Enum.Font.Gotham)
             
-            return addDestroyMethod(label)
+            return addDestroy(label)
         end
         
         return elements
