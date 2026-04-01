@@ -1905,7 +1905,7 @@ al = workspace.DescendantAdded:Connect(function(descendant)
             descendant.CFrame = player.Character.HumanoidRootPart.CFrame
             GGcount = GGcount + 1
             if GGcount >= 3 then
-                CreateNotification("Grace", "全部拉杆已被激活\n门已打开", 5, true)
+                ChronixUI:Notify({ Title = "提示", Content = "全部拉杆已被激活\n门已打开", Type = "success", Duration = 5 })
                 GGcount = 0
             end
             task.wait(1)
@@ -1913,8 +1913,6 @@ al = workspace.DescendantAdded:Connect(function(descendant)
         end
     end
 end)
-
-local processedCharacters = {}
 
 ds = workspace.DescendantAdded:Connect(function(descendant)
     if data.othergamedata.grace.deleteentity then
