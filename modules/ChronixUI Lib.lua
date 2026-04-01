@@ -1429,6 +1429,11 @@ function ChronixUI:CreateWindow(config)
     settingsElements:AddLabel("其他设置")
     windowData.SettingsElements = settingsElements
 
+    -- 添加刷新内容的方法
+    function windowData:RefreshContent()
+        updateContentCanvas()
+    end
+
     settingsBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
         if windowData.SettingsTabContent then
