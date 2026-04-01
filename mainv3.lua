@@ -2023,11 +2023,6 @@ end)
 
 -- 卸载函数
 local function unloadChronixHub()
-    if SystemNotification and SystemNotification.UnloadedGradient then
-        SystemNotification.UnloadedGradient("ChronixHub V3 Already Unload!")
-    else
-        print("ChronixHub V3 已卸载。")
-    end
     _G.ChronixHubisLoaded = false
 
     -- 清理所有资源（保持不变）
@@ -2052,6 +2047,11 @@ local function unloadChronixHub()
     if cc then cc:Disconnect() end
     if gsr then gsr:Disconnect() end
     if hscc then hscc:Disconnect() end
+    if SystemNotification and SystemNotification.UnloadedGradient then
+        SystemNotification.UnloadedGradient("ChronixHub V3 Already Unload!")
+    else
+        print("ChronixHub V3 已卸载。")
+    end
 
     script:Destroy()
 end
