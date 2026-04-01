@@ -1202,7 +1202,7 @@ pauseResumeButton = musicTab:AddButton({
 })
 
 -- 循环播放按钮
-local loopButton = musicTab:AddButton({
+loopButton = musicTab:AddButton({
     Text = "🔄 循环播放",
     Callback = function()
         data.basicdata.otherdata.musicbox.Looped = not data.basicdata.otherdata.musicbox.Looped
