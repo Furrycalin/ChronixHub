@@ -1,6 +1,7 @@
 -- ChronixUI v3.6 - 修复方法调用转发
 -- 完整的 OrionLib 风格 UI 框架
 
+_G.UnloadChronixUI = false
 local ChronixUI = {}
 ChronixUI.Version = "3.6.0"
 ChronixUI.Windows = {}
@@ -567,6 +568,7 @@ function ChronixUI:CreateWindow(config)
     -- 关闭按钮点击事件
     closeBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
+        _G.UnloadChronixUI = true
         -- 先执行外部回调（如果有）
         if externalCloseCallback then
             local success, err = pcall(externalCloseCallback)
