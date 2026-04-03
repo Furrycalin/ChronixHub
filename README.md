@@ -37,6 +37,7 @@ loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/
 - ✅ **Nightmare Run**（噩梦之行）
 - ✅ **West Wood**（西部森林）
 - ✅ **SIREN HEAD: LEGACY**（警笛头:遗产）
+- ✅ **ABYSSAL**（深渊）
 
 ## 🤝 **贡献指南**
 如果你有兴趣为这个项目贡献代码，请遵循以下步骤：
