@@ -1927,9 +1927,9 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
             })
             graceTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
         elseif GetgameInfo.name == "深渊" then
-            local graceTab = mainWindow:CreateTab({ Name = "深渊" })
-            graceTab:AddTitle("深渊")
-            graceTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
+            local abyTab = mainWindow:CreateTab({ Name = "深渊" })
+            abyTab:AddTitle("深渊")
+            abyTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
                 TeleportToAllEnergyParts(0)
             end })
         end
