@@ -505,7 +505,7 @@ function TeleportToAllEnergyParts(delay)
     -- 收集所有目标零件
     local targets = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name == "AbyssalEnergy" or obj.Name == "BigAbyssalEnergy") then
+        if obj:IsA("BasePart") and (obj.Name == "AbyssalEnergy" or obj.Name == "BigAbyssalEnergy" or obj.Name == "Echo") then
             table.insert(targets, obj)
         end
     end
