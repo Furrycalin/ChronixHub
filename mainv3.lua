@@ -1672,9 +1672,9 @@ end
 for _, GetgameInfo in ipairs(data.Supported_Games) do
     if GetgameInfo.gameid == game.GameId then
         if GetgameInfo.name == "死亡球" then
-            local deathballTab = mainWindow:CreateTab({ Name = "死亡球" })
-            deathballTab:AddTitle("死亡球")
-            deathballTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "主功能和界面",
                 Default = false,
                 Callback = function(v)
@@ -1686,38 +1686,38 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
             })
         elseif GetgameInfo.name == "小屋角色扮演" then
-            local cabinroleplayTab = mainWindow:CreateTab({ Name = "小屋角色扮演" })
-            cabinroleplayTab:AddTitle("小屋角色扮演")
-            cabinroleplayTab:AddButton({ Text = "变正常", Callback = function() ChatControl:chat("/re") end })
-            cabinroleplayTab:AddButton({ Text = "变小孩", Callback = function() ChatControl:chat("/kid") end })
-            cabinroleplayTab:AddButton({ Text = "鲨鱼服装", Callback = function() ChatControl:chat("/shark") end })
-            cabinroleplayTab:AddButton({ Text = "修狗服装", Callback = function() ChatControl:chat("/dog") end })
-            cabinroleplayTab:AddButton({ Text = "修猫服装", Callback = function() ChatControl:chat("/cat") end })
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddButton({ Text = "变正常", Callback = function() ChatControl:chat("/re") end })
+            OtherGameTab:AddButton({ Text = "变小孩", Callback = function() ChatControl:chat("/kid") end })
+            OtherGameTab:AddButton({ Text = "鲨鱼服装", Callback = function() ChatControl:chat("/shark") end })
+            OtherGameTab:AddButton({ Text = "修狗服装", Callback = function() ChatControl:chat("/dog") end })
+            OtherGameTab:AddButton({ Text = "修猫服装", Callback = function() ChatControl:chat("/cat") end })
         elseif GetgameInfo.name == "南极探险队" then
-            local njtxdTab = mainWindow:CreateTab({ Name = "南极探险队" })
-            njtxdTab:AddTitle("南极探险队")
-            njtxdTab:AddLabel("基础操作")
-            njtxdTab:AddButton({ Text = "传送到 大本营", Callback = function() TeleportTo(-6015, -158, -35) end })
-            njtxdTab:AddButton({ Text = "传送到 营地1", Callback = function() TeleportTo(-3719, 226, 235) end })
-            njtxdTab:AddButton({ Text = "传送到 营地2", Callback = function() TeleportTo(1790, 106, -138) end })
-            njtxdTab:AddButton({ Text = "传送到 营地3", Callback = function() TeleportTo(5892, 321, -18) end })
-            njtxdTab:AddButton({ Text = "传送到 营地4", Callback = function() TeleportTo(8992, 596, 102) end })
-            njtxdTab:AddButton({ Text = "传送到 营地5", Callback = function() TeleportTo(10990, 550, 104) end })
-            njtxdTab:AddLabel("圣诞活动")
-            njtxdTab:AddButton({ Text = "获取所有礼物", Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddLabel("基础操作")
+            OtherGameTab:AddButton({ Text = "传送到 大本营", Callback = function() TeleportTo(-6015, -158, -35) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地1", Callback = function() TeleportTo(-3719, 226, 235) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地2", Callback = function() TeleportTo(1790, 106, -138) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地3", Callback = function() TeleportTo(5892, 321, -18) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地4", Callback = function() TeleportTo(8992, 596, 102) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地5", Callback = function() TeleportTo(10990, 550, 104) end })
+            OtherGameTab:AddLabel("圣诞活动")
+            OtherGameTab:AddButton({ Text = "获取所有礼物", Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
             local njtx_giftnumber = 0
-            njtxdTab:AddInput({
+            OtherGameTab:AddInput({
                 Label = "礼物号",
                 Placeholder = "",
                 Callback = function(text)
                     njtx_giftnumber = text
                 end
             })
-            njtxdTab:AddButton({ Text = "传送到礼物", Callback = function() TeleportToPresent(tonumber(njtx_giftnumber)) end })
+            OtherGameTab:AddButton({ Text = "传送到礼物", Callback = function() TeleportToPresent(tonumber(njtx_giftnumber)) end })
         elseif GetgameInfo.name == "西部森林" then
-            local westwoodTab = mainWindow:CreateTab({ Name = "西部森林" })
-            westwoodTab:AddTitle("西部森林")
-            westwoodTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "怪物标签",
                 Default = false,
                 Callback = function(v)
@@ -1729,9 +1729,9 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
             })
         elseif GetgameInfo.name == "警笛头:遗产" then
-            local shlTab = mainWindow:CreateTab({ Name = "警笛头:遗产" })
-            shlTab:AddTitle("警笛头:遗产")
-            shlTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "透视盒子",
                 Default = false,
                 Callback = function(v)
@@ -1744,7 +1744,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            shlTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "透视浆果",
                 Default = false,
                 Callback = function(v)
@@ -1757,11 +1757,11 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            shlTab:AddButton({ Text = "传送到树顶", Callback = function() TeleportTo(69, 206, -72) end })
+            OtherGameTab:AddButton({ Text = "传送到树顶", Callback = function() TeleportTo(69, 206, -72) end })
         elseif GetgameInfo.name == "噩梦之行" then
-            local nmrTab = mainWindow:CreateTab({ Name = "噩梦之行" })
-            nmrTab:AddTitle("噩梦之行")
-            nmrTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "高亮怪物",
                 Default = false,
                 Callback = function(v)
@@ -1772,8 +1772,8 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            nmrTab:AddButton({ Text = "高亮芝士", Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
-            nmrTab:AddButton({ Text = "无敌(怪物不追不杀)", Callback = function()
+            OtherGameTab:AddButton({ Text = "高亮芝士", Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
+            OtherGameTab:AddButton({ Text = "无敌(怪物不追不杀)", Callback = function()
                 -- 无敌实现
                 local ClientScripts = game.Players.LocalPlayer.PlayerGui.ClientScripts
                 if ClientScripts:FindFirstChild("SafeSpaceHandler") then
@@ -1787,10 +1787,10 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 ChronixUI:Notify({ Title = "提示", Content = "已设置玩家安全状态\n死亡前生效", Type = "success", Duration = 5 })
             end })
         elseif GetgameInfo.name == "兽化项目" then
-            local ptTab = mainWindow:CreateTab({ Name = "兽化项目" })
-            ptTab:AddTitle("兽化项目")
-            ptTab:AddLabel("基础操作")
-            ptTab:AddButton({ Text = "删除捕兽夹", Callback = function()
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddLabel("基础操作")
+            OtherGameTab:AddButton({ Text = "删除捕兽夹", Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "__SnarePhysical" then
@@ -1800,7 +1800,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
                 ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个捕兽夹", Type = "success", Duration = 10 })
             end })
-            ptTab:AddButton({ Text = "删除地雷", Callback = function()
+            OtherGameTab:AddButton({ Text = "删除地雷", Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "Landmine" then
@@ -1810,7 +1810,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
                 ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个地雷", Type = "success", Duration = 10 })
             end })
-            ptTab:AddButton({ Text = "删除阔剑地雷", Callback = function()
+            OtherGameTab:AddButton({ Text = "删除阔剑地雷", Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "__ClaymorePhysical" then
@@ -1820,8 +1820,8 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
                 ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个阔剑地雷", Type = "success", Duration = 10 })
             end })
-            ptTab:AddLabel("透视功能")
-            ptTab:AddToggle({
+            OtherGameTab:AddLabel("透视功能")
+            OtherGameTab:AddToggle({
                 Label = "Bot兽",
                 Default = false,
                 Callback = function(v)
@@ -1834,7 +1834,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            ptTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "小保险箱",
                 Default = false,
                 Callback = function(v)
@@ -1847,7 +1847,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            ptTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "大保险箱",
                 Default = false,
                 Callback = function(v)
@@ -1860,7 +1860,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            ptTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "金保险箱",
                 Default = false,
                 Callback = function(v)
@@ -1873,7 +1873,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            ptTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "武器盒",
                 Default = false,
                 Callback = function(v)
@@ -1886,7 +1886,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            ptTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "空投",
                 Default = false,
                 Callback = function(v)
@@ -1900,36 +1900,36 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
             })
         elseif GetgameInfo.name == "妄想办公室" then
-            local doTab = mainWindow:CreateTab({ Name = "妄想办公室" })
-            doTab:AddTitle("妄想办公室")
-            doTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "实体警告",
                 Default = false,
                 Callback = function(v) data.othergamedata.delesions_office.entitywarning = v end
             })
-            doTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "提醒他人",
                 Default = false,
                 Callback = function(v) data.othergamedata.delesions_office.tipotherplayer = v end
             })
-            doTab:AddToggle({
+            OtherGameTab:AddToggle({
                 Label = "自动EN-013",
                 Default = false,
                 Callback = function(v) data.othergamedata.delesions_office.auto013 = v end
             })
         elseif GetgameInfo.name == "格蕾丝" then
-            local graceTab = mainWindow:CreateTab({ Name = "格蕾丝" })
-            graceTab:AddTitle("格蕾丝")
-            graceTab:AddToggle({
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddToggle({
                 Label = "自动拉杆",
                 Default = false,
                 Callback = function(v) data.othergamedata.grace.autolever = v end
             })
-            graceTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
+            OtherGameTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
         elseif GetgameInfo.name == "深渊" then
-            local abyTab = mainWindow:CreateTab({ Name = "深渊" })
-            abyTab:AddTitle("深渊")
-            abyTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
+            local OtherGameTab = mainWindow:CreateTab({ Name = GetgameInfo.name })
+            OtherGameTab:AddTitle(GetgameInfo.name)
+            OtherGameTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
                 TeleportToAllEnergyParts(0)
             end })
         end
