@@ -1929,7 +1929,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
         elseif GetgameInfo.name == "深渊" then
             local graceTab = mainWindow:CreateTab({ Name = "深渊" })
             graceTab:AddTitle("深渊")
-            graceTab:AddButton({ Text = "一键获取全地图深渊能量", Callback = function()
+            graceTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
                 TeleportToAllEnergyParts(0)
             end })
         end
