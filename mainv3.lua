@@ -295,6 +295,7 @@ local data = {
         { gameid = 6996099240, name = "噩梦之行" },
         { gameid = 5265348926, name = "西部森林" },
         { gameid = 5429450445, name = "警笛头:遗产" },
+        { gameid = 4981761600, name = "深渊" },
     },
     othergamedata = {
         west_wood = {
@@ -480,6 +481,61 @@ local function detectEntity(instance)
             end
         end
     end
+end
+
+-- 客户端函数：遍历所有 AbyssalEnergy / BigAbyssalEnergy 并逐个传送
+-- 参数 delay：每次传送后的等待时间（秒），默认 0.1
+function TeleportToAllEnergyParts(delay)
+    delay = delay or 0.1
+    local player = game.Players.LocalPlayer
+    
+    -- 获取角色部件
+    local character = player.Character
+    if not character then
+        warn("角色不存在")
+        return
+    end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not hrp or not humanoid or humanoid.Health <= 0 then
+        warn("角色无效或已死亡")
+        return
+    end
+    
+    -- 收集所有目标零件
+    local targets = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name == "AbyssalEnergy" or obj.Name == "BigAbyssalEnergy") then
+            table.insert(targets, obj)
+        end
+    end
+    
+    if #targets == 0 then
+        warn("未找到任何 AbyssalEnergy 或 BigAbyssalEnergy")
+        return
+    end
+    
+    print(string.format("找到 %d 个目标，开始传送（间隔 %.2f 秒）", #targets, delay))
+    
+    for i, part in ipairs(targets) do
+        -- 确保角色依然有效
+        if not hrp or not hrp.Parent then
+            character = player.Character
+            if not character then break end
+            hrp = character:FindFirstChild("HumanoidRootPart")
+            if not hrp then break end
+        end
+        
+        local targetPos = part.Position + Vector3.new(0, 2, 0)
+        hrp.CFrame = CFrame.new(targetPos)
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        
+        print(string.format("[%d/%d] 传送至 %s", i, #targets, part.Name))
+        task.wait(delay)
+    end
+    
+    print("传送完成")
 end
 
 --=============================================================================================
@@ -1870,6 +1926,12 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 Callback = function(v) data.othergamedata.grace.autolever = v end
             })
             graceTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
+        elseif GetgameInfo.name == "深渊" then
+            local graceTab = mainWindow:CreateTab({ Name = "深渊" })
+            graceTab:AddTitle("深渊")
+            graceTab:AddButton({ Text = "一键获取全地图深渊能量", Callback = function()
+                TeleportToAllEnergyParts(0)
+            end })
         end
     end
 end
