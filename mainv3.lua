@@ -1710,9 +1710,9 @@ executerTab:AddButton({
 
 
 local filterTab = mainWindow:CreateTab({ Name = "滤镜控制器" })
-local dynamicControls = {}  -- 存储需要刷新的控件对象
-local staticControls = {}   -- 存储静态控件（如刷新按钮本身）
-local function refreshFilterList()
+local dynamicControls = {}
+local staticControls = {}
+local function refreshFilterList(showNotification)
     -- 销毁所有动态控件
     for _, control in ipairs(dynamicControls) do
         if control and control.Destroy then
@@ -1753,7 +1753,7 @@ local function refreshFilterList()
         table.insert(dynamicControls, toggle)
     end
     
-    -- 颜色微调区域
+    -- 颜色微调区域 (ColorCorrectionEffect 的有效属性)
     if colorCorrection then
         local divider = filterTab:AddDivider()
         table.insert(dynamicControls, divider)
@@ -1761,6 +1761,7 @@ local function refreshFilterList()
         local colorTitle = filterTab:AddTitle("颜色微调")
         table.insert(dynamicControls, colorTitle)
         
+        -- 饱和度滑块 (范围 -1 到 1)
         local saturationSlider = filterTab:AddSlider({
             Label = "饱和度 (Saturation)",
             Min = -1,
@@ -1772,6 +1773,7 @@ local function refreshFilterList()
         })
         table.insert(dynamicControls, saturationSlider)
         
+        -- 亮度滑块 (范围 -1 到 1)
         local brightnessSlider = filterTab:AddSlider({
             Label = "亮度 (Brightness)",
             Min = -1,
@@ -1783,6 +1785,7 @@ local function refreshFilterList()
         })
         table.insert(dynamicControls, brightnessSlider)
         
+        -- 对比度滑块 (范围 -1 到 1)
         local contrastSlider = filterTab:AddSlider({
             Label = "对比度 (Contrast)",
             Min = -1,
@@ -1794,6 +1797,7 @@ local function refreshFilterList()
         })
         table.insert(dynamicControls, contrastSlider)
         
+        -- 色调颜色选择器 (Color3 类型)
         local tintColorPicker = filterTab:AddColorPicker({
             Label = "色调颜色 (TintColor)",
             Default = colorCorrection.TintColor,
@@ -1817,7 +1821,7 @@ local function refreshFilterList()
                     effect.Saturation = 0
                     effect.Brightness = 0
                     effect.Contrast = 0
-                    effect.Tint = 0
+                    effect.TintColor = Color3.new(1, 1, 1)
                 end
             end
             ChronixUI:Notify({
@@ -1826,7 +1830,7 @@ local function refreshFilterList()
                 Type = "success",
                 Duration = 3
             })
-            refreshFilterList()
+            refreshFilterList(true)
         end
     })
     table.insert(dynamicControls, resetButton)
@@ -1835,23 +1839,25 @@ local function refreshFilterList()
         mainWindow:RefreshContent()
     end
     
-    ChronixUI:Notify({
-        Title = "滤镜控制器",
-        Content = "已刷新，找到 " .. #allEffects .. " 个特效",
-        Type = "success",
-        Duration = 2
-    })
+    if showNotification == true then
+        ChronixUI:Notify({
+            Title = "滤镜控制器",
+            Content = "已刷新，找到 " .. #allEffects .. " 个特效",
+            Type = "success",
+            Duration = 2
+        })
+    end
 end
 local refreshButton = filterTab:AddButton({
     Text = "手动刷新滤镜列表",
     Callback = function()
-        refreshFilterList()
+        refreshFilterList(true)
     end
 })
 table.insert(staticControls, refreshButton)
 local staticDivider = filterTab:AddDivider()
 table.insert(staticControls, staticDivider)
-refreshFilterList()
+refreshFilterList(false)
 
 
 local supportedgamesTab = mainWindow:CreateTab({ Name = "支持的游戏" })
