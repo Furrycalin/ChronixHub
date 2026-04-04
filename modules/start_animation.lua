@@ -44,7 +44,9 @@ function LoadAnimationModule:LoadAnimation(duration, config)
     -- 创建界面
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "LoadAnimationGui"
-    screenGui.Parent = game.Players.LocalPlayer.PlayerGui
+    screenGui.Parent = game.CoreGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.ResetOnSpawn = false
 
     local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
 
