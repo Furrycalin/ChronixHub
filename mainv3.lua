@@ -56,6 +56,7 @@ local AntiVoidModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycal
 local ChatSpy = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChatSpy.lua"))()
 local ChatControl = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/chat_test.lua"))()
 local AirWalk = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/AirWalk.lua"))()
+local LockCameraModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/LockCameraModule.lua"))()
 
 --=============================================================================================
 
@@ -642,12 +643,25 @@ ToolsTab:AddToggle({
 })
 
 ToolsTab:AddToggle({
+    Label = "锁定视角",
+    Default = false,
+    Callback = function(v)
+        if v then
+            LockCameraModule.enable()
+            ChronixUI:Notify({ Title = "提示", Content = "按住" .. LockCameraModule.getBindKey().Name .. "键来锁定视角", Type = "success", Duration = 5 })
+        else
+            LockCameraModule.disable()
+        end
+    end
+})
+
+ToolsTab:AddToggle({
     Label = "望远镜",
     Default = false,
     Callback = function(v)
         if v then
             data.basicdata.releasetools.zoom:Enable()
-            ChronixUI:Notify({ Title = "提示", Content = "按住C放大", Type = "success", Duration = 5 })
+            ChronixUI:Notify({ Title = "提示", Content = "按住" .. tostring(data.basicdata.releasetools.zoom:GetBindKey()):gsub("^Enum%.%w+%.", "") .. "键放大", Type = "success", Duration = 5 })
         else
             data.basicdata.releasetools.zoom:Disable()
         end
@@ -1986,6 +2000,15 @@ settingsContent:AddKeybind({
         end
     end
 })
+settingsContent:AddKeybind({
+    Label = "锁定视角",
+    Default = LockCameraModule.getBindKey().Name,
+    Callback = function(key)
+        if key then
+            LockCameraModule.setBindKey(key)
+        end
+    end
+})
 settingsContent:AddInput({
     Label = "TPWalk距离",
     Placeholder = "",
@@ -2111,6 +2134,7 @@ local function unloadChronixHub()
     MovableHighlighter_NM.unloadAll()
     AntiVoidModule.unload()
     ChatSpy.unload()
+    LockCameraModule.unload()
 
     if cc then cc:Disconnect() end
     if gsr then gsr:Disconnect() end
