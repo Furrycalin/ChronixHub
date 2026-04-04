@@ -898,6 +898,9 @@ ToolsTab:AddButton({ Text = "打印当前玩家坐标到控制台", Callback = f
     local position1 = rootPart1.Position
     print(string.format("玩家坐标: (%.2f, %.2f, %.2f)", position1.X, position1.Y, position1.Z))
 end })
+ToolsTab:AddButton({ Text = "开启控制台界面", Callback = function()
+    StarterGui:SetCore("DevConsoleVisible", true)
+end })
 
 
 local scripthubTab = mainWindow:CreateTab({ Name = "脚本中心" })
