@@ -901,6 +901,9 @@ end })
 ToolsTab:AddButton({ Text = "开启控制台界面", Callback = function()
     StarterGui:SetCore("DevConsoleVisible", true)
 end })
+ToolsTab:AddButton({ Text = "启用所有ROBLOXUI", Callback = function()
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) 
+end })
 
 
 local scripthubTab = mainWindow:CreateTab({ Name = "脚本中心" })
