@@ -2132,6 +2132,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
             OtherGameTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
                 TeleportToAllEnergyParts(0)
             end })
+            OtherGameTab:AddButton({ Text = "传送到 灯笼商店", Callback = function() TeleportTo(-375, -11932, -504) end })
         end
     end
 end
