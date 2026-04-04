@@ -539,6 +539,35 @@ function TeleportToAllEnergyParts(delay)
     print("传送完成")
 end
 
+local function getAllPostEffects()
+    local effects = {}
+    -- 在 Lighting 中查找
+    for _, obj in ipairs(game:GetService("Lighting"):GetDescendants()) do
+        if obj:IsA("PostEffect") then
+            table.insert(effects, obj)
+        end
+    end
+    -- 在 CurrentCamera 中查找
+    local camera = workspace.CurrentCamera
+    if camera then
+        for _, obj in ipairs(camera:GetDescendants()) do
+            if obj:IsA("PostEffect") then
+                table.insert(effects, obj)
+            end
+        end
+    end
+    return effects
+end
+
+local function getColorCorrectionEffect()
+    for _, effect in ipairs(getAllPostEffects()) do
+        if effect:IsA("ColorCorrectionEffect") then
+            return effect
+        end
+    end
+    return nil
+end
+
 --=============================================================================================
 
 local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
@@ -1678,6 +1707,151 @@ executerTab:AddButton({
         end
     end
 })
+
+
+local filterTab = mainWindow:CreateTab({ Name = "滤镜控制器" })
+local dynamicControls = {}  -- 存储需要刷新的控件对象
+local staticControls = {}   -- 存储静态控件（如刷新按钮本身）
+local function refreshFilterList()
+    -- 销毁所有动态控件
+    for _, control in ipairs(dynamicControls) do
+        if control and control.Destroy then
+            pcall(function() control:Destroy() end)
+        end
+    end
+    dynamicControls = {}
+    
+    local allEffects = getAllPostEffects()
+    local colorCorrection = getColorCorrectionEffect()
+    
+    if #allEffects == 0 then
+        local noEffectLabel = filterTab:AddLabel("未检测到任何后处理特效")
+        table.insert(dynamicControls, noEffectLabel)
+        return
+    end
+    
+    -- 特效开关区域
+    local titleLabel = filterTab:AddTitle("后处理特效开关")
+    table.insert(dynamicControls, titleLabel)
+    
+    for _, effect in ipairs(allEffects) do
+        local displayName = string.format("%s (%s)", effect.Name, effect.ClassName)
+        local toggle = filterTab:AddToggle({
+            Label = displayName,
+            Default = effect.Enabled,
+            Callback = function(enabled)
+                effect.Enabled = enabled
+                local status = enabled and "启用" or "禁用"
+                ChronixUI:Notify({
+                    Title = "滤镜状态",
+                    Content = effect.Name .. " 已" .. status,
+                    Type = enabled and "success" or "info",
+                    Duration = 2
+                })
+            end
+        })
+        table.insert(dynamicControls, toggle)
+    end
+    
+    -- 颜色微调区域
+    if colorCorrection then
+        local divider = filterTab:AddDivider()
+        table.insert(dynamicControls, divider)
+        
+        local colorTitle = filterTab:AddTitle("颜色微调")
+        table.insert(dynamicControls, colorTitle)
+        
+        local saturationSlider = filterTab:AddSlider({
+            Label = "饱和度 (Saturation)",
+            Min = -1,
+            Max = 1,
+            Default = colorCorrection.Saturation,
+            Callback = function(value)
+                colorCorrection.Saturation = value
+            end
+        })
+        table.insert(dynamicControls, saturationSlider)
+        
+        local brightnessSlider = filterTab:AddSlider({
+            Label = "亮度 (Brightness)",
+            Min = -1,
+            Max = 1,
+            Default = colorCorrection.Brightness,
+            Callback = function(value)
+                colorCorrection.Brightness = value
+            end
+        })
+        table.insert(dynamicControls, brightnessSlider)
+        
+        local contrastSlider = filterTab:AddSlider({
+            Label = "对比度 (Contrast)",
+            Min = -1,
+            Max = 1,
+            Default = colorCorrection.Contrast,
+            Callback = function(value)
+                colorCorrection.Contrast = value
+            end
+        })
+        table.insert(dynamicControls, contrastSlider)
+        
+        local tintColorPicker = filterTab:AddColorPicker({
+            Label = "色调颜色 (TintColor)",
+            Default = colorCorrection.TintColor,
+            Callback = function(color)
+                colorCorrection.TintColor = color
+            end
+        })
+        table.insert(dynamicControls, tintColorPicker)
+    end
+    
+    -- 重置按钮
+    local resetDivider = filterTab:AddDivider()
+    table.insert(dynamicControls, resetDivider)
+    
+    local resetButton = filterTab:AddButton({
+        Text = "重置所有滤镜为默认状态",
+        Callback = function()
+            for _, effect in ipairs(getAllPostEffects()) do
+                effect.Enabled = true
+                if effect:IsA("ColorCorrectionEffect") then
+                    effect.Saturation = 0
+                    effect.Brightness = 0
+                    effect.Contrast = 0
+                    effect.Tint = 0
+                end
+            end
+            ChronixUI:Notify({
+                Title = "滤镜控制器",
+                Content = "所有滤镜已重置为默认状态",
+                Type = "success",
+                Duration = 3
+            })
+            refreshFilterList()
+        end
+    })
+    table.insert(dynamicControls, resetButton)
+    
+    if mainWindow.RefreshContent then
+        mainWindow:RefreshContent()
+    end
+    
+    ChronixUI:Notify({
+        Title = "滤镜控制器",
+        Content = "已刷新，找到 " .. #allEffects .. " 个特效",
+        Type = "success",
+        Duration = 2
+    })
+end
+local refreshButton = filterTab:AddButton({
+    Text = "手动刷新滤镜列表",
+    Callback = function()
+        refreshFilterList()
+    end
+})
+table.insert(staticControls, refreshButton)
+local staticDivider = filterTab:AddDivider()
+table.insert(staticControls, staticDivider)
+refreshFilterList()
 
 
 local supportedgamesTab = mainWindow:CreateTab({ Name = "支持的游戏" })
