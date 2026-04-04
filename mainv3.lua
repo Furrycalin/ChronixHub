@@ -2079,7 +2079,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 OBOTeleportModule.TeleportToParts({"AbyssalEnergy", "BigAbyssalEnergy", "Echo"}, 0)
             end })
             OtherGameTab:AddButton({ Text = "一键解锁全地图路径点", Callback = function()
-                OBOTeleportModule.TeleportToParts("SpawnLocation", 0.2)
+                OBOTeleportModule.TeleportToParts("SpawnLocation", 0.1)
             end })
             OtherGameTab:AddButton({ Text = "传送到 灯笼商店", Callback = function() TeleportTo(-375, -11932, -504) end })
         end
