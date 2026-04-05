@@ -25,13 +25,8 @@ function UIParticleSystem.new(parentUI)
     self.particleSize = 3
     self.particleSpeed = {min = 0.3, max = 1.2}  -- 手机端减慢速度
     self.lineDistance = self.isMobile and 80 or 120  -- 手机端减少连线
-    self.mouseRadius = 100
-    self.lineOpacity = 0.2
+    self.lineOpacity = 0.06
     self.particleColor = Color3.fromRGB(119, 221, 255)  -- 主题色
-    
-    -- 鼠标/触摸位置
-    self.touchPos = Vector2.new(-1000, -1000)
-    self.hasTouch = false
     
     -- 动画控制
     self.connection = nil
@@ -44,7 +39,6 @@ function UIParticleSystem.new(parentUI)
     end
     
     self:initParticles()
-    self:setupTouchTracking(parentUI)
     self:startAnimation()
     
     return self
@@ -55,7 +49,7 @@ function UIParticleSystem:createCircle(parent, size, color)
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, size, 0, size)
     circle.BackgroundColor3 = color
-    circle.BackgroundTransparency = 0.3
+    circle.BackgroundTransparency = 0.7
     circle.BorderSizePixel = 0
     circle.ZIndex = 11  -- 比容器高一点
     
@@ -81,51 +75,16 @@ function UIParticleSystem:initParticles()
             vx = (math.random() - 0.5) * (self.particleSpeed.max - self.particleSpeed.min) * 2,
             vy = (math.random() - 0.5) * (self.particleSpeed.max - self.particleSpeed.min) * 2,
             size = self.particleSize,
-            alpha = 0.4 + math.random() * 0.4,
+            alpha = 0.15 + math.random() * 0.25,
             frame = nil
         }
         
         particle.frame = self:createCircle(self.container, particle.size, self.particleColor)
         particle.frame.Position = UDim2.new(0, particle.x - particle.size/2, 0, particle.y - particle.size/2)
-        particle.frame.BackgroundTransparency = 1 - particle.alpha
+        particle.frame.BackgroundTransparency = 1 - (particle.alpha * 0.6)
         
         table.insert(self.particles, particle)
     end
-end
-
--- 手机端触摸追踪
-function UIParticleSystem:setupTouchTracking(parentUI)
-    local UserInputService = game:GetService("UserInputService")
-    
-    self.touchPos = Vector2.new(-1000, -1000)
-    self.hasTouch = true  -- ✅ 改为始终 true
-    
-    local function isInUI(screenPos)
-        local absPos = parentUI.AbsolutePosition
-        local absSize = parentUI.AbsoluteSize
-        return screenPos.X >= absPos.X and screenPos.X <= absPos.X + absSize.X
-            and screenPos.Y >= absPos.Y and screenPos.Y <= absPos.Y + absSize.Y
-    end
-    
-    -- 监听鼠标移动（不需要按下）
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        if input.UserInputType == Enum.UserInputType.MouseMovement or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            local pos = input.Position
-            if isInUI(pos) then
-                self.touchPos = Vector2.new(pos.X, pos.Y)
-            else
-                self.touchPos = Vector2.new(-1000, -1000)
-            end
-        end
-    end)
-    
-    -- 鼠标离开 UI 区域时清除
-    parentUI.MouseLeave:Connect(function()
-        self.touchPos = Vector2.new(-1000, -1000)
-    end)
 end
 
 function UIParticleSystem:updateParticles(deltaTime)
@@ -186,18 +145,6 @@ function UIParticleSystem:drawLines()
                 self:createLine(p1, p2, opacity)
             end
         end
-        
-        -- 触摸/鼠标连线
-        if self.hasTouch and self.touchPos.X > 0 then
-            local dx = p1.x - self.touchPos.X
-            local dy = p1.y - self.touchPos.Y
-            local dist = math.sqrt(dx * dx + dy * dy)
-            
-            if dist < self.mouseRadius then
-                local opacity = (1 - dist / self.mouseRadius) * 0.4
-                self:createLine(p1, {x = self.touchPos.X, y = self.touchPos.Y}, opacity)
-            end
-        end
     end
 end
 
@@ -256,10 +203,6 @@ end
 
 function UIParticleSystem:setLineDistance(distance)
     self.lineDistance = distance
-end
-
-function UIParticleSystem:setMouseRadius(radius)
-    self.mouseRadius = radius
 end
 
 function UIParticleSystem:setLineOpacity(opacity)
