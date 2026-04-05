@@ -100,9 +100,8 @@ function UIParticleSystem:setupTouchTracking(parentUI)
     local UserInputService = game:GetService("UserInputService")
     
     self.touchPos = Vector2.new(-1000, -1000)
-    self.hasTouch = false
+    self.hasTouch = true  -- ✅ 改为始终 true
     
-    -- 辅助函数：检查坐标是否在 UI 内
     local function isInUI(screenPos)
         local absPos = parentUI.AbsolutePosition
         local absSize = parentUI.AbsoluteSize
@@ -110,47 +109,25 @@ function UIParticleSystem:setupTouchTracking(parentUI)
             and screenPos.Y >= absPos.Y and screenPos.Y <= absPos.Y + absSize.Y
     end
     
-    -- 输入开始
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        local pos = input.Position
-        if isInUI(pos) then
-            self.hasTouch = true
-            self.touchPos = Vector2.new(pos.X, pos.Y)
-        end
-    end)
-    
-    -- 输入移动
+    -- 监听鼠标移动（不需要按下）
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if not self.hasTouch then return end
         
         if input.UserInputType == Enum.UserInputType.MouseMovement or 
            input.UserInputType == Enum.UserInputType.Touch then
             local pos = input.Position
-            self.touchPos = Vector2.new(pos.X, pos.Y)
+            if isInUI(pos) then
+                self.touchPos = Vector2.new(pos.X, pos.Y)
+            else
+                self.touchPos = Vector2.new(-1000, -1000)
+            end
         end
     end)
     
-    -- 输入结束
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            self.hasTouch = false
-            self.touchPos = Vector2.new(-1000, -1000)
-        end
+    -- 鼠标离开 UI 区域时清除
+    parentUI.MouseLeave:Connect(function()
+        self.touchPos = Vector2.new(-1000, -1000)
     end)
-    
-    -- 鼠标离开 UI（仅桌面端辅助）
-    if not self.isMobile then
-        parentUI.MouseLeave:Connect(function()
-            self.hasTouch = false
-            self.touchPos = Vector2.new(-1000, -1000)
-        end)
-    end
 end
 
 function UIParticleSystem:updateParticles(deltaTime)
