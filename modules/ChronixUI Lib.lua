@@ -662,9 +662,6 @@ function ChronixUI:CreateWindow(config)
     -- 关闭按钮事件
     closeBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
-        if windowData.ParticleSystem then
-            windowData.ParticleSystem:destroy()
-        end
         _G.UnloadChronixUI = true
         ContextActionService:UnbindAction(toggleActionName)
         if gui then
