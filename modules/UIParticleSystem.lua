@@ -91,7 +91,6 @@ function UIParticleSystem:initParticles()
         image.ImageColor3 = self.particleColor
         image.ImageTransparency = 1 - particle.alpha
         image.ZIndex = 0
-        image.InputTransparent = true
         image.Parent = self.canvasGroup
         
         particle.imageLabel = image
