@@ -21,7 +21,6 @@ local SoundService = game:GetService("SoundService")
 local ContextActionService = game:GetService("ContextActionService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
-local TextService = game:GetService("TextService")
 
 local UIParticleSystem = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/UIParticleSystem.lua"))()
 
@@ -419,88 +418,6 @@ function ChronixUI:CreateWindow(config)
     local titleLabel = CreateLabel(titleBar, windowName, UDim2.new(1, -140*scale, 1, 0), UDim2.new(0, 20*scale, 0, 0),
                                     self.Themes[self.CurrentTheme].Accent, titleFontSize, Enum.Font.GothamBold)
 
-                                    local function addTitleGlowEffect(targetLabel)
-                                        -- 获取原文字信息
-                                        local originalText = targetLabel.Text
-                                        local originalColor = targetLabel.TextColor3
-                                        local textSize = targetLabel.TextSize
-                                        local font = targetLabel.Font
-                                        local parent = targetLabel.Parent
-                                        local position = targetLabel.Position
-                                        local size = targetLabel.Size
-                                        
-                                        -- 计算实际文字尺寸
-                                        local textBounds = TextService:GetTextSize(originalText, textSize, font, Vector2.new(10000, 100))
-                                        local textWidth = textBounds.X
-                                        local textHeight = textBounds.Y
-                                        
-                                        -- 隐藏原文字
-                                        targetLabel.Visible = false
-                                        
-                                        -- 创建一个容器来放高亮图层
-                                        local container = Instance.new("Frame")
-                                        container.Name = "GlowContainer"
-                                        container.Size = UDim2.new(0, textWidth, 0, textHeight)
-                                        container.Position = UDim2.new(position.X.Scale, position.X.Offset + (size.X.Offset - textWidth)/2, 
-                                                                        position.Y.Scale, position.Y.Offset + (size.Y.Offset - textHeight)/2)
-                                        container.BackgroundTransparency = 1
-                                        container.Parent = parent
-                                        
-                                        -- 创建高亮文字（白色）
-                                        local highlight = Instance.new("TextLabel")
-                                        highlight.Text = originalText
-                                        highlight.TextColor3 = Color3.fromRGB(255, 255, 255)
-                                        highlight.TextSize = textSize
-                                        highlight.Font = font
-                                        highlight.BackgroundTransparency = 1
-                                        highlight.Size = UDim2.new(1, 0, 1, 0)
-                                        highlight.Position = UDim2.new(0, 0, 0, 0)
-                                        highlight.Parent = container
-                                        
-                                        -- 添加渐变
-                                        local gradient = Instance.new("UIGradient")
-                                        gradient.Rotation = 45
-                                        gradient.Transparency = NumberSequence.new({
-                                            NumberSequenceKeypoint.new(0, 1),
-                                            NumberSequenceKeypoint.new(0.45, 1),
-                                            NumberSequenceKeypoint.new(0.5, 0),   -- 光带中心
-                                            NumberSequenceKeypoint.new(0.55, 1),
-                                            NumberSequenceKeypoint.new(1, 1)
-                                        })
-                                        gradient.Parent = highlight
-                                        
-                                        -- 同步文字变化
-                                        local function sync()
-                                            local newText = targetLabel.Text
-                                            local newBounds = TextService:GetTextSize(newText, targetLabel.TextSize, targetLabel.Font, Vector2.new(10000, 100))
-                                            container.Size = UDim2.new(0, newBounds.X, 0, newBounds.Y)
-                                            container.Position = UDim2.new(position.X.Scale, position.X.Offset + (size.X.Offset - newBounds.X)/2,
-                                                                            position.Y.Scale, position.Y.Offset + (size.Y.Offset - newBounds.Y)/2)
-                                            highlight.Text = newText
-                                            highlight.TextSize = targetLabel.TextSize
-                                        end
-                                        
-                                        targetLabel:GetPropertyChangedSignal("Text"):Connect(sync)
-                                        targetLabel:GetPropertyChangedSignal("TextSize"):Connect(sync)
-                                        
-                                        -- 动画
-                                        task.spawn(function()
-                                            while container and container.Parent do
-                                                gradient.Offset = Vector2.new(0, 0)
-                                                highlight.Visible = true
-                                                
-                                                local tween = TweenService:Create(gradient, TweenInfo.new(1, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
-                                                tween:Play()
-                                                tween.Completed:Wait()
-                                                
-                                                highlight.Visible = false
-                                                task.wait(30)
-                                            end
-                                        end)
-                                    end
-
-                                    addTitleGlowEffect(titleLabel)
-
     -- 按钮容器
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Size = UDim2.new(0, 120*scale, 1, 0)
@@ -712,34 +629,34 @@ function ChronixUI:CreateWindow(config)
         Minimized = false
     }
 
-    -- -- ========== 在这里添加粒子系统 ==========
-    -- -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
-    -- if UIParticleSystem then
-    --     local particleBgFrame = Instance.new("Frame")
-    --     particleBgFrame.Name = "ParticleBackground"
-    --     particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
-    --     particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
-    --     particleBgFrame.BackgroundTransparency = 1
-    --     particleBgFrame.BorderSizePixel = 0
-    --     particleBgFrame.ClipsDescendants = true
-    --     particleBgFrame.Parent = mainFrame
+    -- ========== 在这里添加粒子系统 ==========
+    -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
+    if UIParticleSystem then
+        local particleBgFrame = Instance.new("Frame")
+        particleBgFrame.Name = "ParticleBackground"
+        particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
+        particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
+        particleBgFrame.BackgroundTransparency = 1
+        particleBgFrame.BorderSizePixel = 0
+        particleBgFrame.ClipsDescendants = true
+        particleBgFrame.Parent = mainFrame
         
-    --     -- 将粒子系统附加到这个背景容器上
-    --     local particleSystem = UIParticleSystem.new(particleBgFrame)
+        -- 将粒子系统附加到这个背景容器上
+        local particleSystem = UIParticleSystem.new(particleBgFrame)
         
-    --     -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
-    --     if particleSystem then
-    --         particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
-    --         particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
-    --         particleSystem:setLineDistance(160)
-    --         particleSystem:setMouseRadius(130)
-    --         particleSystem:setLineOpacity(0.25)
-    --     end
+        -- -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
+        -- if particleSystem then
+        --     particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
+        --     particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
+        --     particleSystem:setLineDistance(160)
+        --     particleSystem:setMouseRadius(130)
+        --     particleSystem:setLineOpacity(0.25)
+        -- end
         
-    --     -- 将粒子系统保存到 windowData 中，以便清理
-    --     windowData.ParticleSystem = particleSystem
-    -- end
-    -- -- ========== 粒子系统添加结束 ==========
+        -- -- 将粒子系统保存到 windowData 中，以便清理
+        -- windowData.ParticleSystem = particleSystem
+    end
+    -- ========== 粒子系统添加结束 ==========
 
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
