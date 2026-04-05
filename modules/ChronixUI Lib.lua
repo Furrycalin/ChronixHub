@@ -420,65 +420,34 @@ function ChronixUI:CreateWindow(config)
 
     -- --- 新增：为标题添加流光效果 (霓虹灯条带) ---
     local function addTitleGlowEffect(targetLabel)
-        local originalColor = targetLabel.TextColor3  -- 青蓝色 (119,221,255)
+        -- 给文字添加边框（用于显示光带）
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 3
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Transparency = 1  -- 默认透明
+        stroke.Parent = targetLabel
         
-        -- 1. 创建高亮图层（纯白色文字）
-        local highlight = Instance.new("TextLabel")
-        highlight.Name = "HighlightLayer"
-        highlight.BackgroundTransparency = 1
-        highlight.Text = targetLabel.Text
-        highlight.TextColor3 = Color3.fromRGB(255, 255, 255)  -- 纯白色
-        highlight.TextSize = targetLabel.TextSize
-        highlight.Font = targetLabel.Font
-        highlight.TextXAlignment = targetLabel.TextXAlignment
-        highlight.TextYAlignment = targetLabel.TextYAlignment
-        highlight.Visible = false
-        highlight.Parent = targetLabel.Parent
-        -- 同步位置和大小
-        local function sync()
-            highlight.Size = targetLabel.Size
-            highlight.Position = targetLabel.Position
-        end
-        sync()
-        targetLabel:GetPropertyChangedSignal("Size"):Connect(sync)
-        targetLabel:GetPropertyChangedSignal("Position"):Connect(sync)
-        
-        -- 2. 创建渐变（控制白色高亮的显示区域）
+        -- 给边框添加渐变
         local gradient = Instance.new("UIGradient")
         gradient.Rotation = 45
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
-            ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255,255,255)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
-            ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255,255,255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
-        })
         gradient.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),    -- 完全透明
+            NumberSequenceKeypoint.new(0, 1),
             NumberSequenceKeypoint.new(0.45, 1),
-            NumberSequenceKeypoint.new(0.5, 0),  -- 光带中心不透明
+            NumberSequenceKeypoint.new(0.5, 0),
             NumberSequenceKeypoint.new(0.55, 1),
             NumberSequenceKeypoint.new(1, 1)
         })
-        gradient.Parent = highlight
+        gradient.Parent = stroke
         
-        -- 3. 动画
-        local function playShine()
-            if not targetLabel.Parent then return end
-            gradient.Offset = Vector2.new(0, 0)
-            highlight.Visible = true
-            local tween = TweenService:Create(gradient, TweenInfo.new(1, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
-            tween.Completed:Connect(function()
-                highlight.Visible = false
-                gradient.Offset = Vector2.new(0, 0)
-            end)
-            tween:Play()
-        end
-        
-        -- 4. 定时器
+        -- 动画
         task.spawn(function()
             while targetLabel and targetLabel.Parent do
-                playShine()
+                gradient.Offset = Vector2.new(0, 0)
+                stroke.Transparency = 0  -- 显示边框
+                local tween = TweenService:Create(gradient, TweenInfo.new(1, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
+                tween:Play()
+                tween.Completed:Wait()
+                stroke.Transparency = 1  -- 隐藏边框
                 task.wait(30)
             end
         end)
