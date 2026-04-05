@@ -1,18 +1,13 @@
 -- UIParticleSystem.lua
--- 电脑端：鼠标在区域内移动/停留时画线
--- 手机端：只显示粒子，不追踪触摸（纯视觉效果）
-
 local UIParticleSystem = {}
 UIParticleSystem.__index = UIParticleSystem
 
 function UIParticleSystem.new(parentUI)
     local self = setmetatable({}, UIParticleSystem)
 
-    -- 检测设备类型
     local UserInputService = game:GetService("UserInputService")
     self.isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 
-    -- 创建主容器
     self.container = Instance.new("Frame")
     self.container.Name = "ParticleSystem"
     self.container.Size = UDim2.new(1, 0, 1, 0)
@@ -22,48 +17,38 @@ function UIParticleSystem.new(parentUI)
     self.container.ZIndex = 10
     self.container.Parent = parentUI
 
-    -- 参数配置（手机端进一步简化）
     self.particles = {}
-    self.particleCount = self.isMobile and 20 or 45      -- 手机端粒子更少
+    self.particleCount = 45
     self.particleSize = 3
-    self.particleSpeed = {min = 0.2, max = 1.0}         -- 手机端速度更慢
-    self.lineDistance = 120                              -- 连线距离
-    self.mouseRadius = 120                               -- 鼠标影响半径
-    self.lineOpacity = 0.08                              -- 线条基础透明度
-    self.particleColor = Color3.fromRGB(119, 221, 255)   -- 主题色
+    self.particleSpeed = {min = 0.3, max = 1.2}
+    self.lineDistance = 120
+    self.mouseRadius = 120
+    self.lineOpacity = 0.15
+    self.particleColor = Color3.fromRGB(119, 221, 255)
 
-    -- 鼠标追踪专用（电脑端）
     self.mouseInUI = false
     self.mousePos = Vector2.new(-1000, -1000)
 
-    -- 动画控制
     self.connection = nil
     self.lastUpdate = tick()
 
-    -- 获取UI尺寸的函数
     self.getUISize = function()
         local absSize = parentUI.AbsoluteSize
         return absSize.X, absSize.Y
     end
 
     self:initParticles()
-    
-    -- 仅在电脑端启用鼠标追踪
-    if not self.isMobile then
-        self:setupMouseTracking(parentUI)
-    end
-    
+    self:setupMouseTracking(parentUI)
     self:startAnimation()
 
     return self
 end
 
--- 创建圆形粒子
 function UIParticleSystem:createCircle(parent, size, color)
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, size, 0, size)
     circle.BackgroundColor3 = color
-    circle.BackgroundTransparency = 0.3
+    circle.BackgroundTransparency = 0.5
     circle.BorderSizePixel = 0
     circle.ZIndex = 11
 
@@ -75,7 +60,6 @@ function UIParticleSystem:createCircle(parent, size, color)
     return circle
 end
 
--- 初始化粒子
 function UIParticleSystem:initParticles()
     local width, height = self:getUISize()
     if width == 0 or height == 0 then
@@ -90,23 +74,21 @@ function UIParticleSystem:initParticles()
             vx = (math.random() - 0.5) * (self.particleSpeed.max - self.particleSpeed.min) * 2,
             vy = (math.random() - 0.5) * (self.particleSpeed.max - self.particleSpeed.min) * 2,
             size = self.particleSize,
-            alpha = 0.3 + math.random() * 0.3,          -- 手机端粒子更淡
+            alpha = 0.3 + math.random() * 0.3,
             frame = nil
         }
 
         particle.frame = self:createCircle(self.container, particle.size, self.particleColor)
         particle.frame.Position = UDim2.new(0, particle.x - particle.size/2, 0, particle.y - particle.size/2)
-        particle.frame.BackgroundTransparency = 1 - particle.alpha * 0.4
+        particle.frame.BackgroundTransparency = 1 - particle.alpha * 0.6
 
         table.insert(self.particles, particle)
     end
 end
 
--- 电脑端鼠标追踪（移动/停留均触发）
 function UIParticleSystem:setupMouseTracking(parentUI)
     local UserInputService = game:GetService("UserInputService")
 
-    -- 检查坐标是否在 UI 内
     local function isInUI(screenPos)
         local absPos = parentUI.AbsolutePosition
         local absSize = parentUI.AbsoluteSize
@@ -114,7 +96,7 @@ function UIParticleSystem:setupMouseTracking(parentUI)
             and screenPos.Y >= absPos.Y and screenPos.Y <= absPos.Y + absSize.Y
     end
 
-    -- 鼠标移动时更新位置
+    -- 鼠标移动
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -129,14 +111,18 @@ function UIParticleSystem:setupMouseTracking(parentUI)
         end
     end)
 
-    -- 鼠标离开 UI 区域时清除
+    -- 鼠标离开
     parentUI.MouseLeave:Connect(function()
         self.mouseInUI = false
         self.mousePos = Vector2.new(-1000, -1000)
     end)
+    
+    -- 鼠标进入
+    parentUI.MouseEnter:Connect(function()
+        self.mouseInUI = true
+    end)
 end
 
--- 更新粒子位置
 function UIParticleSystem:updateParticles(deltaTime)
     local width, height = self:getUISize()
     if width == 0 or height == 0 then return end
@@ -145,7 +131,6 @@ function UIParticleSystem:updateParticles(deltaTime)
         p.x = p.x + p.vx * deltaTime * 60
         p.y = p.y + p.vy * deltaTime * 60
 
-        -- 边界反弹
         if p.x < -10 then
             p.x = -10
             p.vx = -p.vx
@@ -168,7 +153,6 @@ function UIParticleSystem:updateParticles(deltaTime)
     end
 end
 
--- 绘制连线
 function UIParticleSystem:drawLines()
     -- 清除旧线条
     for _, child in ipairs(self.container:GetChildren()) do
@@ -190,27 +174,26 @@ function UIParticleSystem:drawLines()
             local dy = p1.y - p2.y
             local dist = math.sqrt(dx * dx + dy * dy)
 
-            if dist < self.lineDistance and dist > 5 then
+            if dist < self.lineDistance then
                 local opacity = (1 - dist / self.lineDistance) * self.lineOpacity
                 self:createLine(p1, p2, opacity)
             end
         end
 
-        -- 电脑端鼠标连线（仅在非手机端且鼠标在UI内时）
-        if not self.isMobile and self.mouseInUI and self.mousePos.X > 0 then
+        -- 鼠标连线
+        if self.mouseInUI and self.mousePos.X > 0 then
             local dx = p1.x - self.mousePos.X
             local dy = p1.y - self.mousePos.Y
             local dist = math.sqrt(dx * dx + dy * dy)
 
             if dist < self.mouseRadius then
-                local opacity = (1 - dist / self.mouseRadius) * 0.12  -- 线条更淡
+                local opacity = (1 - dist / self.mouseRadius) * 0.2
                 self:createLine(p1, {x = self.mousePos.X, y = self.mousePos.Y}, opacity)
             end
         end
     end
 end
 
--- 创建单条线段
 function UIParticleSystem:createLine(p1, p2, opacity)
     local dx = p2.x - p1.x
     local dy = p2.y - p1.y
@@ -231,11 +214,10 @@ function UIParticleSystem:createLine(p1, p2, opacity)
     line.BackgroundTransparency = 1 - opacity
     line.BorderSizePixel = 0
     line.ZIndex = 9
-    line.InputTransparent = true  -- 让线条不干扰点击
+    line.InputTransparent = true
     line.Parent = self.container
 end
 
--- 启动动画循环
 function UIParticleSystem:startAnimation()
     self.connection = game:GetService("RunService").RenderStepped:Connect(function(deltaTime)
         local now = tick()
@@ -247,7 +229,6 @@ function UIParticleSystem:startAnimation()
     end)
 end
 
--- 公共方法
 function UIParticleSystem:setColor(color)
     self.particleColor = color
     for _, p in ipairs(self.particles) do
@@ -258,8 +239,7 @@ function UIParticleSystem:setColor(color)
 end
 
 function UIParticleSystem:setParticleCount(count)
-    local maxCount = self.isMobile and 35 or 70
-    self.particleCount = math.min(count, maxCount)
+    self.particleCount = math.min(count, 80)
     for _, p in ipairs(self.particles) do
         if p.frame then p.frame:Destroy() end
     end
