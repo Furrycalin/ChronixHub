@@ -22,6 +22,8 @@ local ContextActionService = game:GetService("ContextActionService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
+local UIParticleSystem = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/UIParticleSystem.lua"))()
+
 -- 设备类型判断
 local function GetDeviceType()
     if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
@@ -603,23 +605,6 @@ function ChronixUI:CreateWindow(config)
                 playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
             end
         end
-
-    local gameInfoCache = nil
-    local function getGameName(universeId)
-        if gameInfoCache then return gameInfoCache end
-        local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
-        local success, response = pcall(function()
-            return game:HttpGet(url)
-        end)
-        if success then
-            local data = HttpService:JSONDecode(response)
-            if data.data and #data.data > 0 then
-                gameInfoCache = data.data[1]
-                return gameInfoCache
-            end
-        end
-        return nil
-    end
     safePlayerInfo()
 
     -- 侧边栏
@@ -677,6 +662,9 @@ function ChronixUI:CreateWindow(config)
     -- 关闭按钮事件
     closeBtn.MouseButton1Click:Connect(function()
         PlayClickSound()
+        if windowData.ParticleSystem then
+            windowData.ParticleSystem:destroy()
+        end
         _G.UnloadChronixUI = true
         ContextActionService:UnbindAction(toggleActionName)
         if gui then
@@ -701,6 +689,35 @@ function ChronixUI:CreateWindow(config)
         SettingsTabContent = nil,
         Minimized = false
     }
+
+    -- ========== 在这里添加粒子系统 ==========
+    -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
+    if UIParticleSystem then
+        local particleBgFrame = Instance.new("Frame")
+        particleBgFrame.Name = "ParticleBackground"
+        particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
+        particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
+        particleBgFrame.BackgroundTransparency = 1
+        particleBgFrame.BorderSizePixel = 0
+        particleBgFrame.ClipsDescendants = true
+        particleBgFrame.Parent = mainFrame
+        
+        -- 将粒子系统附加到这个背景容器上
+        local particleSystem = UIParticleSystem.new(particleBgFrame)
+        
+        -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
+        if particleSystem then
+            particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
+            particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
+            particleSystem:setLineDistance(160)
+            particleSystem:setMouseRadius(130)
+            particleSystem:setLineOpacity(0.25)
+        end
+        
+        -- 将粒子系统保存到 windowData 中，以便清理
+        windowData.ParticleSystem = particleSystem
+    end
+    -- ========== 粒子系统添加结束 ==========
 
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
