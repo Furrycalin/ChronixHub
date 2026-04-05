@@ -420,37 +420,139 @@ function ChronixUI:CreateWindow(config)
 
     -- --- 新增：为标题添加流光效果 (霓虹灯条带) ---
     local function addTitleGlowEffect(targetLabel)
-        -- 给文字添加边框（用于显示光带）
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 3
-        stroke.Color = Color3.fromRGB(255, 255, 255)
-        stroke.Transparency = 1  -- 默认透明
-        stroke.Parent = targetLabel
+        -- 1. 获取原文字信息和父级
+        local parent = targetLabel.Parent
+        local originalText = targetLabel.Text
+        local originalColor = targetLabel.TextColor3
+        local textSize = targetLabel.TextSize
+        local font = targetLabel.Font
+        local position = targetLabel.Position
+        local size = targetLabel.Size
         
-        -- 给边框添加渐变
-        local gradient = Instance.new("UIGradient")
-        gradient.Rotation = 45
-        gradient.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.45, 1),
-            NumberSequenceKeypoint.new(0.5, 0),
-            NumberSequenceKeypoint.new(0.55, 1),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        gradient.Parent = stroke
+        -- 2. 创建容器，替代原来的 TextLabel
+        local container = Instance.new("Frame")
+        container.Name = "GlowTextContainer"
+        container.Size = size
+        container.Position = position
+        container.BackgroundTransparency = 1
+        container.Parent = parent
         
-        -- 动画
+        -- 隐藏原来的文字
+        targetLabel.Visible = false
+        
+        -- 3. 将文字拆分成单个字符，并为每个字符创建一个 TextLabel
+        local charLabels = {}
+        local totalWidth = 0
+        local charWidths = {} -- 存储每个字符的宽度（估算）
+        
+        -- 辅助函数：估算单个字符宽度（简单估算，可根据字体调整）
+        local function estimateCharWidth(char)
+            -- 粗略估算，实际可用 TextService 精确测量，但为了性能，用简单映射
+            if char:match("[a-zA-Z]") then return textSize * 0.6
+            elseif char:match("[0-9]") then return textSize * 0.6
+            elseif char:match("[%p]") then return textSize * 0.4
+            else return textSize * 0.8 end -- 中文等宽字符
+        end
+        
+        -- 计算总宽度和每个字符的宽度
+        for i = 1, #originalText do
+            local char = originalText:sub(i, i)
+            local width = estimateCharWidth(char)
+            charWidths[i] = width
+            totalWidth = totalWidth + width
+        end
+        
+        -- 创建每个字符的 TextLabel
+        local currentX = 0
+        for i, char in ipairs(charLabels) do -- 这里需要修正，应该遍历 originalText
+        end
+        -- 正确创建
+        for i = 1, #originalText do
+            local char = originalText:sub(i, i)
+            local charLabel = Instance.new("TextLabel")
+            charLabel.Text = char
+            charLabel.TextColor3 = originalColor
+            charLabel.TextSize = textSize
+            charLabel.Font = font
+            charLabel.BackgroundTransparency = 1
+            charLabel.Size = UDim2.new(0, charWidths[i], 1, 0)
+            charLabel.Position = UDim2.new(0, currentX, 0, 0)
+            charLabel.Parent = container
+            
+            table.insert(charLabels, charLabel)
+            currentX = currentX + charWidths[i]
+        end
+        
+        -- 调整容器宽度以匹配文字总宽度
+        container.Size = UDim2.new(0, totalWidth, 1, 0)
+        -- 可选：居中容器
+        container.Position = UDim2.new(position.X.Scale, position.X.Offset + (size.X.Offset - totalWidth)/2, position.Y.Scale, position.Y.Offset)
+        
+        -- 4. 流光动画函数
+        local function playShine()
+            -- 动画持续时间 1 秒，分成 60 帧（每帧约 0.0167 秒）
+            local duration = 1.0
+            local steps = 30 -- 步数，越高越平滑
+            local stepTime = duration / steps
+            
+            -- 光带宽度（占总宽度的比例，例如 30%）
+            local bandWidth = 0.3
+            -- 光带移动范围：从 -bandWidth 到 1（即从左边界外开始，到右边界外结束）
+            
+            for step = 0, steps do
+                local t = step / steps -- t 从 0 到 1，表示动画进度
+                -- 光带中心位置：从 -bandWidth/2 到 1 + bandWidth/2
+                local bandCenter = -bandWidth/2 + t * (1 + bandWidth)
+                
+                -- 为每个字符计算颜色
+                for idx, charLabel in ipairs(charLabels) do
+                    -- 计算字符的中心位置（相对于总宽度的比例）
+                    local charStart = (idx - 1 > 0 and charWidths[idx-1] or 0)
+                    local charCenter = (charStart + charWidths[idx]/2) / totalWidth
+                    
+                    -- 计算字符到光带中心的距离
+                    local dist = math.abs(charCenter - bandCenter)
+                    -- 根据距离计算强度（0 = 原色，1 = 白色）
+                    local intensity = 0
+                    if dist < bandWidth/2 then
+                        -- 在光带内，强度从 0 到 1 再到 0 平滑过渡
+                        intensity = 1 - (dist * 2 / bandWidth)
+                        -- 可选：使用更平滑的缓动
+                        intensity = math.sin(intensity * math.pi/2)
+                    end
+                    
+                    -- 混合颜色：原色 + (白色 - 原色) * intensity
+                    local newColor = Color3.new(
+                        originalColor.R + (1 - originalColor.R) * intensity,
+                        originalColor.G + (1 - originalColor.G) * intensity,
+                        originalColor.B + (1 - originalColor.B) * intensity
+                    )
+                    charLabel.TextColor3 = newColor
+                end
+                
+                -- 等待下一帧
+                task.wait(stepTime)
+            end
+            
+            -- 动画结束后，将所有字符恢复原色
+            for _, charLabel in ipairs(charLabels) do
+                charLabel.TextColor3 = originalColor
+            end
+        end
+        
+        -- 5. 定时器
         task.spawn(function()
-            while targetLabel and targetLabel.Parent do
-                gradient.Offset = Vector2.new(0, 0)
-                stroke.Transparency = 0  -- 显示边框
-                local tween = TweenService:Create(gradient, TweenInfo.new(1, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
-                tween:Play()
-                tween.Completed:Wait()
-                stroke.Transparency = 1  -- 隐藏边框
+            while container and container.Parent do
+                playShine()
                 task.wait(30)
             end
         end)
+        
+        -- 6. 清理函数（可选，当窗口关闭时调用）
+        return function()
+            container:Destroy()
+            targetLabel.Visible = true
+        end
     end
 
     -- 调用流光效果函数，传入刚创建的标题文字
