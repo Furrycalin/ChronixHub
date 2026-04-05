@@ -220,7 +220,6 @@ function UIParticleSystem:createLine(p1, p2, opacity, isMouseLine)
     line.BorderSizePixel = 0
     line.Parent = self.canvasGroup
     line.ZIndex = 0
-    line.InputTransparent = true 
 end
 
 -- 动画循环
