@@ -26,7 +26,7 @@ function UIParticleSystem.new(parentUI)
     self.particleSpeed = {min = 0.3, max = 1.2}  -- 手机端减慢速度
     self.lineDistance = self.isMobile and 80 or 120  -- 手机端减少连线
     self.mouseRadius = 100
-    self.lineOpacity = 0.2
+    self.lineOpacity = 0.08
     self.particleColor = Color3.fromRGB(119, 221, 255)  -- 主题色
     
     -- 鼠标/触摸位置
@@ -87,7 +87,7 @@ function UIParticleSystem:initParticles()
         
         particle.frame = self:createCircle(self.container, particle.size, self.particleColor)
         particle.frame.Position = UDim2.new(0, particle.x - particle.size/2, 0, particle.y - particle.size/2)
-        particle.frame.BackgroundTransparency = 1 - particle.alpha
+        particle.frame.BackgroundTransparency = 1 - particle.alpha * 0.5
         
         table.insert(self.particles, particle)
     end
@@ -219,7 +219,7 @@ function UIParticleSystem:drawLines()
             local dist = math.sqrt(dx * dx + dy * dy)
             
             if dist < self.mouseRadius then
-                local opacity = (1 - dist / self.mouseRadius) * 0.4
+                local opacity = (1 - dist / self.mouseRadius) * 0.15
                 self:createLine(p1, {x = self.touchPos.X, y = self.touchPos.Y}, opacity)
             end
         end
