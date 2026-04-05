@@ -426,25 +426,30 @@ function ChronixUI:CreateWindow(config)
         gradient.Enabled = false -- 关键：默认不生效，文字保持原样
         gradient.Parent = targetLabel
 
-        -- 2. 设置银白色光带的渐变颜色
+        -- 2. 【关键修正】设置颜色序列：保持文字原色，只让光带区域变白
+        -- 原理：Color 决定叠加的颜色，配合 Transparency 实现“提亮”效果
         local colorSequence = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),   -- 白色边缘
-            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(200, 200, 210)),-- 过渡银色
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), -- 亮银色光带中心
-            ColorSequenceKeypoint.new(0.52, Color3.fromRGB(200, 200, 210)),
+            -- 边缘区域：完全透明，不改变文字颜色
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),     -- 白色，但靠透明度控制
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),   -- 白色
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(255, 255, 255)),  -- 光带边缘：白色
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),   -- 光带中心：纯白
+            ColorSequenceKeypoint.new(0.52, Color3.fromRGB(255, 255, 255)),
             ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 255, 255)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
         })
         gradient.Color = colorSequence
 
-        -- 3. 设置透明度（让光带区域更亮）
+        -- 3. 【关键修正】透明度序列：只在光带区域降低透明度（让白色显现）
+        -- 平时完全透明（1.0），光带中心完全不透明（0.0）
         local transparencySequence = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.7),
-            NumberSequenceKeypoint.new(0.48, 0.4),
-            NumberSequenceKeypoint.new(0.5, 0),   -- 光带中心完全不透明
-            NumberSequenceKeypoint.new(0.52, 0.4),
-            NumberSequenceKeypoint.new(1, 0.7)
+            NumberSequenceKeypoint.new(0, 1.0),      -- 完全透明，文字显示原本的青蓝色
+            NumberSequenceKeypoint.new(0.4, 1.0),
+            NumberSequenceKeypoint.new(0.48, 0.6),   -- 光带边缘：半透明，产生柔和过渡
+            NumberSequenceKeypoint.new(0.5, 0.0),    -- 光带中心：完全不透明，白色高亮
+            NumberSequenceKeypoint.new(0.52, 0.6),
+            NumberSequenceKeypoint.new(0.6, 1.0),
+            NumberSequenceKeypoint.new(1, 1.0)
         })
         gradient.Transparency = transparencySequence
 
@@ -687,34 +692,34 @@ function ChronixUI:CreateWindow(config)
         Minimized = false
     }
 
-    -- ========== 在这里添加粒子系统 ==========
-    -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
-    if UIParticleSystem then
-        local particleBgFrame = Instance.new("Frame")
-        particleBgFrame.Name = "ParticleBackground"
-        particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
-        particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
-        particleBgFrame.BackgroundTransparency = 1
-        particleBgFrame.BorderSizePixel = 0
-        particleBgFrame.ClipsDescendants = true
-        particleBgFrame.Parent = mainFrame
+    -- -- ========== 在这里添加粒子系统 ==========
+    -- -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
+    -- if UIParticleSystem then
+    --     local particleBgFrame = Instance.new("Frame")
+    --     particleBgFrame.Name = "ParticleBackground"
+    --     particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
+    --     particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
+    --     particleBgFrame.BackgroundTransparency = 1
+    --     particleBgFrame.BorderSizePixel = 0
+    --     particleBgFrame.ClipsDescendants = true
+    --     particleBgFrame.Parent = mainFrame
         
-        -- 将粒子系统附加到这个背景容器上
-        local particleSystem = UIParticleSystem.new(particleBgFrame)
+    --     -- 将粒子系统附加到这个背景容器上
+    --     local particleSystem = UIParticleSystem.new(particleBgFrame)
         
-        -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
-        if particleSystem then
-            particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
-            particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
-            particleSystem:setLineDistance(160)
-            particleSystem:setMouseRadius(130)
-            particleSystem:setLineOpacity(0.25)
-        end
+    --     -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
+    --     if particleSystem then
+    --         particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
+    --         particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
+    --         particleSystem:setLineDistance(160)
+    --         particleSystem:setMouseRadius(130)
+    --         particleSystem:setLineOpacity(0.25)
+    --     end
         
-        -- 将粒子系统保存到 windowData 中，以便清理
-        windowData.ParticleSystem = particleSystem
-    end
-    -- ========== 粒子系统添加结束 ==========
+    --     -- 将粒子系统保存到 windowData 中，以便清理
+    --     windowData.ParticleSystem = particleSystem
+    -- end
+    -- -- ========== 粒子系统添加结束 ==========
 
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
