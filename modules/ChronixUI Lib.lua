@@ -420,50 +420,66 @@ function ChronixUI:CreateWindow(config)
 
     -- --- 新增：为标题添加流光效果 (霓虹灯条带) ---
     local function addTitleGlowEffect(targetLabel)
-        -- 1. 创建 UIGradient（平时禁用）
+        local originalColor = targetLabel.TextColor3  -- 青蓝色 (119,221,255)
+        
+        -- 1. 创建高亮图层（纯白色文字）
+        local highlight = Instance.new("TextLabel")
+        highlight.Name = "HighlightLayer"
+        highlight.BackgroundTransparency = 1
+        highlight.Text = targetLabel.Text
+        highlight.TextColor3 = Color3.fromRGB(255, 255, 255)  -- 纯白色
+        highlight.TextSize = targetLabel.TextSize
+        highlight.Font = targetLabel.Font
+        highlight.TextXAlignment = targetLabel.TextXAlignment
+        highlight.TextYAlignment = targetLabel.TextYAlignment
+        highlight.Visible = false
+        highlight.Parent = targetLabel.Parent
+        -- 同步位置和大小
+        local function sync()
+            highlight.Size = targetLabel.Size
+            highlight.Position = targetLabel.Position
+        end
+        sync()
+        targetLabel:GetPropertyChangedSignal("Size"):Connect(sync)
+        targetLabel:GetPropertyChangedSignal("Position"):Connect(sync)
+        
+        -- 2. 创建渐变（控制白色高亮的显示区域）
         local gradient = Instance.new("UIGradient")
-        gradient.Rotation = 45  -- 斜向划过，经典效果
-        gradient.Enabled = false -- 关键：默认不生效，文字保持原样
-        gradient.Parent = targetLabel
-
-        local originalColor = targetLabel.TextColor3
-        local whiteColor = Color3.fromRGB(255, 255, 255)
-
-        local colorSequence = ColorSequence.new({
-            -- 边缘：保持青蓝色
-            ColorSequenceKeypoint.new(0, originalColor),
-            ColorSequenceKeypoint.new(0.4, originalColor),
-            -- 光带区域：平滑过渡到白色，再过渡回青蓝色
-            ColorSequenceKeypoint.new(0.48, whiteColor),  -- 光带边缘开始变白
-            ColorSequenceKeypoint.new(0.5, whiteColor),   -- 光带中心纯白高亮
-            ColorSequenceKeypoint.new(0.52, whiteColor),  -- 光带边缘开始恢复
-            -- 边缘：恢复青蓝色
-            ColorSequenceKeypoint.new(0.6, originalColor),
-            ColorSequenceKeypoint.new(1, originalColor)
+        gradient.Rotation = 45
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
         })
-        gradient.Color = colorSequence
-
-        -- 4. 流光动画函数（只执行一次划过）
+        gradient.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),    -- 完全透明
+            NumberSequenceKeypoint.new(0.45, 1),
+            NumberSequenceKeypoint.new(0.5, 0),  -- 光带中心不透明
+            NumberSequenceKeypoint.new(0.55, 1),
+            NumberSequenceKeypoint.new(1, 1)
+        })
+        gradient.Parent = highlight
+        
+        -- 3. 动画
         local function playShine()
-            if not targetLabel.Parent then return end -- 防止文字被销毁后出错
+            if not targetLabel.Parent then return end
             gradient.Offset = Vector2.new(0, 0)
-            gradient.Enabled = true
-        
-            local tweenInfo = TweenInfo.new(1.0, Enum.EasingStyle.Linear) -- 1秒划过
-            local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(1, 0)})
-        
+            highlight.Visible = true
+            local tween = TweenService:Create(gradient, TweenInfo.new(1, Enum.EasingStyle.Linear), {Offset = Vector2.new(1, 0)})
             tween.Completed:Connect(function()
-                gradient.Enabled = false
+                highlight.Visible = false
                 gradient.Offset = Vector2.new(0, 0)
             end)
             tween:Play()
         end
-
-        -- 5. 启动定时器：每30秒执行一次流光，且不影响性能
+        
+        -- 4. 定时器
         task.spawn(function()
             while targetLabel and targetLabel.Parent do
                 playShine()
-                task.wait(30) -- 等待30秒，这行是关键，让循环休息
+                task.wait(30)
             end
         end)
     end
