@@ -95,48 +95,45 @@ end
 
 -- 手机端触摸追踪
 -- 修正 setupTouchTracking 函数
+-- 设置触摸/鼠标追踪（通用版）
 function UIParticleSystem:setupTouchTracking(parentUI)
     local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
     
-    -- 获取鼠标/触摸位置的变量
     self.touchPos = Vector2.new(-1000, -1000)
     self.hasTouch = false
     
-    -- 检测是否在目标 UI 内
-    local function isMouseOverUI()
-        local mousePos = UserInputService:GetMouseLocation()
+    -- 辅助函数：检查坐标是否在 UI 内
+    local function isInUI(screenPos)
         local absPos = parentUI.AbsolutePosition
         local absSize = parentUI.AbsoluteSize
-        
-        return mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X
-            and mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y
+        return screenPos.X >= absPos.X and screenPos.X <= absPos.X + absSize.X
+            and screenPos.Y >= absPos.Y and screenPos.Y <= absPos.Y + absSize.Y
     end
     
-    -- 输入开始（鼠标按下 或 触摸开始）
+    -- 输入开始
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
-        -- 检查是否在 UI 内
-        if isMouseOverUI() then
+        local pos = input.Position
+        if isInUI(pos) then
             self.hasTouch = true
-            local pos = input.Position
             self.touchPos = Vector2.new(pos.X, pos.Y)
         end
     end)
     
-    -- 输入更新（鼠标移动 或 触摸移动）
+    -- 输入移动
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
         if gameProcessed then return end
+        if not self.hasTouch then return end
         
-        if self.hasTouch and (input.UserInputType == Enum.UserInputType.MouseMovement or 
-                              input.UserInputType == Enum.UserInputType.Touch) then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or 
+           input.UserInputType == Enum.UserInputType.Touch then
             local pos = input.Position
             self.touchPos = Vector2.new(pos.X, pos.Y)
         end
     end)
     
-    -- 输入结束（鼠标释放 或 触摸结束）
+    -- 输入结束
     UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         
@@ -147,7 +144,7 @@ function UIParticleSystem:setupTouchTracking(parentUI)
         end
     end)
     
-    -- 可选：鼠标离开 UI 区域时清除（仅桌面端）
+    -- 鼠标离开 UI（仅桌面端辅助）
     if not self.isMobile then
         parentUI.MouseLeave:Connect(function()
             self.hasTouch = false
