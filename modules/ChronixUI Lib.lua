@@ -426,32 +426,22 @@ function ChronixUI:CreateWindow(config)
         gradient.Enabled = false -- 关键：默认不生效，文字保持原样
         gradient.Parent = targetLabel
 
-        -- 2. 【关键修正】设置颜色序列：保持文字原色，只让光带区域变白
-        -- 原理：Color 决定叠加的颜色，配合 Transparency 实现“提亮”效果
+        local originalColor = targetLabel.TextColor3
+        local whiteColor = Color3.fromRGB(255, 255, 255)
+
         local colorSequence = ColorSequence.new({
-            -- 边缘区域：完全透明，不改变文字颜色
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),     -- 白色，但靠透明度控制
-            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),   -- 白色
-            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(255, 255, 255)),  -- 光带边缘：白色
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),   -- 光带中心：纯白
-            ColorSequenceKeypoint.new(0.52, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+            -- 边缘：保持青蓝色
+            ColorSequenceKeypoint.new(0, originalColor),
+            ColorSequenceKeypoint.new(0.4, originalColor),
+            -- 光带区域：平滑过渡到白色，再过渡回青蓝色
+            ColorSequenceKeypoint.new(0.48, whiteColor),  -- 光带边缘开始变白
+            ColorSequenceKeypoint.new(0.5, whiteColor),   -- 光带中心纯白高亮
+            ColorSequenceKeypoint.new(0.52, whiteColor),  -- 光带边缘开始恢复
+            -- 边缘：恢复青蓝色
+            ColorSequenceKeypoint.new(0.6, originalColor),
+            ColorSequenceKeypoint.new(1, originalColor)
         })
         gradient.Color = colorSequence
-
-        -- 3. 【关键修正】透明度序列：只在光带区域降低透明度（让白色显现）
-        -- 平时完全透明（1.0），光带中心完全不透明（0.0）
-        local transparencySequence = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1.0),      -- 完全透明，文字显示原本的青蓝色
-            NumberSequenceKeypoint.new(0.4, 1.0),
-            NumberSequenceKeypoint.new(0.48, 0.6),   -- 光带边缘：半透明，产生柔和过渡
-            NumberSequenceKeypoint.new(0.5, 0.0),    -- 光带中心：完全不透明，白色高亮
-            NumberSequenceKeypoint.new(0.52, 0.6),
-            NumberSequenceKeypoint.new(0.6, 1.0),
-            NumberSequenceKeypoint.new(1, 1.0)
-        })
-        gradient.Transparency = transparencySequence
 
         -- 4. 流光动画函数（只执行一次划过）
         local function playShine()
