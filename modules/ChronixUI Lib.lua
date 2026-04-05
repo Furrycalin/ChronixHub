@@ -630,7 +630,7 @@ function ChronixUI:CreateWindow(config)
     }
 
     -- ========== 在这里添加粒子系统 ==========
-    -- 创建粒子背景专用容器（位于标题栏之下，内容区域之上）
+    -- 在 windowData 定义之后添加
     if UIParticleSystem then
         local particleBgFrame = Instance.new("Frame")
         particleBgFrame.Name = "ParticleBackground"
@@ -639,22 +639,13 @@ function ChronixUI:CreateWindow(config)
         particleBgFrame.BackgroundTransparency = 1
         particleBgFrame.BorderSizePixel = 0
         particleBgFrame.ClipsDescendants = true
+        particleBgFrame.ZIndex = 5
         particleBgFrame.Parent = mainFrame
-        
-        -- 将粒子系统附加到这个背景容器上
+    
         local particleSystem = UIParticleSystem.new(particleBgFrame)
-        
-        -- -- 自定义粒子效果参数，使其更适配 ChronixUI 主题
-        -- if particleSystem then
-        --     particleSystem:setColor(self.Themes[self.CurrentTheme].Accent) -- 使用主题强调色
-        --     particleSystem:setParticleCount(50)  -- 减少粒子数量保证性能
-        --     particleSystem:setLineDistance(160)
-        --     particleSystem:setMouseRadius(130)
-        --     particleSystem:setLineOpacity(0.25)
-        -- end
-        
-        -- -- 将粒子系统保存到 windowData 中，以便清理
-        -- windowData.ParticleSystem = particleSystem
+        if particleSystem then
+            particleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
+        end
     end
     -- ========== 粒子系统添加结束 ==========
 
