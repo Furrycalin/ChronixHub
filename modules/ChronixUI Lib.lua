@@ -416,6 +416,64 @@ function ChronixUI:CreateWindow(config)
     local titleLabel = CreateLabel(titleBar, windowName, UDim2.new(1, -140*scale, 1, 0), UDim2.new(0, 20*scale, 0, 0),
                                     self.Themes[self.CurrentTheme].Accent, titleFontSize, Enum.Font.GothamBold)
 
+    -- --- 新增：为标题添加流光效果 (霓虹灯条带) ---
+    local function addTitleGlowEffect(targetLabel)
+        -- 1. 创建 UIGradient（平时禁用）
+        local gradient = Instance.new("UIGradient")
+        gradient.Rotation = 45  -- 斜向划过，经典效果
+        gradient.Enabled = false -- 关键：默认不生效，文字保持原样
+        gradient.Parent = targetLabel
+
+        -- 2. 设置银白色光带的渐变颜色
+        local colorSequence = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),   -- 白色边缘
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.48, Color3.fromRGB(200, 200, 210)),-- 过渡银色
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), -- 亮银色光带中心
+            ColorSequenceKeypoint.new(0.52, Color3.fromRGB(200, 200, 210)),
+            ColorSequenceKeypoint.new(0.6, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+        })
+        gradient.Color = colorSequence
+
+        -- 3. 设置透明度（让光带区域更亮）
+        local transparencySequence = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.7),
+            NumberSequenceKeypoint.new(0.48, 0.4),
+            NumberSequenceKeypoint.new(0.5, 0),   -- 光带中心完全不透明
+            NumberSequenceKeypoint.new(0.52, 0.4),
+            NumberSequenceKeypoint.new(1, 0.7)
+        })
+        gradient.Transparency = transparencySequence
+
+        -- 4. 流光动画函数（只执行一次划过）
+        local function playShine()
+            if not targetLabel.Parent then return end -- 防止文字被销毁后出错
+            gradient.Offset = Vector2.new(0, 0)
+            gradient.Enabled = true
+        
+            local tweenInfo = TweenInfo.new(1.0, Enum.EasingStyle.Linear) -- 1秒划过
+            local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(1, 0)})
+        
+            tween.Completed:Connect(function()
+                gradient.Enabled = false
+                gradient.Offset = Vector2.new(0, 0)
+            end)
+            tween:Play()
+        end
+
+        -- 5. 启动定时器：每30秒执行一次流光，且不影响性能
+        task.spawn(function()
+            while targetLabel and targetLabel.Parent do
+                playShine()
+                task.wait(30) -- 等待30秒，这行是关键，让循环休息
+            end
+        end)
+    end
+
+    -- 调用流光效果函数，传入刚创建的标题文字
+    addTitleGlowEffect(titleLabel)
+
     -- 按钮容器
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Size = UDim2.new(0, 120*scale, 1, 0)
