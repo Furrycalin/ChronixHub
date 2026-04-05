@@ -94,38 +94,64 @@ function UIParticleSystem:initParticles()
 end
 
 -- 手机端触摸追踪
+-- 修正 setupTouchTracking 函数
 function UIParticleSystem:setupTouchTracking(parentUI)
-    -- 手机端：使用 TouchMoved
-    if self.isMobile then
-        parentUI.TouchMoved:Connect(function(touch)
+    local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+    
+    -- 获取鼠标/触摸位置的变量
+    self.touchPos = Vector2.new(-1000, -1000)
+    self.hasTouch = false
+    
+    -- 检测是否在目标 UI 内
+    local function isMouseOverUI()
+        local mousePos = UserInputService:GetMouseLocation()
+        local absPos = parentUI.AbsolutePosition
+        local absSize = parentUI.AbsoluteSize
+        
+        return mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X
+            and mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y
+    end
+    
+    -- 输入开始（鼠标按下 或 触摸开始）
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        -- 检查是否在 UI 内
+        if isMouseOverUI() then
             self.hasTouch = true
-            self.touchPos = Vector2.new(touch.Position.X, touch.Position.Y)
-        end)
-        parentUI.TouchEnded:Connect(function()
+            local pos = input.Position
+            self.touchPos = Vector2.new(pos.X, pos.Y)
+        end
+    end)
+    
+    -- 输入更新（鼠标移动 或 触摸移动）
+    UserInputService.InputChanged:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if self.hasTouch and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                              input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = input.Position
+            self.touchPos = Vector2.new(pos.X, pos.Y)
+        end
+    end)
+    
+    -- 输入结束（鼠标释放 或 触摸结束）
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+           input.UserInputType == Enum.UserInputType.Touch then
             self.hasTouch = false
             self.touchPos = Vector2.new(-1000, -1000)
-        end)
-        parentUI.TouchTap:Connect(function(touch)
-            self.hasTouch = true
-            self.touchPos = Vector2.new(touch.Position.X, touch.Position.Y)
-            task.delay(0.5, function()
-                self.hasTouch = false
-                self.touchPos = Vector2.new(-1000, -1000)
-            end)
-        end)
-    else
-        -- 电脑端：鼠标追踪
-        parentUI.MouseEnter:Connect(function()
-            self.hasTouch = true
-        end)
+        end
+    end)
+    
+    -- 可选：鼠标离开 UI 区域时清除（仅桌面端）
+    if not self.isMobile then
         parentUI.MouseLeave:Connect(function()
             self.hasTouch = false
             self.touchPos = Vector2.new(-1000, -1000)
-        end)
-        parentUI.MouseMoved:Connect(function(x, y)
-            if self.hasTouch then
-                self.touchPos = Vector2.new(x, y)
-            end
         end)
     end
 end
