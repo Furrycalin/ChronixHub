@@ -629,25 +629,25 @@ function ChronixUI:CreateWindow(config)
         Minimized = false
     }
 
-    -- ========== 在这里添加粒子系统 ==========
-    -- 在 windowData 定义之后添加
-    if UIParticleSystem then
-        local particleBgFrame = Instance.new("Frame")
-        particleBgFrame.Name = "ParticleBackground"
-        particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
-        particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
-        particleBgFrame.BackgroundTransparency = 1
-        particleBgFrame.BorderSizePixel = 0
-        particleBgFrame.ClipsDescendants = true
-        particleBgFrame.ZIndex = 5
-        particleBgFrame.Parent = mainFrame
+    -- -- ========== 在这里添加粒子系统 ==========
+    -- -- 在 windowData 定义之后添加
+    -- if UIParticleSystem then
+    --     local particleBgFrame = Instance.new("Frame")
+    --     particleBgFrame.Name = "ParticleBackground"
+    --     particleBgFrame.Size = UDim2.new(1, 0, 1, -titleBarHeight - playerBarHeight)
+    --     particleBgFrame.Position = UDim2.new(0, 0, 0, titleBarHeight)
+    --     particleBgFrame.BackgroundTransparency = 1
+    --     particleBgFrame.BorderSizePixel = 0
+    --     particleBgFrame.ClipsDescendants = true
+    --     particleBgFrame.ZIndex = 5
+    --     particleBgFrame.Parent = mainFrame
     
-        local particleSystem = UIParticleSystem.new(particleBgFrame)
-        if particleSystem then
-            particleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
-        end
-    end
-    -- ========== 粒子系统添加结束 ==========
+    --     local particleSystem = UIParticleSystem.new(particleBgFrame)
+    --     if particleSystem then
+    --         particleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
+    --     end
+    -- end
+    -- -- ========== 粒子系统添加结束 ==========
 
     -- 最小化功能
     minBtn.MouseButton1Click:Connect(function()
