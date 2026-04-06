@@ -514,6 +514,33 @@ local function getColorCorrectionEffect()
     return nil
 end
 
+local function getMemoryUsage(unit)
+    unit = unit or "MB"  -- 默认返回MB
+    
+    local success, result = pcall(function()
+        return collectgarbage("count")
+    end)
+    
+    local memoryKB
+    if success then
+        memoryKB = result
+    else
+        local current, total = gcinfo()
+        memoryKB = current
+    end
+    
+    -- 根据请求的单位返回
+    if unit == "KB" then
+        return memoryKB
+    elseif unit == "MB" then
+        return memoryKB / 1024
+    elseif unit == "GB" then
+        return memoryKB / (1024 * 1024)
+    else
+        return memoryKB / 1024  -- 默认MB
+    end
+end
+
 --=============================================================================================
 
 local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
@@ -2107,6 +2134,8 @@ infoTab:AddParagraph({
     .. "• 部分功能可能在游戏中被检测\n"
     .. "• 使用前请了解游戏规则"
 })
+infoTab:AddDivider()
+local memLabel = infoTab:AddLabel(string.format("客户端脚本占用内存: %.2f MB", getMemoryUsage("MB")))
 
 
 local settingsContent = mainWindow.SettingsElements
@@ -2240,6 +2269,16 @@ Stepped6 = game:GetService("RunService").Stepped:Connect(function()
     end
 end)
 
+local lastTime = 0
+-- 每帧执行，但只每秒打印一次
+onesecrun = RunService.Stepped:Connect(function()
+    local now = tick()
+    if now - lastTime >= 1 then
+        lastTime = now
+        memLabel.Text = string.format("客户端脚本占用内存: %.2f MB", getMemoryUsage("MB"))
+    end
+end)
+
 --======================================================================================
 
 -- 卸载函数
@@ -2269,6 +2308,7 @@ local function unloadChronixHub()
     if cc then cc:Disconnect() end
     if gsr then gsr:Disconnect() end
     if hscc then hscc:Disconnect() end
+    if onesecrun then onesecrun:Disconnect() end
     if SystemNotification and SystemNotification.UnloadedGradient then
         SystemNotification.UnloadedGradient("ChronixHub V3 Already Unload!")
     else
