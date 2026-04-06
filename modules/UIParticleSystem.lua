@@ -1,4 +1,4 @@
--- UIParticleSystem.lua
+-- UIParticleSystem.lua (内存泄漏修复版)
 local UIParticleSystem = {}
 UIParticleSystem.__index = UIParticleSystem
 
@@ -9,24 +9,25 @@ function UIParticleSystem.new(parentUI)
     local UserInputService = game:GetService("UserInputService")
     self.isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
     
-    -- 创建主容器（必须放在最上层）
+    -- 创建主容器
     self.container = Instance.new("Frame")
     self.container.Name = "ParticleSystem"
     self.container.Size = UDim2.new(1, 0, 1, 0)
     self.container.BackgroundTransparency = 1
     self.container.BorderSizePixel = 0
-    self.container.ClipsDescendants = true  -- 防止粒子溢出
-    self.container.ZIndex = 10  -- 确保在背景之上，按钮之下
+    self.container.ClipsDescendants = true
+    self.container.ZIndex = 10
     self.container.Parent = parentUI
     
-    -- 参数配置（手机端优化）
+    -- 参数配置
     self.particles = {}
-    self.particleCount = self.isMobile and 25 or 50  -- 手机端减少粒子
+    self.lines = {}          -- ✅ 新增：存储线条对象以便复用
+    self.particleCount = self.isMobile and 25 or 50
     self.particleSize = 3
-    self.particleSpeed = {min = 0.3, max = 1.2}  -- 手机端减慢速度
-    self.lineDistance = self.isMobile and 80 or 120  -- 手机端减少连线
+    self.particleSpeed = {min = 0.3, max = 1.2}
+    self.lineDistance = self.isMobile and 80 or 120
     self.lineOpacity = 0.06
-    self.particleColor = Color3.fromRGB(119, 221, 255)  -- 主题色
+    self.particleColor = Color3.fromRGB(119, 221, 255)
     
     -- 动画控制
     self.connection = nil
@@ -44,17 +45,17 @@ function UIParticleSystem.new(parentUI)
     return self
 end
 
--- 创建圆形粒子（用 Frame + UICorner，不依赖图片）
+-- 创建圆形粒子
 function UIParticleSystem:createCircle(parent, size, color)
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, size, 0, size)
     circle.BackgroundColor3 = color
     circle.BackgroundTransparency = 0.7
     circle.BorderSizePixel = 0
-    circle.ZIndex = 11  -- 比容器高一点
+    circle.ZIndex = 11
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)  -- 圆形
+    corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = circle
     
     circle.Parent = parent
@@ -95,7 +96,6 @@ function UIParticleSystem:updateParticles(deltaTime)
         p.x = p.x + p.vx * deltaTime * 60
         p.y = p.y + p.vy * deltaTime * 60
         
-        -- 边界反弹（带一点边界缓冲，避免卡边）
         if p.x < -10 then
             p.x = -10
             p.vx = -p.vx
@@ -119,56 +119,60 @@ function UIParticleSystem:updateParticles(deltaTime)
 end
 
 function UIParticleSystem:drawLines()
-    -- 清除旧线条
-    for _, child in ipairs(self.container:GetChildren()) do
-        if child:IsA("Frame") and child.Name == "Line" then
-            child:Destroy()
-        end
-    end
-    
     local width, height = self:getUISize()
     if width == 0 or height == 0 then return end
     
-    -- 只画可见范围内的连线（优化性能）
+    -- ✅ 修复：先隐藏所有现有线条，而不是销毁
+    for _, line in ipairs(self.lines) do
+        line.Visible = false
+    end
+    
+    local lineIndex = 1
+    local maxLines = #self.particles * (#self.particles - 1) / 2  -- 最大可能线条数
+    
+    -- 确保有足够的线条对象
+    while #self.lines < maxLines and lineIndex <= maxLines do
+        local line = Instance.new("Frame")
+        line.Name = "Line"
+        line.Size = UDim2.new(0, 0, 0, 1)
+        line.BackgroundColor3 = self.particleColor
+        line.BorderSizePixel = 0
+        line.ZIndex = 9
+        line.Visible = false
+        line.Parent = self.container
+        table.insert(self.lines, line)
+    end
+    
+    -- 绘制可见的线条
     for i = 1, #self.particles do
         local p1 = self.particles[i]
         
-        -- 粒子之间的连线
         for j = i + 1, #self.particles do
             local p2 = self.particles[j]
             local dx = p1.x - p2.x
             local dy = p1.y - p2.y
             local dist = math.sqrt(dx * dx + dy * dy)
             
-            if dist < self.lineDistance and dist > 5 then  -- 避免太近的线
+            if dist < self.lineDistance and dist > 5 then
                 local opacity = (1 - dist / self.lineDistance) * self.lineOpacity
-                self:createLine(p1, p2, opacity)
+                local line = self.lines[lineIndex]
+                if line then
+                    -- 更新现有线条的位置和大小
+                    local angle = math.atan2(dy, dx)
+                    local centerX = p1.x + dx / 2
+                    local centerY = p1.y + dy / 2
+                    
+                    line.Size = UDim2.new(0, dist, 0, 1)
+                    line.Position = UDim2.new(0, centerX - dist/2, 0, centerY - 0.5)
+                    line.Rotation = math.deg(angle)
+                    line.BackgroundTransparency = 1 - opacity
+                    line.Visible = true
+                    line.BackgroundColor3 = self.particleColor
+                end
+                lineIndex = lineIndex + 1
             end
         end
     end
-end
-
-function UIParticleSystem:createLine(p1, p2, opacity)
-    local dx = p2.x - p1.x
-    local dy = p2.y - p1.y
-    local dist = math.sqrt(dx * dx + dy * dy)
-    
-    if dist < 0.5 then return end
-    
-    local angle = math.atan2(dy, dx)
-    local centerX = p1.x + dx / 2
-    local centerY = p1.y + dy / 2
-    
-    local line = Instance.new("Frame")
-    line.Name = "Line"
-    line.Size = UDim2.new(0, dist, 0, 1)
-    line.Position = UDim2.new(0, centerX - dist/2, 0, centerY - 0.5)
-    line.Rotation = math.deg(angle)
-    line.BackgroundColor3 = self.particleColor
-    line.BackgroundTransparency = 1 - opacity
-    line.BorderSizePixel = 0
-    line.ZIndex = 9  -- 在粒子下方
-    line.Parent = self.container
 end
 
 function UIParticleSystem:startAnimation()
@@ -189,6 +193,9 @@ function UIParticleSystem:setColor(color)
         if p.frame then
             p.frame.BackgroundColor3 = color
         end
+    end
+    for _, line in ipairs(self.lines) do
+        line.BackgroundColor3 = color
     end
 end
 
@@ -213,6 +220,9 @@ function UIParticleSystem:destroy()
     if self.connection then
         self.connection:Disconnect()
         self.connection = nil
+    end
+    for _, line in ipairs(self.lines) do
+        line:Destroy()
     end
     if self.container then
         self.container:Destroy()
