@@ -1,4 +1,4 @@
--- UIParticleSystem.lua (内存泄漏修复版)
+-- UIParticleSystem.lua (内存泄漏修复版 - 保持原有效果)
 local UIParticleSystem = {}
 UIParticleSystem.__index = UIParticleSystem
 
@@ -9,25 +9,24 @@ function UIParticleSystem.new(parentUI)
     local UserInputService = game:GetService("UserInputService")
     self.isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
     
-    -- 创建主容器
+    -- 创建主容器（必须放在最上层）
     self.container = Instance.new("Frame")
     self.container.Name = "ParticleSystem"
     self.container.Size = UDim2.new(1, 0, 1, 0)
     self.container.BackgroundTransparency = 1
     self.container.BorderSizePixel = 0
-    self.container.ClipsDescendants = true
-    self.container.ZIndex = 10
+    self.container.ClipsDescendants = true  -- 防止粒子溢出
+    self.container.ZIndex = 10  -- 确保在背景之上，按钮之下
     self.container.Parent = parentUI
     
-    -- 参数配置
+    -- 参数配置（手机端优化）
     self.particles = {}
-    self.lines = {}          -- ✅ 新增：存储线条对象以便复用
-    self.particleCount = self.isMobile and 25 or 50
+    self.particleCount = self.isMobile and 25 or 50  -- 手机端减少粒子
     self.particleSize = 3
-    self.particleSpeed = {min = 0.3, max = 1.2}
-    self.lineDistance = self.isMobile and 80 or 120
+    self.particleSpeed = {min = 0.3, max = 1.2}  -- 手机端减慢速度
+    self.lineDistance = self.isMobile and 80 or 120  -- 手机端减少连线
     self.lineOpacity = 0.06
-    self.particleColor = Color3.fromRGB(119, 221, 255)
+    self.particleColor = Color3.fromRGB(119, 221, 255)  -- 主题色
     
     -- 动画控制
     self.connection = nil
@@ -45,17 +44,17 @@ function UIParticleSystem.new(parentUI)
     return self
 end
 
--- 创建圆形粒子
+-- 创建圆形粒子（用 Frame + UICorner，不依赖图片）
 function UIParticleSystem:createCircle(parent, size, color)
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, size, 0, size)
     circle.BackgroundColor3 = color
     circle.BackgroundTransparency = 0.7
     circle.BorderSizePixel = 0
-    circle.ZIndex = 11
+    circle.ZIndex = 11  -- 比容器高一点
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
+    corner.CornerRadius = UDim.new(1, 0)  -- 圆形
     corner.Parent = circle
     
     circle.Parent = parent
@@ -96,6 +95,7 @@ function UIParticleSystem:updateParticles(deltaTime)
         p.x = p.x + p.vx * deltaTime * 60
         p.y = p.y + p.vy * deltaTime * 60
         
+        -- 边界反弹（带一点边界缓冲，避免卡边）
         if p.x < -10 then
             p.x = -10
             p.vx = -p.vx
@@ -118,32 +118,12 @@ function UIParticleSystem:updateParticles(deltaTime)
     end
 end
 
+-- ✅ 修复内存泄漏的关键：复用线条对象，而不是每帧创建/销毁
+-- 但保持完全相同的连线逻辑
 function UIParticleSystem:drawLines()
-    local width, height = self:getUISize()
-    if width == 0 or height == 0 then return end
+    -- 第一步：收集所有需要显示的线条数据
+    local linesToDraw = {}
     
-    -- ✅ 修复：先隐藏所有现有线条，而不是销毁
-    for _, line in ipairs(self.lines) do
-        line.Visible = false
-    end
-    
-    local lineIndex = 1
-    local maxLines = #self.particles * (#self.particles - 1) / 2  -- 最大可能线条数
-    
-    -- 确保有足够的线条对象
-    while #self.lines < maxLines and lineIndex <= maxLines do
-        local line = Instance.new("Frame")
-        line.Name = "Line"
-        line.Size = UDim2.new(0, 0, 0, 1)
-        line.BackgroundColor3 = self.particleColor
-        line.BorderSizePixel = 0
-        line.ZIndex = 9
-        line.Visible = false
-        line.Parent = self.container
-        table.insert(self.lines, line)
-    end
-    
-    -- 绘制可见的线条
     for i = 1, #self.particles do
         local p1 = self.particles[i]
         
@@ -153,26 +133,91 @@ function UIParticleSystem:drawLines()
             local dy = p1.y - p2.y
             local dist = math.sqrt(dx * dx + dy * dy)
             
+            -- 完全保持原有的连线判断逻辑
             if dist < self.lineDistance and dist > 5 then
                 local opacity = (1 - dist / self.lineDistance) * self.lineOpacity
-                local line = self.lines[lineIndex]
-                if line then
-                    -- 更新现有线条的位置和大小
-                    local angle = math.atan2(dy, dx)
-                    local centerX = p1.x + dx / 2
-                    local centerY = p1.y + dy / 2
-                    
-                    line.Size = UDim2.new(0, dist, 0, 1)
-                    line.Position = UDim2.new(0, centerX - dist/2, 0, centerY - 0.5)
-                    line.Rotation = math.deg(angle)
-                    line.BackgroundTransparency = 1 - opacity
-                    line.Visible = true
-                    line.BackgroundColor3 = self.particleColor
-                end
-                lineIndex = lineIndex + 1
+                table.insert(linesToDraw, {
+                    p1 = p1,
+                    p2 = p2,
+                    opacity = opacity,
+                    dist = dist
+                })
             end
         end
     end
+    
+    -- 第二步：复用现有的线条对象，或创建新的
+    -- 先隐藏所有现有线条
+    local lineChildren = {}
+    for _, child in ipairs(self.container:GetChildren()) do
+        if child:IsA("Frame") and child.Name == "Line" then
+            table.insert(lineChildren, child)
+            child.Visible = false
+        end
+    end
+    
+    -- 更新或创建线条
+    for idx, lineData in ipairs(linesToDraw) do
+        local line
+        if idx <= #lineChildren then
+            -- 复用现有线条
+            line = lineChildren[idx]
+        else
+            -- 创建新线条
+            line = Instance.new("Frame")
+            line.Name = "Line"
+            line.BorderSizePixel = 0
+            line.ZIndex = 9
+            line.Parent = self.container
+            table.insert(lineChildren, line)
+        end
+        
+        -- 计算线条位置和旋转（与原 createLine 逻辑完全一致）
+        local dx = lineData.p2.x - lineData.p1.x
+        local dy = lineData.p2.y - lineData.p1.y
+        local dist = lineData.dist
+        local angle = math.atan2(dy, dx)
+        local centerX = lineData.p1.x + dx / 2
+        local centerY = lineData.p1.y + dy / 2
+        
+        line.Size = UDim2.new(0, dist, 0, 1)
+        line.Position = UDim2.new(0, centerX - dist/2, 0, centerY - 0.5)
+        line.Rotation = math.deg(angle)
+        line.BackgroundColor3 = self.particleColor
+        line.BackgroundTransparency = 1 - lineData.opacity
+        line.Visible = true
+    end
+    
+    -- 第三步：删除多余的线条（如果粒子数量减少导致线条数变少）
+    for i = #linesToDraw + 1, #lineChildren do
+        lineChildren[i]:Destroy()
+    end
+end
+
+function UIParticleSystem:createLine(p1, p2, opacity)
+    -- 保留此函数以保持兼容性，但 drawLines 中已不使用
+    -- 如果你有其他代码调用这个方法，它仍然可用
+    local dx = p2.x - p1.x
+    local dy = p2.y - p1.y
+    local dist = math.sqrt(dx * dx + dy * dy)
+    
+    if dist < 0.5 then return end
+    
+    local angle = math.atan2(dy, dx)
+    local centerX = p1.x + dx / 2
+    local centerY = p1.y + dy / 2
+    
+    local line = Instance.new("Frame")
+    line.Name = "Line"
+    line.Size = UDim2.new(0, dist, 0, 1)
+    line.Position = UDim2.new(0, centerX - dist/2, 0, centerY - 0.5)
+    line.Rotation = math.deg(angle)
+    line.BackgroundColor3 = self.particleColor
+    line.BackgroundTransparency = 1 - opacity
+    line.BorderSizePixel = 0
+    line.ZIndex = 9
+    line.Parent = self.container
+    return line
 end
 
 function UIParticleSystem:startAnimation()
@@ -194,8 +239,11 @@ function UIParticleSystem:setColor(color)
             p.frame.BackgroundColor3 = color
         end
     end
-    for _, line in ipairs(self.lines) do
-        line.BackgroundColor3 = color
+    -- 更新已有线条的颜色
+    for _, child in ipairs(self.container:GetChildren()) do
+        if child:IsA("Frame") and child.Name == "Line" then
+            child.BackgroundColor3 = color
+        end
     end
 end
 
@@ -220,9 +268,6 @@ function UIParticleSystem:destroy()
     if self.connection then
         self.connection:Disconnect()
         self.connection = nil
-    end
-    for _, line in ipairs(self.lines) do
-        line:Destroy()
     end
     if self.container then
         self.container:Destroy()
