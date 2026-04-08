@@ -775,7 +775,7 @@ function ChronixUI:CreateWindow(config)
             btn.Text = btnText
             btn.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Text
             btn.TextSize = math.floor(14 * scale)
-            btn.Font = Enum.Font.GothamSemibold
+            btn.Font = Enum.Font.GothamBold
             btn.BorderSizePixel = 0
             local btnCorner = Instance.new("UICorner")
             btnCorner.CornerRadius = UDim.new(0, math.floor(4 * scale))
