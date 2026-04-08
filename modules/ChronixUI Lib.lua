@@ -638,8 +638,138 @@ function ChronixUI:CreateWindow(config)
         CurrentTab = nil,
         SettingsTabContent = nil,
         ParticleSystem = nil,
-        Minimized = false
+        Minimized = false,
+        UpdateTheme = nil
     }
+
+        -- 主题更新函数
+    function windowData:UpdateTheme(themeName)
+        local theme = ChronixUI.Themes[themeName]
+        if not theme then return false end
+        
+        -- 1. 更新主框架背景和边框描边
+        mainFrame.BackgroundColor3 = theme.Background
+        local mainStroke = mainFrame:FindFirstChildOfClass("UIStroke")
+        if mainStroke then
+            mainStroke.Color = theme.Border
+        end
+        
+        -- 2. 更新侧边栏
+        sidebar.BackgroundColor3 = theme.Sidebar
+        sidebarTitle.TextColor3 = theme.Accent
+        
+        -- 3. 更新标题栏文字颜色
+        titleLabel.TextColor3 = theme.Accent
+        
+        -- 4. 更新右上角按钮样式
+        local function updateButtonStyle(btn)
+            btn.BackgroundColor3 = theme.Card
+            btn.TextColor3 = theme.Text
+            local btnStroke = btn:FindFirstChildOfClass("UIStroke")
+            if btnStroke then
+                btnStroke.Color = theme.Border
+            end
+        end
+        updateButtonStyle(settingsBtn)
+        updateButtonStyle(minBtn)
+        updateButtonStyle(closeBtn)
+        
+        -- 5. 更新底部玩家信息栏
+        playerBar.BackgroundColor3 = theme.Card
+        local barStroke = playerBar:FindFirstChildOfClass("UIStroke")
+        if barStroke then
+            barStroke.Color = theme.Border
+        end
+        if avatarContainer then
+            avatarContainer.BackgroundColor3 = theme.Border
+        end
+        playerNameLabel.TextColor3 = theme.Text
+        playerInfoLabel.TextColor3 = theme.TextDark
+        
+        -- 6. 更新粒子系统颜色
+        if self.ParticleSystem then
+            self.ParticleSystem:setColor(theme.Accent)
+        end
+        
+        -- 7. 更新所有Tab按钮样式
+        for _, tabData in pairs(self.Tabs) do
+            if tabData.Button then
+                tabData.Button.BackgroundColor3 = theme.Card
+                tabData.Button.TextColor3 = theme.TextDark
+            end
+            
+            -- 当前选中的Tab保持高亮
+            if self.CurrentTab and self.CurrentTab.Name == tabData.Name then
+                tabData.Button.BackgroundColor3 = theme.Accent
+                tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+            end
+            
+            -- 递归更新Tab内容区域
+            local function updateElementColors(obj)
+                if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                    if obj:IsA("TextButton") then
+                        local isSpecial = false
+                        for _, tab in pairs(self.Tabs) do
+                            if obj == tab.Button then
+                                isSpecial = true
+                                break
+                            end
+                        end
+                        if not isSpecial then
+                            obj.BackgroundColor3 = theme.Card
+                        end
+                    elseif obj:IsA("TextBox") then
+                        obj.BackgroundColor3 = theme.Input
+                    end
+                    
+                    if obj:FindFirstChild("IsTitle") then
+                        obj.TextColor3 = theme.Accent
+                    elseif obj:FindFirstChild("IsDark") then
+                        obj.TextColor3 = theme.TextDark
+                    else
+                        obj.TextColor3 = theme.Text
+                    end
+                end
+                
+                local stroke = obj:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    stroke.Color = theme.Border
+                end
+                
+                for _, child in ipairs(obj:GetChildren()) do
+                    updateElementColors(child)
+                end
+            end
+            
+            updateElementColors(tabData.Content)
+        end
+        
+        -- 8. 单独处理设置页
+        if self.SettingsTabContent then
+            local function updateSettingsColors(obj)
+                if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                    if obj:IsA("TextButton") then
+                        obj.BackgroundColor3 = theme.Card
+                    elseif obj:IsA("TextBox") then
+                        obj.BackgroundColor3 = theme.Input
+                    end
+                    obj.TextColor3 = theme.Text
+                end
+                
+                local stroke = obj:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    stroke.Color = theme.Border
+                end
+                
+                for _, child in ipairs(obj:GetChildren()) do
+                    updateSettingsColors(child)
+                end
+            end
+            updateSettingsColors(self.SettingsTabContent)
+        end
+        
+        return true
+    end
 
     -- ========== 在这里添加粒子系统 ==========
     -- 在 windowData 定义之后添加
@@ -1509,130 +1639,8 @@ function ChronixUI:CreateWindow(config)
         Callback = function(selectedTheme)
             if ChronixUI.Themes[selectedTheme] then
                 ChronixUI.CurrentTheme = selectedTheme
-                    
-                -- 1. 更新主框架背景和边框描边
-                mainFrame.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Background
-                -- 更新主框架的描边
-                local mainStroke = mainFrame:FindFirstChildOfClass("UIStroke")
-                if mainStroke then
-                    mainStroke.Color = ChronixUI.Themes[selectedTheme].Border
-                end
+                windowData:UpdateTheme(selectedTheme)
                 
-                -- 2. 更新侧边栏
-                sidebar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Sidebar
-                
-                -- 3. 更新标题栏（背景透明，但需要更新文字和按钮颜色）
-                titleLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
-                
-                -- 4. 更新所有按钮（最小化、关闭等）
-                local function updateButtonStyle(btn)
-                    btn.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                    btn.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                    -- 更新按钮的描边
-                    local btnStroke = btn:FindFirstChildOfClass("UIStroke")
-                    if btnStroke then
-                        btnStroke.Color = ChronixUI.Themes[selectedTheme].Border
-                    end
-                end
-                updateButtonStyle(settingsBtn)
-                updateButtonStyle(minBtn)
-                updateButtonStyle(closeBtn)
-                
-                -- 5. 更新玩家信息栏
-                playerBar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                -- 更新信息栏的描边
-                local barStroke = playerBar:FindFirstChildOfClass("UIStroke")
-                if barStroke then
-                    barStroke.Color = ChronixUI.Themes[selectedTheme].Border
-                end
-                -- 更新头像容器背景色
-                if avatarContainer then
-                    avatarContainer.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Border
-                end
-                playerNameLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                playerInfoLabel.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
-                    
-                -- 6. 更新粒子系统颜色（如果存在）
-                if windowData.ParticleSystem then
-                    windowData.ParticleSystem:setColor(ChronixUI.Themes[selectedTheme].Accent)
-                end
-                    
-                -- 7. 遍历所有Tab和内容元素进行更新
-                for _, tabData in pairs(windowData.Tabs) do
-                    -- 更新Tab按钮样式
-                    if tabData.Button then
-                        tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                        tabData.Button.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
-                    end
-                        
-                    -- 更新当前选中的Tab样式
-                    if windowData.CurrentTab and windowData.CurrentTab.Name == tabData.Name then
-                        tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Accent
-                        tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
-                    end
-                        
-                    -- 递归更新Tab内容区域内的所有元素
-                    local function updateElementColors(obj)
-                        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                            if obj:IsA("TextButton") then
-                                -- 保留特殊按钮的原有颜色逻辑，只更新非特殊状态的按钮
-                                local isSpecial = false
-                                for _, tab in pairs(windowData.Tabs) do
-                                    if obj == tab.Button then
-                                        isSpecial = true
-                                        break
-                                    end
-                                end
-                                if not isSpecial then
-                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                                end
-                            elseif obj:IsA("TextBox") then
-                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
-                            end
-                            
-                            -- 根据文字类型区分颜色
-                            if obj:FindFirstChild("IsTitle") then
-                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
-                            elseif obj:FindFirstChild("IsDark") then
-                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
-                            else
-                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                            end
-                        end
-                        
-                        -- 更新边框描边颜色
-                        local stroke = obj:FindFirstChildOfClass("UIStroke")
-                        if stroke then
-                            stroke.Color = ChronixUI.Themes[selectedTheme].Border
-                        end
-                        
-                        for _, child in ipairs(obj:GetChildren()) do
-                            updateElementColors(child)
-                        end
-                    end
-                        
-                    updateElementColors(tabData.Content)
-                end
-                    
-                -- 8. 单独处理设置页
-                if windowData.SettingsTabContent then
-                    local function updateSettingsColors(obj)
-                        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                            if obj:IsA("TextButton") then
-                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                            elseif obj:IsA("TextBox") then
-                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
-                            end
-                            obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                        end
-                        for _, child in ipairs(obj:GetChildren()) do
-                            updateSettingsColors(child)
-                        end
-                    end
-                    updateSettingsColors(windowData.SettingsTabContent)
-                end
-                    
-                -- 9. 提示主题已切换
                 ChronixUI:Notify({
                     Title = "主题已切换",
                     Content = "当前主题: " .. selectedTheme,
@@ -1691,9 +1699,21 @@ end
 
 -- 设置主题
 function ChronixUI:SetTheme(themeName)
-    if self.Themes[themeName] then
-        self.CurrentTheme = themeName
+    if not self.Themes[themeName] then
+        warn("ChronixUI: 主题 '" .. tostring(themeName) .. "' 不存在")
+        return false
     end
+    
+    self.CurrentTheme = themeName
+    
+    -- 遍历所有窗口，调用它们的 UpdateTheme 方法
+    for _, window in ipairs(self.Windows) do
+        if window.UpdateTheme then
+            window:UpdateTheme(themeName)
+        end
+    end
+    
+    return true
 end
 
 return ChronixUI
