@@ -1641,7 +1641,7 @@ function ChronixUI:CreateWindow(config)
                     tab.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
                     for _, otherTab in pairs(windowData.Tabs) do
                         if otherTab ~= tab then
-                            otherTab.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
+                            otherTab.Button.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Background
                             otherTab.Button.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
                             otherTab.Content.Visible = false
                         end
