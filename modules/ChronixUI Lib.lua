@@ -1,8 +1,8 @@
--- ChronixUI v3.9 - 修复颜色选取器问题、信息栏更改为设备名用户、新增主题切换功能、修复主题切换函数问题、修复后台警告和报错
+-- ChronixUI v4.0 - 修复颜色选取器问题、信息栏更改为设备名用户、新增主题切换功能、修复主题切换函数问题、修复后台警告和报错
 
 _G.UnloadChronixUI = false
 local ChronixUI = {}
-ChronixUI.Version = "3.9.0"
+ChronixUI.Version = "4.0.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
@@ -52,22 +52,27 @@ ChronixUI.Themes = {
         Success = Color3.fromRGB(76, 175, 80),
         Error = Color3.fromRGB(244, 67, 54),
         Warning = Color3.fromRGB(255, 152, 0),
-        Info = Color3.fromRGB(33, 150, 243)
+        Info = Color3.fromRGB(33, 150, 243),
+        NotificationBg = Color3.fromRGB(45, 45, 55),
+        NotificationBorder = Color3.fromRGB(60, 60, 70)
     },
     Light = {
         Background = Color3.fromRGB(245, 245, 250),
         Sidebar = Color3.fromRGB(235, 235, 240),
-        Accent = Color3.fromRGB(0, 110, 200),        -- 稍微加深主题色
-        Text = Color3.fromRGB(30, 30, 30),           -- 保持深色，不做过激调整
-        TextDark = Color3.fromRGB(90, 90, 90),       -- 次要文字稍浅
+        Accent = Color3.fromRGB(0, 110, 200),
+        Text = Color3.fromRGB(30, 30, 30),
+        TextDark = Color3.fromRGB(90, 90, 90),
         Border = Color3.fromRGB(180, 180, 180),      
-        Card = Color3.fromRGB(255, 255, 255),        -- 卡片保持纯白，增强对比
+        Card = Color3.fromRGB(255, 255, 255),
         Input = Color3.fromRGB(255, 255, 255),
-        Hover = Color3.fromRGB(230, 230, 235),       -- 悬停背景稍微加深，提高文字对比度
+        Hover = Color3.fromRGB(230, 230, 235),
         Success = Color3.fromRGB(46, 125, 50),
         Error = Color3.fromRGB(211, 47, 47),
         Warning = Color3.fromRGB(237, 108, 0),
-        Info = Color3.fromRGB(2, 136, 209)
+        Info = Color3.fromRGB(2, 136, 209),
+        Notification = Color3.fromRGB(250, 250, 250),
+        NotificationBg = Color3.fromRGB(250, 250, 255),
+        NotificationBorder = Color3.fromRGB(200, 200, 210)
     }
 }
 ChronixUI.CurrentTheme = "Default"
@@ -233,7 +238,7 @@ function ChronixUI:Notify(config)
     local notificationFrame = Instance.new("Frame")
     notificationFrame.Size = UDim2.new(0, notifWidth, 0, notifHeight)
     notificationFrame.Position = UDim2.new(1, notifOffsetX, 1, notifOffsetY)
-    notificationFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    notificationFrame.BackgroundColor3 = self.Themes[self.CurrentTheme].NotificationBg
     notificationFrame.BorderSizePixel = 0
     notificationFrame.ClipsDescendants = true
     notificationFrame.BackgroundTransparency = 1
@@ -244,7 +249,7 @@ function ChronixUI:Notify(config)
     corner.Parent = notificationFrame
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60, 60, 70)
+    stroke.Color = self.Themes[self.CurrentTheme].NotificationBorder
     stroke.Thickness = 1 * scale
     stroke.Parent = notificationFrame
 
