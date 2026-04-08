@@ -1454,127 +1454,92 @@ function ChronixUI:CreateWindow(config)
         return elements
     end
 
-    -- 刷新所有UI元素的主题
-    function ChronixUI:RefreshTheme()
-        local theme = self.Themes[self.CurrentTheme]
+    -- 刷新所有UI元素的主题（完全灵活版本，支持任意数量主题）
+function ChronixUI:RefreshTheme()
+    local newTheme = self.Themes[self.CurrentTheme]
     
-        for _, window in pairs(self.Windows) do
-            local mainFrame = window.MainFrame
-            if not mainFrame then continue end
+    -- 收集当前UI中实际使用的所有颜色
+    local usedColors = {}
+    for _, window in pairs(self.Windows) do
+        local mainFrame = window.MainFrame
+        if not mainFrame then continue end
         
-            -- 1. 刷新主框架背景
-            mainFrame.BackgroundColor3 = theme.Background
-        
-            -- 2. 遍历所有子元素
-            for _, obj in pairs(mainFrame:GetDescendants()) do
-                -- 刷新 UIStroke（边框）
-                if obj:IsA("UIStroke") then
-                    obj.Color = theme.Border
-                
-                -- 刷新文本元素
-                elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                    local parent = obj.Parent
-                    local objName = obj.Name
-                    local parentName = parent and parent.Name or ""
-                
-                    -- 标题栏文字（标题、功能菜单）- Accent 颜色
-                    if parentName == "titleBar" or (objName == "sidebarTitle") then
-                        obj.TextColor3 = theme.Accent
-                    
-                    -- 侧边栏 Tab 按钮
-                    elseif parentName == "ScrollingFrame" and obj:IsA("TextButton") then
-                        -- 选中的 Tab 保持 Accent，未选中的用 TextDark
-                        if obj.BackgroundColor3 == theme.Accent then
-                            obj.TextColor3 = Color3.fromRGB(0, 0, 0)  -- 选中时文字黑色
-                        else
-                            obj.TextColor3 = theme.TextDark
-                        end
-                    
-                    -- 设置按钮、最小化、关闭按钮
-                    elseif objName == "settingsBtn" or objName == "minBtn" or objName == "closeBtn" then
-                        obj.TextColor3 = theme.Text
-                    
-                    -- 底部信息栏文字
-                    elseif parentName == "playerBar" then
-                        if objName == "playerNameLabel" then
-                            obj.TextColor3 = theme.Text
-                        elseif objName == "playerInfoLabel" then
-                            obj.TextColor3 = theme.TextDark
-                        end
-                    
-                    -- 普通标签和按钮文字
-                    else
-                        -- 根据文字原有颜色风格判断
-                        local currentColor = obj.TextColor3
-                        -- 如果是接近白色/深色，设为 Text；如果是灰色，设为 TextDark
-                        if currentColor.r > 0.8 and currentColor.g > 0.8 and currentColor.b > 0.8 then
-                            obj.TextColor3 = theme.Text
-                        elseif currentColor.r < 0.3 and currentColor.g < 0.3 and currentColor.b < 0.3 then
-                            obj.TextColor3 = theme.Text
-                        elseif currentColor.r > 0.5 and currentColor.g > 0.5 and currentColor.b > 0.5 then
-                            obj.TextColor3 = theme.TextDark
-                        end
-                    end
-                
-                -- 刷新 Frame 背景（侧边栏、卡片、输入框等）
-                elseif obj:IsA("Frame") and obj ~= mainFrame then
-                    local objName = obj.Name
-                    local parent = obj.Parent
-                    local parentName = parent and parent.Name or ""
-                
-                    -- 侧边栏背景
-                    if objName == "sidebar" then
-                        obj.BackgroundColor3 = theme.Sidebar
-                    
-                    -- 标题栏
-                    elseif objName == "titleBar" then
-                        obj.BackgroundColor3 = theme.Background
-                    
-                    -- 底部信息栏、设置/最小化/关闭按钮背景
-                    elseif objName == "playerBar" or 
-                        objName == "settingsBtn" or objName == "minBtn" or objName == "closeBtn" then
-                        obj.BackgroundColor3 = theme.Card
-                    
-                    -- 下拉框、输入框、按键绑定按钮
-                    elseif objName == "dropdownBtn" or objName == "inputBox" or objName == "keyBtn" then
-                        obj.BackgroundColor3 = theme.Input
-                    
-                    -- 下拉列表
-                    elseif objName == "dropdownList" then
-                        obj.BackgroundColor3 = theme.Input
-                    
-                    -- 开关背景（需要特殊处理）
-                    elseif objName == "toggleBtn" then
-                        -- 保持原有逻辑，只刷新未激活状态的背景
-                        if obj.BackgroundColor3 ~= theme.Accent then
-                            obj.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-                        end
-                    
-                    -- 滑块轨道
-                    elseif objName == "slider" then
-                        obj.BackgroundColor3 = theme.Border
-                    
-                    -- 卡片类背景（按钮、选项等）
-                    else
-                        local bgColor = obj.BackgroundColor3
-                        -- 如果是默认的深色卡片色或白色卡片色，更新为新的卡片色
-                        if (bgColor.r == 37/255 and bgColor.g == 37/255 and bgColor.b == 53/255) or
-                        (bgColor.r == 1 and bgColor.g == 1 and bgColor.b == 1) then
-                            obj.BackgroundColor3 = theme.Card
-                        -- 如果是输入框背景色
-                        elseif bgColor.r == 37/255 and bgColor.g == 37/255 and bgColor.b == 53/255 then
-                            obj.BackgroundColor3 = theme.Input
-                        end
-                    end
+        local function collectColors(obj)
+            if obj:IsA("Frame") and obj.BackgroundTransparency < 1 then
+                usedColors[obj.BackgroundColor3] = true
+            elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                usedColors[obj.TextColor3] = true
+                if obj:IsA("TextBox") and obj.PlaceholderColor3 then
+                    usedColors[obj.PlaceholderColor3] = true
                 end
+            elseif obj:IsA("UIStroke") then
+                usedColors[obj.Color] = true
             end
-        
-            -- 3. 刷新粒子系统
-            if window.ParticleSystem and window.ParticleSystem.setColor then
-                window.ParticleSystem:setColor(theme.Accent)
+            for _, child in pairs(obj:GetChildren()) do
+                collectColors(child)
             end
         end
-    end 
+        collectColors(mainFrame)
+    end
+    
+    -- 找出每个旧颜色应该映射到哪个新颜色
+    local colorMap = {}
+    for oldColor in pairs(usedColors) do
+        local minDiff = math.huge
+        local bestMatch = nil
+        
+        -- 在所有主题的所有颜色中找最接近的匹配
+        for themeName, themeColors in pairs(self.Themes) do
+            for colorName, themeColor in pairs(themeColors) do
+                local diff = math.abs(oldColor.R - themeColor.R) + 
+                            math.abs(oldColor.G - themeColor.G) + 
+                            math.abs(oldColor.B - themeColor.B)
+                if diff < minDiff then
+                    minDiff = diff
+                    bestMatch = colorName
+                end
+            end
+        end
+        
+        -- 映射到新主题的对应颜色
+        if bestMatch and newTheme[bestMatch] then
+            colorMap[oldColor] = newTheme[bestMatch]
+        end
+    end
+    
+    -- 应用颜色映射
+    for _, window in pairs(self.Windows) do
+        local mainFrame = window.MainFrame
+        if not mainFrame then continue end
+        
+        local function applyColors(obj)
+            if obj:IsA("Frame") then
+                local mapped = colorMap[obj.BackgroundColor3]
+                if mapped then obj.BackgroundColor3 = mapped end
+            elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                local mapped = colorMap[obj.TextColor3]
+                if mapped then obj.TextColor3 = mapped end
+                if obj:IsA("TextBox") then
+                    local placeholderMapped = colorMap[obj.PlaceholderColor3]
+                    if placeholderMapped then obj.PlaceholderColor3 = placeholderMapped end
+                end
+            elseif obj:IsA("UIStroke") then
+                local mapped = colorMap[obj.Color]
+                if mapped then obj.Color = mapped end
+            end
+            
+            for _, child in pairs(obj:GetChildren()) do
+                applyColors(child)
+            end
+        end
+        applyColors(mainFrame)
+        
+        -- 刷新粒子系统
+        if window.ParticleSystem and window.ParticleSystem.setColor then
+            window.ParticleSystem:setColor(newTheme.Accent)
+        end
+    end
+end
 
     -- 创建内置设置 Tab（不在侧边栏显示）
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
