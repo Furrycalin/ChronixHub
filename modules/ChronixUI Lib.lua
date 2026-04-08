@@ -1611,37 +1611,37 @@ function ChronixUI:CreateWindow(config)
                         end
                     end
                         
-                        updateElementColors(tabData.Content)
-                    end
-                    
-                    -- 8. 单独处理设置页
-                    if windowData.SettingsTabContent then
-                        local function updateSettingsColors(obj)
-                            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                                if obj:IsA("TextButton") then
-                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                                elseif obj:IsA("TextBox") then
-                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
-                                end
-                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                            end
-                            for _, child in ipairs(obj:GetChildren()) do
-                                updateSettingsColors(child)
-                            end
-                        end
-                        updateSettingsColors(windowData.SettingsTabContent)
-                    end
-                    
-                    -- 9. 提示主题已切换
-                    ChronixUI:Notify({
-                        Title = "主题已切换",
-                        Content = "当前主题: " .. selectedTheme,
-                        Type = "success",
-                        Duration = 2
-                    })
+                    updateElementColors(tabData.Content)
                 end
+                    
+                -- 8. 单独处理设置页
+                if windowData.SettingsTabContent then
+                    local function updateSettingsColors(obj)
+                        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                            if obj:IsA("TextButton") then
+                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                            elseif obj:IsA("TextBox") then
+                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
+                            end
+                            obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                        end
+                        for _, child in ipairs(obj:GetChildren()) do
+                            updateSettingsColors(child)
+                        end
+                    end
+                    updateSettingsColors(windowData.SettingsTabContent)
+                end
+                    
+                -- 9. 提示主题已切换
+                ChronixUI:Notify({
+                    Title = "主题已切换",
+                    Content = "当前主题: " .. selectedTheme,
+                    Type = "success",
+                    Duration = 2
+                })
             end
-        })
+        end
+    })
     settingsElements:AddDivider()
     settingsElements:AddLabel("其他设置")
     windowData.SettingsElements = settingsElements
