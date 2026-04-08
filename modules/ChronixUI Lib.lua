@@ -1,8 +1,8 @@
--- ChronixUI v3.7 - 手机端支持（UI 等比缩小 30%，触摸交互优化）
+-- ChronixUI v3.8 - 修复颜色选取器问题、信息栏更改为设备名用户
 
 _G.UnloadChronixUI = false
 local ChronixUI = {}
-ChronixUI.Version = "3.7.0"
+ChronixUI.Version = "3.8.0"
 ChronixUI.Windows = {}
 ChronixUI.Notifications = {}
 ChronixUI.Settings = {
