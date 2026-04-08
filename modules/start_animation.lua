@@ -171,7 +171,7 @@ function LoadAnimationModule:LoadAnimation(duration, config)
 
     -- 创建取消按钮
     local cancelButton = Instance.new("TextButton")
-    cancelButton.Text = "✕"
+    cancelButton.Text = "×"
     cancelButton.Size = UDim2.new(0, 30, 0, 30)
     cancelButton.Position = UDim2.new(0, uiWidth - 40, 0, 10)
     cancelButton.TextColor3 = Color3.new(1, 1, 1)
