@@ -1142,7 +1142,6 @@ function ChronixUI:CreateWindow(config)
             container.BackgroundTransparency = 1
             container.AutomaticSize = Enum.AutomaticSize.Y
         
-            -- HSV值存储
             local h, s, v = Color3.toHSV(default)
             local expanded = false
             
@@ -1167,7 +1166,6 @@ function ChronixUI:CreateWindow(config)
             previewCorner.Parent = colorPreview
             AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
             
-            -- 展开按钮
             local expandBtn = Instance.new("TextButton")
             expandBtn.Size = UDim2.new(1, 0, 1, 0)
             expandBtn.BackgroundTransparency = 1
@@ -1194,7 +1192,6 @@ function ChronixUI:CreateWindow(config)
             squareCorner.CornerRadius = UDim.new(0, 6 * scale)
             squareCorner.Parent = squareContainer
             
-            -- 色盘上的饱和度/亮度渐变
             local satBrightGradient = Instance.new("ImageLabel")
             satBrightGradient.Size = UDim2.new(1, 0, 1, 0)
             satBrightGradient.BackgroundTransparency = 1
@@ -1202,12 +1199,11 @@ function ChronixUI:CreateWindow(config)
             satBrightGradient.ScaleType = Enum.ScaleType.Stretch
             satBrightGradient.Parent = squareContainer
             
-            -- 色相条容器 - 关键修复：设置背景透明，让渐变完全显示
+            -- 色相条容器
             local hueContainer = Instance.new("Frame")
             hueContainer.Size = UDim2.new(0, 20 * scale, 1, -10 * scale)
             hueContainer.Position = UDim2.new(1, -25 * scale, 0, 5 * scale)
-            hueContainer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            hueContainer.BackgroundTransparency = 1  -- 关键：设为透明，让渐变完全可见
+            hueContainer.BackgroundTransparency = 1
             hueContainer.BorderSizePixel = 0
             hueContainer.Parent = pickerPanel
             
@@ -1215,7 +1211,6 @@ function ChronixUI:CreateWindow(config)
             hueCorner.CornerRadius = UDim.new(0, 6 * scale)
             hueCorner.Parent = hueContainer
             
-            -- 色相渐变条（实际的渐变显示）
             local hueGradientBar = Instance.new("Frame")
             hueGradientBar.Size = UDim2.new(1, 0, 1, 0)
             hueGradientBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1227,24 +1222,23 @@ function ChronixUI:CreateWindow(config)
             hueBarCorner.CornerRadius = UDim.new(0, 6 * scale)
             hueBarCorner.Parent = hueGradientBar
             
-            -- 色相渐变 - 正确的彩虹渐变
             local hueGradient = Instance.new("UIGradient")
             hueGradient.Rotation = 270
             hueGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),     -- 红
-                ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)), -- 黄
-                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),   -- 绿
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),  -- 青
-                ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),   -- 蓝
-                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)), -- 紫
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))       -- 红
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
             })
             hueGradient.Parent = hueGradientBar
             
-            -- 选择器圆点 - 修复偏移问题
+            -- 选择器圆点 - 关键修复：设置正确的锚点
             local squareSelector = Instance.new("ImageLabel")
             squareSelector.Size = UDim2.new(0, 14 * scale, 0, 14 * scale)
-            squareSelector.AnchorPoint = Vector2.new(0.5, 0.5)
+            squareSelector.AnchorPoint = Vector2.new(0.5, 0.5)  -- 中心锚点
             squareSelector.BackgroundTransparency = 1
             squareSelector.Image = "rbxassetid://4805639000"
             squareSelector.ZIndex = 10
@@ -1252,7 +1246,7 @@ function ChronixUI:CreateWindow(config)
             
             local hueSelector = Instance.new("ImageLabel")
             hueSelector.Size = UDim2.new(0, 14 * scale, 0, 14 * scale)
-            hueSelector.AnchorPoint = Vector2.new(0.5, 0.5)
+            hueSelector.AnchorPoint = Vector2.new(0.5, 0.5)  -- 中心锚点
             hueSelector.BackgroundTransparency = 1
             hueSelector.Image = "rbxassetid://4805639000"
             hueSelector.ZIndex = 10
@@ -1266,23 +1260,35 @@ function ChronixUI:CreateWindow(config)
                 callback(color)
             end
             
-            -- 更新选择器位置 - 修复偏移计算
-            local function updateSelectorPositions()
-                -- 色盘选择器位置：需要限制在有效范围内，避免超出边框
-                local selectorSize = 7 * scale  -- 圆点半径（因为锚点是0.5，所以偏移量是半径）
-                local maxX = 1 - (selectorSize * 2 / squareContainer.AbsoluteSize.X)
-                local maxY = 1 - (selectorSize * 2 / squareContainer.AbsoluteSize.Y)
-                
-                local clampedS = math.clamp(s, 0, maxX)
-                local clampedV = math.clamp(1 - v, 0, maxY)
-                
-                squareSelector.Position = UDim2.new(clampedS, -selectorSize, clampedV, -selectorSize)
-                
-                -- 色相选择器位置
-                local hueSelectorSize = 7 * scale
-                local hueMaxY = 1 - (hueSelectorSize * 2 / hueContainer.AbsoluteSize.Y)
-                local clampedH = math.clamp(1 - h, 0, hueMaxY)
-                hueSelector.Position = UDim2.new(0.5, -selectorSize, clampedH, -selectorSize)
+            -- 更新选择器位置 - 关键修复：简化计算，直接映射鼠标位置
+            local function updateSquareSelectorPosition(xPos, yPos)
+                -- 因为锚点是0.5,0.5，位置就是鼠标坐标在容器中的比例位置
+                -- 不需要额外偏移计算
+                local clampedX = math.clamp(xPos, 0, 1)
+                local clampedY = math.clamp(yPos, 0, 1)
+                squareSelector.Position = UDim2.new(clampedX, 0, clampedY, 0)
+            end
+            
+            local function updateHueSelectorPosition(yPos)
+                local clampedY = math.clamp(yPos, 0, 1)
+                hueSelector.Position = UDim2.new(0.5, 0, clampedY, 0)
+            end
+            
+            -- 从鼠标位置更新所有值
+            local function updateFromSquareMouse(mouseX, mouseY)
+                local xPos = math.clamp((mouseX - satBrightGradient.AbsolutePosition.X) / satBrightGradient.AbsoluteSize.X, 0, 1)
+                local yPos = math.clamp((mouseY - satBrightGradient.AbsolutePosition.Y) / satBrightGradient.AbsoluteSize.Y, 0, 1)
+                s = xPos
+                v = 1 - yPos
+                updateSquareSelectorPosition(xPos, yPos)
+                updateColor()
+            end
+            
+            local function updateFromHueMouse(mouseY)
+                local yPos = math.clamp((mouseY - hueGradientBar.AbsolutePosition.Y) / hueGradientBar.AbsoluteSize.Y, 0, 1)
+                h = 1 - yPos
+                updateHueSelectorPosition(yPos)
+                updateColor()
             end
             
             -- 色相条拖动逻辑
@@ -1292,18 +1298,12 @@ function ChronixUI:CreateWindow(config)
             local function startHueDrag(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     hueDragging = true
-                    local yPos = math.clamp((input.Position.Y - hueGradientBar.AbsolutePosition.Y) / hueGradientBar.AbsoluteSize.Y, 0, 1)
-                    h = 1 - yPos
-                    updateColor()
-                    updateSelectorPositions()
+                    updateFromHueMouse(input.Position.Y)
                     
                     if hueConnection then hueConnection:Disconnect() end
                     hueConnection = RunService.RenderStepped:Connect(function()
                         if hueDragging then
-                            local yPos = math.clamp((Mouse.Y - hueGradientBar.AbsolutePosition.Y) / hueGradientBar.AbsoluteSize.Y, 0, 1)
-                            h = 1 - yPos
-                            updateColor()
-                            updateSelectorPositions()
+                            updateFromHueMouse(Mouse.Y)
                         end
                     end)
                 end
@@ -1329,22 +1329,12 @@ function ChronixUI:CreateWindow(config)
             local function startSquareDrag(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     squareDragging = true
-                    local xPos = math.clamp((input.Position.X - satBrightGradient.AbsolutePosition.X) / satBrightGradient.AbsoluteSize.X, 0, 1)
-                    local yPos = math.clamp((input.Position.Y - satBrightGradient.AbsolutePosition.Y) / satBrightGradient.AbsoluteSize.Y, 0, 1)
-                    s = xPos
-                    v = 1 - yPos
-                    updateColor()
-                    updateSelectorPositions()
+                    updateFromSquareMouse(input.Position.X, input.Position.Y)
                     
                     if squareConnection then squareConnection:Disconnect() end
                     squareConnection = RunService.RenderStepped:Connect(function()
                         if squareDragging then
-                            local xPos = math.clamp((Mouse.X - satBrightGradient.AbsolutePosition.X) / satBrightGradient.AbsoluteSize.X, 0, 1)
-                            local yPos = math.clamp((Mouse.Y - satBrightGradient.AbsolutePosition.Y) / satBrightGradient.AbsoluteSize.Y, 0, 1)
-                            s = xPos
-                            v = 1 - yPos
-                            updateColor()
-                            updateSelectorPositions()
+                            updateFromSquareMouse(Mouse.X, Mouse.Y)
                         end
                     end)
                 end
@@ -1363,6 +1353,18 @@ function ChronixUI:CreateWindow(config)
             satBrightGradient.InputBegan:Connect(startSquareDrag)
             satBrightGradient.InputEnded:Connect(endSquareDrag)
             
+            -- 初始化位置
+            local function initializePositions()
+                -- 设置色盘选择器位置
+                local initialX = s
+                local initialY = 1 - v
+                squareSelector.Position = UDim2.new(initialX, 0, initialY, 0)
+                
+                -- 设置色相选择器位置
+                local initialHueY = 1 - h
+                hueSelector.Position = UDim2.new(0.5, 0, initialHueY, 0)
+            end
+            
             -- 展开/收起
             expandBtn.MouseButton1Click:Connect(function()
                 PlayClickSound()
@@ -1370,9 +1372,8 @@ function ChronixUI:CreateWindow(config)
                 if expanded then
                     TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 188 * scale)}):Play()
                     pickerPanel.Visible = true
-                    -- 延迟一帧后更新位置，确保UI已渲染
                     task.wait()
-                    updateSelectorPositions()
+                    initializePositions()
                 else
                     TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 38 * scale)}):Play()
                     wait(0.15)
@@ -1380,10 +1381,9 @@ function ChronixUI:CreateWindow(config)
                 end
             end)
             
-            -- 初始化位置和颜色
-            -- 延迟初始化，确保容器尺寸已计算
+            -- 初始化
             task.wait()
-            updateSelectorPositions()
+            initializePositions()
             updateColor()
             
             return wrap(container)
