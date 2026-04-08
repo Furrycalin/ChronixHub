@@ -53,6 +53,21 @@ ChronixUI.Themes = {
         Error = Color3.fromRGB(244, 67, 54),
         Warning = Color3.fromRGB(255, 152, 0),
         Info = Color3.fromRGB(33, 150, 243)
+    },
+    Light = {
+        Background = Color3.fromRGB(245, 245, 250),
+        Sidebar = Color3.fromRGB(235, 235, 240),
+        Accent = Color3.fromRGB(0, 120, 210),
+        Text = Color3.fromRGB(30, 30, 30),
+        TextDark = Color3.fromRGB(100, 100, 100),
+        Border = Color3.fromRGB(200, 200, 200),
+        Card = Color3.fromRGB(255, 255, 255),
+        Input = Color3.fromRGB(255, 255, 255),
+        Hover = Color3.fromRGB(225, 225, 230),
+        Success = Color3.fromRGB(46, 125, 50),
+        Error = Color3.fromRGB(211, 47, 47),
+        Warning = Color3.fromRGB(237, 108, 0),
+        Info = Color3.fromRGB(2, 136, 209)
     }
 }
 ChronixUI.CurrentTheme = "Default"
@@ -642,6 +657,8 @@ function ChronixUI:CreateWindow(config)
         if particleSystem then
             particleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
         end
+
+        windowData.ParticleSystem = particleSystem
     end
     -- ========== 粒子系统添加结束 ==========
 
@@ -1438,6 +1455,78 @@ function ChronixUI:CreateWindow(config)
         return elements
     end
 
+    -- 刷新所有UI元素的主题
+    function ChronixUI:RefreshTheme()
+        local theme = self.Themes[self.CurrentTheme]
+
+        -- 刷新粒子系统颜色
+        if window.ParticleSystem and window.ParticleSystem.setColor then
+            window.ParticleSystem:setColor(theme.Accent)
+        end
+    
+        for _, window in pairs(self.Windows) do
+            local mainFrame = window.MainFrame
+            if mainFrame then
+                -- 刷新主框架
+                mainFrame.BackgroundColor3 = theme.Background
+            
+                -- 刷新所有UIStroke
+                for _, stroke in pairs(mainFrame:GetDescendants()) do
+                    if stroke:IsA("UIStroke") then
+                        stroke.Color = theme.Border
+                    end
+                end
+            
+                -- 刷新侧边栏
+                local sidebar = mainFrame:FindFirstChildOfClass("Frame")
+                if sidebar then
+                    for _, child in pairs(sidebar:GetChildren()) do
+                        if child:IsA("Frame") and child.Name ~= "ScrollingFrame" then
+                            child.BackgroundColor3 = theme.Sidebar
+                        end
+                    end
+                end
+            
+                -- 刷新所有文本颜色
+                for _, textObj in pairs(mainFrame:GetDescendants()) do
+                    if textObj:IsA("TextLabel") or textObj:IsA("TextButton") then
+                        -- 保持原有逻辑判断，这里简单处理
+                        if textObj.TextColor3 == Color3.fromRGB(255, 255, 255) or 
+                            textObj.TextColor3 == Color3.fromRGB(30, 30, 30) then
+                            textObj.TextColor3 = theme.Text
+                        elseif textObj.TextColor3 == Color3.fromRGB(170, 170, 170) or
+                            textObj.TextColor3 == Color3.fromRGB(100, 100, 100) then
+                            textObj.TextColor3 = theme.TextDark
+                        end
+                    end
+                end
+            
+                -- 刷新卡片和输入框背景
+                for _, frame in pairs(mainFrame:GetDescendants()) do
+                    if frame:IsA("Frame") and frame ~= mainFrame then
+                        local bgColor = frame.BackgroundColor3
+                        -- 检查是否需要更新为Card颜色
+                        if bgColor == Color3.fromRGB(37, 37, 53) or bgColor == Color3.fromRGB(255, 255, 255) then
+                            frame.BackgroundColor3 = theme.Card
+                        -- 检查是否需要更新为Input颜色
+                        elseif bgColor == Color3.fromRGB(37, 37, 53) then
+                            frame.BackgroundColor3 = theme.Input
+                        end
+                    end
+                end
+            
+                -- 刷新粒子系统颜色
+                local particleBg = mainFrame:FindFirstChild("ParticleBackground")
+                if particleBg and UIParticleSystem then
+                    local particleSystem = particleBg:FindFirstChildOfClass("Frame")
+                    if particleSystem and particleSystem.setColor then
+                        particleSystem:setColor(theme.Accent)
+                    end
+                end
+            end
+        end
+    end
+
     -- 创建内置设置 Tab（不在侧边栏显示）
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
     settingsElements:AddTitle("UI 设置")
@@ -1477,6 +1566,26 @@ function ChronixUI:CreateWindow(config)
                     Duration = 3
                 })
             end
+        end
+    })
+    local themeNames = {}
+    for themeName, _ in pairs(ChronixUI.Themes) do
+        table.insert(themeNames, themeName)
+    end
+    settingsElements:AddDropdown({
+        Label = "界面主题",
+        Options = themeNames,
+        Default = ChronixUI.CurrentTheme,
+        Callback = function(selectedTheme)
+            ChronixUI:SetTheme(selectedTheme)
+            -- 刷新整个UI的主题
+            ChronixUI:RefreshTheme()
+            ChronixUI:Notify({
+                Title = "主题已切换",
+                Content = "当前主题: " .. selectedTheme,
+                Type = "success",
+                Duration = 2
+            })
         end
     })
     settingsElements:AddDivider()
