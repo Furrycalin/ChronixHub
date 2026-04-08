@@ -540,7 +540,7 @@ end
 
 --=============================================================================================
 
-local isMobile = (game:GetService("UserInputService").TouchEnabled and not game:GetService("UserInputService").MouseEnabled)
+local isMobile = (UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
 local windowSize = isMobile and UDim2.new(0, 476, 0, 294) or UDim2.new(0, 680, 0, 420)
 
 local mainWindow = ChronixUI:CreateWindow({
@@ -620,7 +620,7 @@ ToolsTab:AddButton({ Text = "回满血", Callback = function() LocalPlayer.Chara
 
 ToolsTab:AddButton({ Text = "自杀", Callback = function() LocalPlayer.Character.Humanoid.Health = 0 end })
 
-ToolsTab:AddButton({ Text = "获得点击传送工具", Callback = function() mouse = game.Players.LocalPlayer:GetMouse() tool = Instance.new("Tool") tool.RequiresHandle = false tool.Name = "手持点击传送" tool.Activated:connect(function() local pos = mouse.Hit+Vector3.new(0,2.5,0) pos = CFrame.new(pos.X,pos.Y,pos.Z) game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pos end) tool.Parent = game.Players.LocalPlayer.Backpack end })
+ToolsTab:AddButton({ Text = "获得点击传送工具", Callback = function() mouse = LocalPlayer:GetMouse() tool = Instance.new("Tool") tool.RequiresHandle = false tool.Name = "手持点击传送" tool.Activated:connect(function() local pos = mouse.Hit+Vector3.new(0,2.5,0) pos = CFrame.new(pos.X,pos.Y,pos.Z) character.HumanoidRootPart.CFrame = pos end) tool.Parent = LocalPlayer.Backpack end })
 
 ToolsTab:AddToggle({
     Label = "TPWalk",
@@ -755,15 +755,15 @@ ToolsTab:AddToggle({
         Stepped = game:GetService("RunService").Stepped:Connect(function()
             if not data.basicdata.releasetools.noclip == false then
                 for a, b in pairs(Workspace:GetChildren()) do
-                    if b.Name == Players.LocalPlayer.Name then
-                        for i, v in pairs(Workspace[Players.LocalPlayer.Name]:GetChildren()) do
+                    if b.Name == LocalPlayer.Name then
+                        for i, v in pairs(Workspace[LocalPlayer.Name]:GetChildren()) do
                             if v:IsA("BasePart") then
                                 v.CanCollide = false
                             end end end end
             else
                 for a, b in pairs(Workspace:GetChildren()) do
-                    if b.Name == Players.LocalPlayer.Name then
-                        for i, v in pairs(Workspace[Players.LocalPlayer.Name]:GetChildren()) do
+                    if b.Name == LocalPlayer.Name then
+                        for i, v in pairs(Workspace[LocalPlayer.Name]:GetChildren()) do
                             if v:IsA("BasePart") then
                                 v.CanCollide = true
                             end end end end
@@ -778,7 +778,7 @@ ToolsTab:AddToggle({
     Default = false,
     Callback = function(v)
         data.basicdata.releasetools.infjump = v
-        JR = game:GetService("UserInputService").JumpRequest:Connect(function()
+        JR = UserInputService.JumpRequest:Connect(function()
             if not data.basicdata.releasetools.infjump then
                 JR:Disconnect()
             end
@@ -1945,13 +1945,12 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
             OtherGameTab:AddButton({ Text = "高亮芝士", Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
             OtherGameTab:AddButton({ Text = "无敌(怪物不追不杀)", Callback = function()
                 -- 无敌实现
-                local ClientScripts = game.Players.LocalPlayer.PlayerGui.ClientScripts
+                local ClientScripts = LocalPlayer.PlayerGui.ClientScripts
                 if ClientScripts:FindFirstChild("SafeSpaceHandler") then
                     ClientScripts.SafeSpaceHandler:Destroy() -- 删除安全区处理脚本、防止被持续监测到（注意：死亡后会重新生成）
                 end
-                local LocalPlayer_upvr = game.Players.LocalPlayer
                 local Events_upvr = ReplicatedStorage.Events
-                LocalPlayer_upvr:SetAttribute("Safe", true) -- 设置安全状态
+                LocalPlayer:SetAttribute("Safe", true) -- 设置安全状态
                 Events_upvr.SetAttributeEvent:FireServer("Safe", true) -- 向服务端发送安全状态
                 ChronixUI:Notify({ Title = "提示", Content = "已设置玩家安全状态\n死亡前生效", Type = "success", Duration = 5 })
             end })
@@ -2212,16 +2211,16 @@ local GGcount = 0
 
 al = workspace.DescendantAdded:Connect(function(descendant)
     if descendant.Name == "base" and descendant:IsA("BasePart") and data.othergamedata.grace.autolever then
-        local player = game.Players.LocalPlayer
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            descendant.CFrame = player.Character.HumanoidRootPart.CFrame
+        local player67 = LocalPlayer
+        if player67 and player67.Character and player67.Character:FindFirstChild("HumanoidRootPart") then
+            descendant.CFrame = player67.Character.HumanoidRootPart.CFrame
             GGcount = GGcount + 1
             if GGcount >= 3 then
                 ChronixUI:Notify({ Title = "提示", Content = "全部拉杆已被激活\n门已打开", Type = "success", Duration = 5 })
                 GGcount = 0
             end
             task.wait(1)
-            descendant.CFrame = player.Character.HumanoidRootPart.CFrame
+            descendant.CFrame = player67.Character.HumanoidRootPart.CFrame
         end
     end
 end)
