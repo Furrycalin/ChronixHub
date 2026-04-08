@@ -10,7 +10,6 @@ end
 _G.ChronixHubisLoaded = true
 _G.SA_FASTLOADING = true
 
-local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -27,9 +26,7 @@ local HumanoidRootPart = character:WaitForChild("HumanoidRootPart")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextChatService = game:GetService("TextChatService")
 local HttpService = game:GetService("HttpService")
-local ScriptContext = game:GetService("ScriptContext")
 local TeleportService = game:GetService("TeleportService")
 
 local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
@@ -1952,9 +1949,8 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 if ClientScripts:FindFirstChild("SafeSpaceHandler") then
                     ClientScripts.SafeSpaceHandler:Destroy() -- 删除安全区处理脚本、防止被持续监测到（注意：死亡后会重新生成）
                 end
-                local ReplicatedStorage_upvr = game:GetService("ReplicatedStorage")
                 local LocalPlayer_upvr = game.Players.LocalPlayer
-                local Events_upvr = ReplicatedStorage_upvr.Events
+                local Events_upvr = ReplicatedStorage.Events
                 LocalPlayer_upvr:SetAttribute("Safe", true) -- 设置安全状态
                 Events_upvr.SetAttributeEvent:FireServer("Safe", true) -- 向服务端发送安全状态
                 ChronixUI:Notify({ Title = "提示", Content = "已设置玩家安全状态\n死亡前生效", Type = "success", Duration = 5 })
@@ -2240,25 +2236,24 @@ end)
 
 Stepped6 = game:GetService("RunService").Stepped:Connect(function()
     if data.othergamedata.grace.deleteentity then 
-    local RS = game:GetService("ReplicatedStorage")
-    RS.eyegui:Destroy()
-    RS.smilegui:Destroy()
-    RS.SendRush:Destroy()
-    RS.SendWorm:Destroy()
-    RS.SendSorrow:Destroy()
-    RS.SendGoatman:Destroy()
+    ReplicatedStorage.eyegui:Destroy()
+    ReplicatedStorage.smilegui:Destroy()
+    ReplicatedStorage.SendRush:Destroy()
+    ReplicatedStorage.SendWorm:Destroy()
+    ReplicatedStorage.SendSorrow:Destroy()
+    ReplicatedStorage.SendGoatman:Destroy()
     wait(0.1)
-    RS.Worm:Destroy()
-    RS.elkman:Destroy()
+    ReplicatedStorage.Worm:Destroy()
+    ReplicatedStorage.elkman:Destroy()
     wait(0.1)
-    RS.QuickNotes.Eye:Destroy()
-    RS.QuickNotes.Rush:Destroy()
-    RS.QuickNotes.Sorrow:Destroy()
-    RS.QuickNotes.elkman:Destroy()  
-    RS.QuickNotes.EyePrime:Destroy()
-    RS.QuickNotes.SlugFish:Destroy()
-    RS.QuickNotes.FakeDoor:Destroy()
-    RS.QuickNotes.SleepyHead:Destroy()
+    ReplicatedStorage.QuickNotes.Eye:Destroy()
+    ReplicatedStorage.QuickNotes.Rush:Destroy()
+    ReplicatedStorage.QuickNotes.Sorrow:Destroy()
+    ReplicatedStorage.QuickNotes.elkman:Destroy()  
+    ReplicatedStorage.QuickNotes.EyePrime:Destroy()
+    ReplicatedStorage.QuickNotes.SlugFish:Destroy()
+    ReplicatedStorage.QuickNotes.FakeDoor:Destroy()
+    ReplicatedStorage.QuickNotes.SleepyHead:Destroy()
     local SmileGui = player:FindFirstChild("PlayerGui"):FindFirstChild("smilegui")
     if SmileGui then
         SmileGui:Destroy()
