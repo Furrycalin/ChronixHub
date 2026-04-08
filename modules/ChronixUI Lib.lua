@@ -637,6 +637,7 @@ function ChronixUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         SettingsTabContent = nil,
+        ParticleSystem = nil,
         Minimized = false
     }
 
