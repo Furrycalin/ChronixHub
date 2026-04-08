@@ -1172,6 +1172,7 @@ musicTab:AddDivider()
 musicTab:AddLabel("或手动输入自定义ID")
 local customIdInput = musicTab:AddInput({
     Label = "自定义音乐ID",
+    Default = data.basicdata.otherdata.musicData.currentId,
     Placeholder = "输入 rbxassetid，例如: 142376088",
     Callback = function(text)
         -- 当用户输入时，更新当前ID
@@ -1180,11 +1181,6 @@ local customIdInput = musicTab:AddInput({
         end
     end
 })
--- 设置初始值
-local textBox = customIdInput:FindFirstChildOfClass("TextBox")
-if textBox then
-    textBox.Text = data.basicdata.otherdata.musicData.currentId
-end
 
 musicTab:AddDivider()
 musicTab:AddLabel("播放控制")
@@ -1456,6 +1452,7 @@ audioCheckerTab:AddTitle("音频检查器")
 audioCheckerTab:AddLabel("筛选音量分贝 (0-100)")
 local thresholdInput = audioCheckerTab:AddInput({
     Label = "音量阈值",
+    Default = tostring(data.basicdata.otherdata.audioData.threshold),
     Placeholder = "输入阈值，例如: 50",
     Callback = function(text)
         local num = tonumber(text)
@@ -1467,10 +1464,6 @@ local thresholdInput = audioCheckerTab:AddInput({
         end
     end
 })
-local thresholdTextBox = thresholdInput:FindFirstChildOfClass("TextBox")
-if thresholdTextBox then
-    thresholdTextBox.Text = tostring(data.basicdata.otherdata.audioData.threshold)
-end
 audioCheckerTab:AddDivider()
 audioCheckerTab:AddTitle("操作面板")
 audioCheckerTab:AddToggle({
