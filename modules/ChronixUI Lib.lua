@@ -1460,62 +1460,121 @@ function ChronixUI:CreateWindow(config)
     
         for _, window in pairs(self.Windows) do
             local mainFrame = window.MainFrame
-            if mainFrame then
-                -- 刷新主框架
-                mainFrame.BackgroundColor3 = theme.Background
-            
-                -- 刷新所有UIStroke
-                for _, stroke in pairs(mainFrame:GetDescendants()) do
-                    if stroke:IsA("UIStroke") then
-                        stroke.Color = theme.Border
-                    end
-                end
-            
-                -- 刷新侧边栏
-                local sidebar = mainFrame:FindFirstChildOfClass("Frame")
-                if sidebar then
-                    for _, child in pairs(sidebar:GetChildren()) do
-                        if child:IsA("Frame") and child.Name ~= "ScrollingFrame" then
-                            child.BackgroundColor3 = theme.Sidebar
+            if not mainFrame then continue end
+        
+            -- 1. 刷新主框架背景
+            mainFrame.BackgroundColor3 = theme.Background
+        
+            -- 2. 遍历所有子元素
+            for _, obj in pairs(mainFrame:GetDescendants()) do
+                -- 刷新 UIStroke（边框）
+                if obj:IsA("UIStroke") then
+                    obj.Color = theme.Border
+                
+                -- 刷新文本元素
+                elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                    local parent = obj.Parent
+                    local objName = obj.Name
+                    local parentName = parent and parent.Name or ""
+                
+                    -- 标题栏文字（标题、功能菜单）- Accent 颜色
+                    if parentName == "titleBar" or (objName == "sidebarTitle") then
+                        obj.TextColor3 = theme.Accent
+                    
+                    -- 侧边栏 Tab 按钮
+                    elseif parentName == "ScrollingFrame" and obj:IsA("TextButton") then
+                        -- 选中的 Tab 保持 Accent，未选中的用 TextDark
+                        if obj.BackgroundColor3 == theme.Accent then
+                            obj.TextColor3 = Color3.fromRGB(0, 0, 0)  -- 选中时文字黑色
+                        else
+                            obj.TextColor3 = theme.TextDark
+                        end
+                    
+                    -- 设置按钮、最小化、关闭按钮
+                    elseif objName == "settingsBtn" or objName == "minBtn" or objName == "closeBtn" then
+                        obj.TextColor3 = theme.Text
+                    
+                    -- 底部信息栏文字
+                    elseif parentName == "playerBar" then
+                        if objName == "playerNameLabel" then
+                            obj.TextColor3 = theme.Text
+                        elseif objName == "playerInfoLabel" then
+                            obj.TextColor3 = theme.TextDark
+                        end
+                    
+                    -- 普通标签和按钮文字
+                    else
+                        -- 根据文字原有颜色风格判断
+                        local currentColor = obj.TextColor3
+                        -- 如果是接近白色/深色，设为 Text；如果是灰色，设为 TextDark
+                        if currentColor.r > 0.8 and currentColor.g > 0.8 and currentColor.b > 0.8 then
+                            obj.TextColor3 = theme.Text
+                        elseif currentColor.r < 0.3 and currentColor.g < 0.3 and currentColor.b < 0.3 then
+                            obj.TextColor3 = theme.Text
+                        elseif currentColor.r > 0.5 and currentColor.g > 0.5 and currentColor.b > 0.5 then
+                            obj.TextColor3 = theme.TextDark
                         end
                     end
-                end
-            
-                -- 刷新所有文本颜色
-                for _, textObj in pairs(mainFrame:GetDescendants()) do
-                    if textObj:IsA("TextLabel") or textObj:IsA("TextButton") then
-                        -- 保持原有逻辑判断，这里简单处理
-                        if textObj.TextColor3 == Color3.fromRGB(255, 255, 255) or 
-                            textObj.TextColor3 == Color3.fromRGB(30, 30, 30) then
-                            textObj.TextColor3 = theme.Text
-                        elseif textObj.TextColor3 == Color3.fromRGB(170, 170, 170) or
-                            textObj.TextColor3 == Color3.fromRGB(100, 100, 100) then
-                            textObj.TextColor3 = theme.TextDark
+                
+                -- 刷新 Frame 背景（侧边栏、卡片、输入框等）
+                elseif obj:IsA("Frame") and obj ~= mainFrame then
+                    local objName = obj.Name
+                    local parent = obj.Parent
+                    local parentName = parent and parent.Name or ""
+                
+                    -- 侧边栏背景
+                    if objName == "sidebar" then
+                        obj.BackgroundColor3 = theme.Sidebar
+                    
+                    -- 标题栏
+                    elseif objName == "titleBar" then
+                        obj.BackgroundColor3 = theme.Background
+                    
+                    -- 底部信息栏、设置/最小化/关闭按钮背景
+                    elseif objName == "playerBar" or 
+                        objName == "settingsBtn" or objName == "minBtn" or objName == "closeBtn" then
+                        obj.BackgroundColor3 = theme.Card
+                    
+                    -- 下拉框、输入框、按键绑定按钮
+                    elseif objName == "dropdownBtn" or objName == "inputBox" or objName == "keyBtn" then
+                        obj.BackgroundColor3 = theme.Input
+                    
+                    -- 下拉列表
+                    elseif objName == "dropdownList" then
+                        obj.BackgroundColor3 = theme.Input
+                    
+                    -- 开关背景（需要特殊处理）
+                    elseif objName == "toggleBtn" then
+                        -- 保持原有逻辑，只刷新未激活状态的背景
+                        if obj.BackgroundColor3 ~= theme.Accent then
+                            obj.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+                        end
+                    
+                    -- 滑块轨道
+                    elseif objName == "slider" then
+                        obj.BackgroundColor3 = theme.Border
+                    
+                    -- 卡片类背景（按钮、选项等）
+                    else
+                        local bgColor = obj.BackgroundColor3
+                        -- 如果是默认的深色卡片色或白色卡片色，更新为新的卡片色
+                        if (bgColor.r == 37/255 and bgColor.g == 37/255 and bgColor.b == 53/255) or
+                        (bgColor.r == 1 and bgColor.g == 1 and bgColor.b == 1) then
+                            obj.BackgroundColor3 = theme.Card
+                        -- 如果是输入框背景色
+                        elseif bgColor.r == 37/255 and bgColor.g == 37/255 and bgColor.b == 53/255 then
+                            obj.BackgroundColor3 = theme.Input
                         end
                     end
-                end
-            
-                -- 刷新卡片和输入框背景
-                for _, frame in pairs(mainFrame:GetDescendants()) do
-                    if frame:IsA("Frame") and frame ~= mainFrame then
-                        local bgColor = frame.BackgroundColor3
-                        -- 检查是否需要更新为Card颜色
-                        if bgColor == Color3.fromRGB(37, 37, 53) or bgColor == Color3.fromRGB(255, 255, 255) then
-                            frame.BackgroundColor3 = theme.Card
-                        -- 检查是否需要更新为Input颜色
-                        elseif bgColor == Color3.fromRGB(37, 37, 53) then
-                            frame.BackgroundColor3 = theme.Input
-                        end
-                    end
-                end
-            
-                -- 刷新粒子系统颜色
-                if window.ParticleSystem and window.ParticleSystem.setColor then
-                    window.ParticleSystem:setColor(theme.Accent)
                 end
             end
+        
+            -- 3. 刷新粒子系统
+            if window.ParticleSystem and window.ParticleSystem.setColor then
+                window.ParticleSystem:setColor(theme.Accent)
+            end
         end
-    end
+    end 
 
     -- 创建内置设置 Tab（不在侧边栏显示）
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
