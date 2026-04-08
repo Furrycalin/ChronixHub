@@ -1139,46 +1139,90 @@ function ChronixUI:CreateWindow(config)
             local label = colorConfig.Label or "颜色选择"
             local default = colorConfig.Default or Color3.fromRGB(119, 221, 255)
             local callback = colorConfig.Callback or function() end
-
+        
             local container = Instance.new("Frame")
             container.Parent = tabContent
-            container.Size = UDim2.new(1, 0, 0, math.floor(38 * scale))
+            container.Size = UDim2.new(1, 0, 0, 38 * scale)
             container.BackgroundTransparency = 1
             container.AutomaticSize = Enum.AutomaticSize.Y
-
-            local ColorH, ColorS, ColorV = Color3.toHSV(default)
-            local toggled = false
-
-            -- 颜色选择器控件
-            local ColorSelection = Instance.new("ImageLabel")
-            ColorSelection.Size = UDim2.new(0, math.floor(12 * scale), 0, math.floor(12 * scale))
-            ColorSelection.ScaleType = Enum.ScaleType.Fit
-            ColorSelection.AnchorPoint = Vector2.new(0.5, 0.5)
-            ColorSelection.BackgroundTransparency = 1
-            ColorSelection.Image = "http://www.roblox.com/asset/?id=4805639000"
-
-            local HueSelection = Instance.new("ImageLabel")
-            HueSelection.Size = UDim2.new(0, math.floor(12 * scale), 0, math.floor(12 * scale))
-            HueSelection.ScaleType = Enum.ScaleType.Fit
-            HueSelection.AnchorPoint = Vector2.new(0.5, 0.5)
-            HueSelection.BackgroundTransparency = 1
-            HueSelection.Image = "http://www.roblox.com/asset/?id=4805639000"
-
-            local ColorSquare = Instance.new("ImageLabel")
-            ColorSquare.Size = UDim2.new(1, -25*scale, 1, 0)
-            ColorSquare.Visible = false
-            ColorSquare.Image = "rbxassetid://4155801252"
-            ColorSquare.BackgroundTransparency = 1
-
-            local HueBar = Instance.new("Frame")
-            HueBar.Size = UDim2.new(0, math.floor(20 * scale), 1, 0)
-            HueBar.Position = UDim2.new(1, -20*scale, 0, 0)
-            HueBar.Visible = false
-            HueBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-
-            local HueGradient = Instance.new("UIGradient")
-            HueGradient.Rotation = 270
-            HueGradient.Color = ColorSequence.new{
+        
+            -- HSV值存储
+            local h, s, v = Color3.toHSV(default)
+            local expanded = false
+            
+            -- 颜色预览条
+            local header = Instance.new("Frame")
+            header.Size = UDim2.new(1, 0, 0, 38 * scale)
+            header.BackgroundTransparency = 1
+            header.Parent = container
+            
+            local labelText = CreateLabel(header, label, UDim2.new(1, -50*scale, 1, 0), UDim2.new(0, 12*scale, 0, 0),
+                ChronixUI.Themes[ChronixUI.CurrentTheme].Text, 14 * scale, Enum.Font.GothamSemibold)
+            
+            local colorPreview = Instance.new("Frame")
+            colorPreview.Size = UDim2.new(0, 30 * scale, 0, 30 * scale)
+            colorPreview.Position = UDim2.new(1, -40*scale, 0.5, -15 * scale)
+            colorPreview.BackgroundColor3 = default
+            colorPreview.BorderSizePixel = 0
+            colorPreview.Parent = header
+            
+            local previewCorner = Instance.new("UICorner")
+            previewCorner.CornerRadius = UDim.new(0, 6 * scale)
+            previewCorner.Parent = colorPreview
+            AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+            
+            -- 展开按钮
+            local expandBtn = Instance.new("TextButton")
+            expandBtn.Size = UDim2.new(1, 0, 1, 0)
+            expandBtn.BackgroundTransparency = 1
+            expandBtn.Text = ""
+            expandBtn.Parent = header
+            
+            -- 颜色选择器面板
+            local pickerPanel = Instance.new("Frame")
+            pickerPanel.Size = UDim2.new(1, 0, 0, 150 * scale)
+            pickerPanel.Position = UDim2.new(0, 0, 0, 38 * scale)
+            pickerPanel.BackgroundTransparency = 1
+            pickerPanel.Visible = false
+            pickerPanel.Parent = container
+            
+            -- 色盘（HSV颜色方块）
+            local colorSquare = Instance.new("ImageLabel")
+            colorSquare.Size = UDim2.new(1, -40 * scale, 1, -10 * scale)
+            colorSquare.Position = UDim2.new(0, 5 * scale, 0, 5 * scale)
+            colorSquare.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            colorSquare.BackgroundTransparency = 0
+            colorSquare.BorderSizePixel = 0
+            colorSquare.Parent = pickerPanel
+            
+            local squareCorner = Instance.new("UICorner")
+            squareCorner.CornerRadius = UDim.new(0, 6 * scale)
+            squareCorner.Parent = colorSquare
+            
+            -- 色盘上的饱和度/亮度渐变
+            local satBrightGradient = Instance.new("ImageLabel")
+            satBrightGradient.Size = UDim2.new(1, 0, 1, 0)
+            satBrightGradient.BackgroundTransparency = 1
+            satBrightGradient.Image = "rbxassetid://4155801252"
+            satBrightGradient.ScaleType = Enum.ScaleType.Fit
+            satBrightGradient.Parent = colorSquare
+            
+            -- 色相条
+            local hueBar = Instance.new("Frame")
+            hueBar.Size = UDim2.new(0, 20 * scale, 1, -10 * scale)
+            hueBar.Position = UDim2.new(1, -25 * scale, 0, 5 * scale)
+            hueBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            hueBar.BorderSizePixel = 0
+            hueBar.Parent = pickerPanel
+            
+            local hueCorner = Instance.new("UICorner")
+            hueCorner.CornerRadius = UDim.new(0, 6 * scale)
+            hueCorner.Parent = hueBar
+            
+            -- 色相渐变
+            local hueGradient = Instance.new("UIGradient")
+            hueGradient.Rotation = 270
+            hueGradient.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
                 ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
                 ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
@@ -1186,156 +1230,128 @@ function ChronixUI:CreateWindow(config)
                 ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
                 ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
                 ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-            }
-            HueGradient.Parent = HueBar
-
-            local PickerContainer = Instance.new("Frame")
-            PickerContainer.Position = UDim2.new(0, 0, 0, math.floor(38 * scale))
-            PickerContainer.Size = UDim2.new(1, 0, 1, -math.floor(38 * scale))
-            PickerContainer.BackgroundTransparency = 1
-            PickerContainer.ClipsDescendants = true
-
-            ColorSquare.Parent = PickerContainer
-            HueBar.Parent = PickerContainer
-            ColorSelection.Parent = ColorSquare
-            HueSelection.Parent = HueBar
-
-            local padding = Instance.new("UIPadding")
-            padding.PaddingLeft = UDim.new(0, math.floor(35 * scale))
-            padding.PaddingRight = UDim.new(0, math.floor(35 * scale))
-            padding.PaddingBottom = UDim.new(0, math.floor(10 * scale))
-            padding.PaddingTop = UDim.new(0, math.floor(17 * scale))
-            padding.Parent = PickerContainer
-
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = UDim.new(0, math.floor(5 * scale))
-            corner.Parent = ColorSquare
-
-            local hueCorner = Instance.new("UICorner")
-            hueCorner.CornerRadius = UDim.new(0, math.floor(5 * scale))
-            hueCorner.Parent = HueBar
-
-            -- 标题栏
-            local header = Instance.new("Frame")
-            header.Size = UDim2.new(1, 0, 0, math.floor(38 * scale))
-            header.BackgroundTransparency = 1
-            header.Parent = container
-
-            local labelText = CreateLabel(header, label, UDim2.new(1, -50*scale, 1, 0), UDim2.new(0, 12*scale, 0, 0),
-                                           ChronixUI.Themes[ChronixUI.CurrentTheme].Text, math.floor(14 * scale), Enum.Font.GothamSemibold)
-
-            local colorPreview = Instance.new("Frame")
-            colorPreview.Size = UDim2.new(0, math.floor(30 * scale), 0, math.floor(30 * scale))
-            colorPreview.Position = UDim2.new(1, -40*scale, 0.5, -math.floor(15 * scale))
-            colorPreview.BackgroundColor3 = default
-            colorPreview.BorderSizePixel = 0
-            colorPreview.Parent = header
-            local previewCorner = Instance.new("UICorner")
-            previewCorner.CornerRadius = UDim.new(0, math.floor(6 * scale))
-            previewCorner.Parent = colorPreview
-            AddStroke(colorPreview, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
-
-            local expandBtn = Instance.new("TextButton")
-            expandBtn.Size = UDim2.new(1, 0, 1, 0)
-            expandBtn.BackgroundTransparency = 1
-            expandBtn.Text = ""
-            expandBtn.Parent = header
-
-            PickerContainer.Parent = container
-
-            local function UpdateColorPicker()
-                local color = Color3.fromHSV(ColorH, ColorS, ColorV)
+            })
+            hueGradient.Parent = hueBar
+            
+            -- 选择器圆点
+            local squareSelector = Instance.new("ImageLabel")
+            squareSelector.Size = UDim2.new(0, 12 * scale, 0, 12 * scale)
+            squareSelector.AnchorPoint = Vector2.new(0.5, 0.5)
+            squareSelector.BackgroundTransparency = 1
+            squareSelector.Image = "rbxassetid://4805639000"
+            squareSelector.Parent = colorSquare
+            
+            local hueSelector = Instance.new("ImageLabel")
+            hueSelector.Size = UDim2.new(0, 12 * scale, 0, 12 * scale)
+            hueSelector.AnchorPoint = Vector2.new(0.5, 0.5)
+            hueSelector.BackgroundTransparency = 1
+            hueSelector.Image = "rbxassetid://4805639000"
+            hueSelector.Parent = hueBar
+            
+            -- 更新颜色显示
+            local function updateColor()
+                local color = Color3.fromHSV(h, s, v)
                 colorPreview.BackgroundColor3 = color
-                ColorSquare.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
-                if callback then
-                    callback(color)
-                end
+                colorSquare.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                callback(color)
             end
-
-            local function UpdatePositions()
-                ColorSelection.Position = UDim2.new(ColorS, -math.floor(6 * scale), ColorV, -math.floor(6 * scale))
-                HueSelection.Position = UDim2.new(0.5, 0, 1 - ColorH, -math.floor(6 * scale))
+            
+            -- 更新选择器位置
+            local function updateSelectorPositions()
+                squareSelector.Position = UDim2.new(s, -6 * scale, 1 - v, -6 * scale)
+                hueSelector.Position = UDim2.new(0.5, 0, 1 - h, -6 * scale)
             end
-
-            -- 色相选择
-            local HueInput = nil
-            HueBar.InputBegan:Connect(function(input)
+            
+            -- 色相条拖动逻辑
+            local hueDragging = false
+            local hueConnection = nil
+            
+            hueBar.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    local HueY = math.clamp((input.Position.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 1)
-                    ColorH = 1 - HueY
-                    HueSelection.Position = UDim2.new(0.5, 0, HueY, -math.floor(6 * scale))
-                    UpdateColorPicker()
-
-                    if HueInput then HueInput:Disconnect() end
-                    HueInput = RunService.RenderStepped:Connect(function()
-                        local newY = math.clamp((Mouse.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y, 0, 1)
-                        ColorH = 1 - newY
-                        HueSelection.Position = UDim2.new(0.5, 0, newY, -math.floor(6 * scale))
-                        UpdateColorPicker()
-                    end)
-
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then
-                            if HueInput then HueInput:Disconnect() end
+                    hueDragging = true
+                    local yPos = math.clamp((input.Position.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+                    h = 1 - yPos
+                    updateColor()
+                    updateSelectorPositions()
+                    
+                    if hueConnection then hueConnection:Disconnect() end
+                    hueConnection = RunService.RenderStepped:Connect(function()
+                        if hueDragging then
+                            local yPos = math.clamp((Mouse.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+                            h = 1 - yPos
+                            updateColor()
+                            updateSelectorPositions()
                         end
                     end)
                 end
             end)
-
-            -- 颜色方块选择
-            local ColorInput = nil
-            ColorSquare.InputBegan:Connect(function(input)
+            
+            hueBar.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    local ColorX = math.clamp((input.Position.X - ColorSquare.AbsolutePosition.X) / ColorSquare.AbsoluteSize.X, 0, 1)
-                    local ColorY = math.clamp((input.Position.Y - ColorSquare.AbsolutePosition.Y) / ColorSquare.AbsoluteSize.Y, 0, 1)
-                    ColorS = ColorX
-                    ColorV = 1 - ColorY
-                    ColorSelection.Position = UDim2.new(ColorX, -math.floor(6 * scale), ColorY, -math.floor(6 * scale))
-                    UpdateColorPicker()
-
-                    if ColorInput then ColorInput:Disconnect() end
-                    ColorInput = RunService.RenderStepped:Connect(function()
-                        local newX = math.clamp((Mouse.X - ColorSquare.AbsolutePosition.X) / ColorSquare.AbsoluteSize.X, 0, 1)
-                        local newY = math.clamp((Mouse.Y - ColorSquare.AbsolutePosition.Y) / ColorSquare.AbsoluteSize.Y, 0, 1)
-                        ColorS = newX
-                        ColorV = 1 - newY
-                        ColorSelection.Position = UDim2.new(newX, -math.floor(6 * scale), newY, -math.floor(6 * scale))
-                        UpdateColorPicker()
-                    end)
-
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then
-                            if ColorInput then ColorInput:Disconnect() end
+                    hueDragging = false
+                    if hueConnection then
+                        hueConnection:Disconnect()
+                        hueConnection = nil
+                    end
+                end
+            end)
+            
+            -- 色盘拖动逻辑
+            local squareDragging = false
+            local squareConnection = nil
+            
+            colorSquare.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    squareDragging = true
+                    local xPos = math.clamp((input.Position.X - colorSquare.AbsolutePosition.X) / colorSquare.AbsoluteSize.X, 0, 1)
+                    local yPos = math.clamp((input.Position.Y - colorSquare.AbsolutePosition.Y) / colorSquare.AbsoluteSize.Y, 0, 1)
+                    s = xPos
+                    v = 1 - yPos
+                    updateColor()
+                    updateSelectorPositions()
+                    
+                    if squareConnection then squareConnection:Disconnect() end
+                    squareConnection = RunService.RenderStepped:Connect(function()
+                        if squareDragging then
+                            local xPos = math.clamp((Mouse.X - colorSquare.AbsolutePosition.X) / colorSquare.AbsoluteSize.X, 0, 1)
+                            local yPos = math.clamp((Mouse.Y - colorSquare.AbsolutePosition.Y) / colorSquare.AbsoluteSize.Y, 0, 1)
+                            s = xPos
+                            v = 1 - yPos
+                            updateColor()
+                            updateSelectorPositions()
                         end
                     end)
                 end
             end)
-
+            
+            colorSquare.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    squareDragging = false
+                    if squareConnection then
+                        squareConnection:Disconnect()
+                        squareConnection = nil
+                    end
+                end
+            end)
+            
             -- 展开/收起
             expandBtn.MouseButton1Click:Connect(function()
                 PlayClickSound()
-                toggled = not toggled
-                if toggled then
-                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, math.floor(150 * scale))}):Play()
-                    PickerContainer.Visible = true
-                    ColorSquare.Visible = true
-                    HueBar.Visible = true
+                expanded = not expanded
+                if expanded then
+                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 188 * scale)}):Play()
+                    pickerPanel.Visible = true
                 else
-                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, math.floor(38 * scale))}):Play()
+                    TweenService:Create(container, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 38 * scale)}):Play()
                     wait(0.15)
-                    PickerContainer.Visible = false
-                    ColorSquare.Visible = false
-                    HueBar.Visible = false
+                    pickerPanel.Visible = false
                 end
             end)
-
-            -- 初始设置
-            UpdatePositions()
-            UpdateColorPicker()
-            PickerContainer.Visible = false
-            ColorSquare.Visible = false
-            HueBar.Visible = false
-
+            
+            -- 初始化位置和颜色
+            updateSelectorPositions()
+            updateColor()
+            
             return wrap(container)
         end
 
