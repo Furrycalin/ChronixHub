@@ -1495,22 +1495,22 @@ function ChronixUI:CreateWindow(config)
             end
         end
     })
-        -- 添加主题切换下拉菜单
-        local themeNames = {}
-        for themeName, _ in pairs(ChronixUI.Themes) do
-            table.insert(themeNames, themeName)
-        end
-        table.sort(themeNames) -- 按字母排序，看起来整齐
+    -- 添加主题切换下拉菜单
+    local themeNames = {}
+    for themeName, _ in pairs(ChronixUI.Themes) do
+        table.insert(themeNames, themeName)
+    end
+    table.sort(themeNames) -- 按字母排序，看起来整齐
     
-        settingsElements:AddDropdown({
-            Label = "界面主题",
-            Options = themeNames,
-            Default = ChronixUI.CurrentTheme,
-            Callback = function(selectedTheme)
-                if ChronixUI.Themes[selectedTheme] then
-                    ChronixUI.CurrentTheme = selectedTheme
+    settingsElements:AddDropdown({
+        Label = "界面主题",
+        Options = themeNames,
+        Default = ChronixUI.CurrentTheme,
+        Callback = function(selectedTheme)
+            if ChronixUI.Themes[selectedTheme] then
+                ChronixUI.CurrentTheme = selectedTheme
                     
-                                    -- 1. 更新主框架背景和边框描边
+                -- 1. 更新主框架背景和边框描边
                 mainFrame.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Background
                 -- 更新主框架的描边
                 local mainStroke = mainFrame:FindFirstChildOfClass("UIStroke")
@@ -1552,24 +1552,24 @@ function ChronixUI:CreateWindow(config)
                 playerNameLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Text
                 playerInfoLabel.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
                     
-                    -- 6. 更新粒子系统颜色（如果存在）
-                    if windowData.ParticleSystem then
-                        windowData.ParticleSystem:setColor(ChronixUI.Themes[selectedTheme].Accent)
-                    end
+                -- 6. 更新粒子系统颜色（如果存在）
+                if windowData.ParticleSystem then
+                    windowData.ParticleSystem:setColor(ChronixUI.Themes[selectedTheme].Accent)
+                end
                     
-                    -- 7. 遍历所有Tab和内容元素进行更新
-                    for _, tabData in pairs(windowData.Tabs) do
-                        -- 更新Tab按钮样式
-                        if tabData.Button then
-                            tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                            tabData.Button.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
-                        end
+                -- 7. 遍历所有Tab和内容元素进行更新
+                for _, tabData in pairs(windowData.Tabs) do
+                    -- 更新Tab按钮样式
+                    if tabData.Button then
+                        tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                        tabData.Button.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                    end
                         
-                        -- 更新当前选中的Tab样式
-                        if windowData.CurrentTab and windowData.CurrentTab.Name == tabData.Name then
-                            tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Accent
-                            tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
-                        end
+                    -- 更新当前选中的Tab样式
+                    if windowData.CurrentTab and windowData.CurrentTab.Name == tabData.Name then
+                        tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Accent
+                        tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    end
                         
                     -- 递归更新Tab内容区域内的所有元素
                     local function updateElementColors(obj)
