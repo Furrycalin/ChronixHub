@@ -37,6 +37,10 @@ local function GetDeviceType()
     end
 end
 
+local function GetPlatFormName()
+    return tostring(UserInputService:GetPlatform()):split(".")[2]
+end
+
 -- 主题颜色配置
 ChronixUI.Themes = {
     Default = {
@@ -531,11 +535,7 @@ function ChronixUI:CreateWindow(config)
             local player = Players.LocalPlayer
             if not player then return end
             local isPremium = player.MembershipType == Enum.MembershipType.Premium
-            local infotitle = "用户"
-            local device = GetDeviceType()
-            if device == "Desktop" then infotitle = "电脑用户"
-            elseif device == "Mobile" then infotitle = "手机用户"
-            end
+            local infotitle = GetPlatFormName() .. "用户"
             local nameStr = "欢迎使用! " .. infotitle .. player.DisplayName .. " | ID:" .. player.UserId
             if isPremium then nameStr = nameStr .. " | 已开通Premium" end
             playerNameLabel.Text = nameStr
