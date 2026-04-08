@@ -2317,7 +2317,7 @@ end)
 ChronixUI:Notify({ Title = "提示", Content = "ChronixHub 启动成功。", Type = "success", Duration = 5 })
 
 local successMsg = "ChronixHub V3 Already Success Loaded!\nWelcome " .. displayName
+print(successMsg)
 if SystemNotification and SystemNotification.Rainbow then
-    print(successMsg)
     SystemNotification.Rainbow(successMsg)
 end
