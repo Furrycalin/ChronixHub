@@ -1,4 +1,4 @@
--- ChronixUI v3.8 - 修复颜色选取器问题、信息栏更改为设备名用户
+-- ChronixUI v3.8 - 修复颜色选取器问题、信息栏更改为设备名用户，新增主题切换功能，修复主题切换函数问题
 
 _G.UnloadChronixUI = false
 local ChronixUI = {}
