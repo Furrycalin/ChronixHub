@@ -1454,93 +1454,6 @@ function ChronixUI:CreateWindow(config)
         return elements
     end
 
-    -- 刷新所有UI元素的主题（完全灵活版本，支持任意数量主题）
-function ChronixUI:RefreshTheme()
-    local newTheme = self.Themes[self.CurrentTheme]
-    
-    -- 收集当前UI中实际使用的所有颜色
-    local usedColors = {}
-    for _, window in pairs(self.Windows) do
-        local mainFrame = window.MainFrame
-        if not mainFrame then continue end
-        
-        local function collectColors(obj)
-            if obj:IsA("Frame") and obj.BackgroundTransparency < 1 then
-                usedColors[obj.BackgroundColor3] = true
-            elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                usedColors[obj.TextColor3] = true
-                if obj:IsA("TextBox") and obj.PlaceholderColor3 then
-                    usedColors[obj.PlaceholderColor3] = true
-                end
-            elseif obj:IsA("UIStroke") then
-                usedColors[obj.Color] = true
-            end
-            for _, child in pairs(obj:GetChildren()) do
-                collectColors(child)
-            end
-        end
-        collectColors(mainFrame)
-    end
-    
-    -- 找出每个旧颜色应该映射到哪个新颜色
-    local colorMap = {}
-    for oldColor in pairs(usedColors) do
-        local minDiff = math.huge
-        local bestMatch = nil
-        
-        -- 在所有主题的所有颜色中找最接近的匹配
-        for themeName, themeColors in pairs(self.Themes) do
-            for colorName, themeColor in pairs(themeColors) do
-                local diff = math.abs(oldColor.R - themeColor.R) + 
-                            math.abs(oldColor.G - themeColor.G) + 
-                            math.abs(oldColor.B - themeColor.B)
-                if diff < minDiff then
-                    minDiff = diff
-                    bestMatch = colorName
-                end
-            end
-        end
-        
-        -- 映射到新主题的对应颜色
-        if bestMatch and newTheme[bestMatch] then
-            colorMap[oldColor] = newTheme[bestMatch]
-        end
-    end
-    
-    -- 应用颜色映射
-    for _, window in pairs(self.Windows) do
-        local mainFrame = window.MainFrame
-        if not mainFrame then continue end
-        
-        local function applyColors(obj)
-            if obj:IsA("Frame") then
-                local mapped = colorMap[obj.BackgroundColor3]
-                if mapped then obj.BackgroundColor3 = mapped end
-            elseif obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                local mapped = colorMap[obj.TextColor3]
-                if mapped then obj.TextColor3 = mapped end
-                if obj:IsA("TextBox") then
-                    local placeholderMapped = colorMap[obj.PlaceholderColor3]
-                    if placeholderMapped then obj.PlaceholderColor3 = placeholderMapped end
-                end
-            elseif obj:IsA("UIStroke") then
-                local mapped = colorMap[obj.Color]
-                if mapped then obj.Color = mapped end
-            end
-            
-            for _, child in pairs(obj:GetChildren()) do
-                applyColors(child)
-            end
-        end
-        applyColors(mainFrame)
-        
-        -- 刷新粒子系统
-        if window.ParticleSystem and window.ParticleSystem.setColor then
-            window.ParticleSystem:setColor(newTheme.Accent)
-        end
-    end
-end
-
     -- 创建内置设置 Tab（不在侧边栏显示）
     local settingsElements = windowData:CreateTab({ Name = "设置", IsSettings = true })
     settingsElements:AddTitle("UI 设置")
@@ -1580,26 +1493,6 @@ end
                     Duration = 3
                 })
             end
-        end
-    })
-    local themeNames = {}
-    for themeName, _ in pairs(ChronixUI.Themes) do
-        table.insert(themeNames, themeName)
-    end
-    settingsElements:AddDropdown({
-        Label = "界面主题",
-        Options = themeNames,
-        Default = ChronixUI.CurrentTheme,
-        Callback = function(selectedTheme)
-            ChronixUI:SetTheme(selectedTheme)
-            -- 刷新整个UI的主题
-            ChronixUI:RefreshTheme()
-            ChronixUI:Notify({
-                Title = "主题已切换",
-                Content = "当前主题: " .. selectedTheme,
-                Type = "success",
-                Duration = 2
-            })
         end
     })
     settingsElements:AddDivider()
