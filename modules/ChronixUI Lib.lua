@@ -1510,28 +1510,47 @@ function ChronixUI:CreateWindow(config)
                 if ChronixUI.Themes[selectedTheme] then
                     ChronixUI.CurrentTheme = selectedTheme
                     
-                    -- 1. 更新主框架背景
-                    mainFrame.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Background
-                    
-                    -- 2. 更新侧边栏
-                    sidebar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Sidebar
-                    
-                    -- 3. 更新标题栏（背景透明，但需要更新文字和按钮颜色）
-                    titleLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
-                    
-                    -- 4. 更新所有按钮（最小化、关闭等）
-                    local function updateButtonStyle(btn)
-                        btn.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                        btn.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                                    -- 1. 更新主框架背景和边框描边
+                mainFrame.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Background
+                -- 更新主框架的描边
+                local mainStroke = mainFrame:FindFirstChildOfClass("UIStroke")
+                if mainStroke then
+                    mainStroke.Color = ChronixUI.Themes[selectedTheme].Border
+                end
+                
+                -- 2. 更新侧边栏
+                sidebar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Sidebar
+                
+                -- 3. 更新标题栏（背景透明，但需要更新文字和按钮颜色）
+                titleLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
+                
+                -- 4. 更新所有按钮（最小化、关闭等）
+                local function updateButtonStyle(btn)
+                    btn.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                    btn.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                    -- 更新按钮的描边
+                    local btnStroke = btn:FindFirstChildOfClass("UIStroke")
+                    if btnStroke then
+                        btnStroke.Color = ChronixUI.Themes[selectedTheme].Border
                     end
-                    updateButtonStyle(settingsBtn)
-                    updateButtonStyle(minBtn)
-                    updateButtonStyle(closeBtn)
-                    
-                    -- 5. 更新玩家信息栏
-                    playerBar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                    playerNameLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                    playerInfoLabel.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                end
+                updateButtonStyle(settingsBtn)
+                updateButtonStyle(minBtn)
+                updateButtonStyle(closeBtn)
+                
+                -- 5. 更新玩家信息栏
+                playerBar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                -- 更新信息栏的描边
+                local barStroke = playerBar:FindFirstChildOfClass("UIStroke")
+                if barStroke then
+                    barStroke.Color = ChronixUI.Themes[selectedTheme].Border
+                end
+                -- 更新头像容器背景色
+                if avatarContainer then
+                    avatarContainer.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Border
+                end
+                playerNameLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                playerInfoLabel.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
                     
                     -- 6. 更新粒子系统颜色（如果存在）
                     if windowData.ParticleSystem then
