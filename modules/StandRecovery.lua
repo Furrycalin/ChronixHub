@@ -134,7 +134,6 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
 
             -- 步骤3：枚举判断报错时，断开监听，防止循环报错
             if not success then
-                warn(string.format("[站立恢复模块] 状态判断异常：%s", result))
                 pcall(function() self.humanoidStateChangedConn:Disconnect() end)
                 self.humanoidStateChangedConn = nil
                 self.isNormalJumpProcess = false
@@ -143,7 +142,6 @@ function StandRecovery:bindCharacterAndComponents(newCharacter)
     end
 
     if not success2 or not tempRootPart then
-        warn("[站立恢复模块] 无法获取角色 HumanoidRootPart 组件")
         self.humanoidRootPart = nil
     else
         self.humanoidRootPart = tempRootPart
