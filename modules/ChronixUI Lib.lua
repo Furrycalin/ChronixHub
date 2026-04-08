@@ -58,12 +58,12 @@ ChronixUI.Themes = {
         Background = Color3.fromRGB(245, 245, 250),
         Sidebar = Color3.fromRGB(235, 235, 240),
         Accent = Color3.fromRGB(0, 120, 210),
-        Text = Color3.fromRGB(30, 30, 30),
-        TextDark = Color3.fromRGB(100, 100, 100),
-        Border = Color3.fromRGB(200, 200, 200),
-        Card = Color3.fromRGB(255, 255, 255),
-        Input = Color3.fromRGB(255, 255, 255),
-        Hover = Color3.fromRGB(225, 225, 230),
+        Text = Color3.fromRGB(20, 20, 20),
+        TextDark = Color3.fromRGB(80, 80, 80),
+        Border = Color3.fromRGB(180, 180, 180),
+        Card = Color3.fromRGB(250, 250, 255),
+        Input = Color3.fromRGB(250, 250, 255),
+        Hover = Color3.fromRGB(220, 220, 225),
         Success = Color3.fromRGB(46, 125, 50),
         Error = Color3.fromRGB(211, 47, 47),
         Warning = Color3.fromRGB(237, 108, 0),
@@ -725,7 +725,7 @@ function ChronixUI:CreateWindow(config)
 
         local function SelectTab()
             for _, otherTab in pairs(windowData.Tabs) do
-                otherTab.Button.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
+                otherTab.Button.BackgroundColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].Background
                 otherTab.Button.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
                 otherTab.Content.Visible = false
             end
@@ -1552,33 +1552,45 @@ function ChronixUI:CreateWindow(config)
                             tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
                         end
                         
-                        -- 递归更新Tab内容区域内的所有元素
-                        local function updateElementColors(obj)
-                            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-                                if obj:IsA("TextButton") then
+                    -- 递归更新Tab内容区域内的所有元素
+                    local function updateElementColors(obj)
+                        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                            if obj:IsA("TextButton") then
+                                -- 保留特殊按钮的原有颜色逻辑，只更新非特殊状态的按钮
+                                local isSpecial = false
+                                for _, tab in pairs(windowData.Tabs) do
+                                    if obj == tab.Button then
+                                        isSpecial = true
+                                        break
+                                    end
+                                end
+                                if not isSpecial then
                                     obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
-                                elseif obj:IsA("TextBox") then
-                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
                                 end
-                                
-                                -- 根据文字类型区分颜色
-                                if obj:FindFirstChild("IsTitle") then
-                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
-                                elseif obj:FindFirstChild("IsDark") then
-                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
-                                else
-                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
-                                end
-                            elseif obj:IsA("Frame") and obj.BackgroundColor3 == Color3.fromRGB(80, 80, 80) then
-                                -- 可能是Toggle的滑块背景
-                            elseif obj:IsA("Frame") and not obj:FindFirstChild("IsAccent") then
-                                -- 保留原有颜色逻辑
+                            elseif obj:IsA("TextBox") then
+                                obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
                             end
                             
-                            for _, child in ipairs(obj:GetChildren()) do
-                                updateElementColors(child)
+                            -- 根据文字类型区分颜色
+                            if obj:FindFirstChild("IsTitle") then
+                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
+                            elseif obj:FindFirstChild("IsDark") then
+                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                            else
+                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
                             end
                         end
+                        
+                        -- 更新边框描边颜色
+                        local stroke = obj:FindFirstChildOfClass("UIStroke")
+                        if stroke then
+                            stroke.Color = ChronixUI.Themes[selectedTheme].Border
+                        end
+                        
+                        for _, child in ipairs(obj:GetChildren()) do
+                            updateElementColors(child)
+                        end
+                    end
                         
                         updateElementColors(tabData.Content)
                     end
