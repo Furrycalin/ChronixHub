@@ -558,17 +558,7 @@ function ChronixUI:CreateWindow(config)
                 playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
             end
         end
-    -- 将原来的 safePlayerInfo() 调用替换为以下代码
-    task.spawn(function()
-        local player = Players.LocalPlayer
-        -- 等待 UserId 真正可用（不为 nil）
-        while not (player and player.UserId) do
-            task.wait()
-            player = Players.LocalPlayer -- 重新获取以防万一
-        end
-        -- 现在可以安全地使用 player.UserId 了
         safePlayerInfo()
-    end)
 
     -- 侧边栏
     local sidebarWidth = math.floor(160 * scale)
