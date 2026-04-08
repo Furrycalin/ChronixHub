@@ -654,12 +654,10 @@ function ChronixUI:CreateWindow(config)
         particleBgFrame.ZIndex = 5
         particleBgFrame.Parent = mainFrame
     
-        local particleSystem = UIParticleSystem.new(particleBgFrame)
-        if particleSystem then
-            particleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
+        windowData.ParticleSystem = UIParticleSystem.new(particleBgFrame)
+        if windowData.ParticleSystem then
+            windowData.ParticleSystem:setColor(self.Themes[self.CurrentTheme].Accent)
         end
-
-        windowData.ParticleSystem = particleSystem
     end
     -- ========== 粒子系统添加结束 ==========
 
@@ -1459,11 +1457,6 @@ function ChronixUI:CreateWindow(config)
     -- 刷新所有UI元素的主题
     function ChronixUI:RefreshTheme()
         local theme = self.Themes[self.CurrentTheme]
-
-        -- 刷新粒子系统颜色
-        if window.ParticleSystem and window.ParticleSystem.setColor then
-            window.ParticleSystem:setColor(theme.Accent)
-        end
     
         for _, window in pairs(self.Windows) do
             local mainFrame = window.MainFrame
@@ -1517,12 +1510,8 @@ function ChronixUI:CreateWindow(config)
                 end
             
                 -- 刷新粒子系统颜色
-                local particleBg = mainFrame:FindFirstChild("ParticleBackground")
-                if particleBg and UIParticleSystem then
-                    local particleSystem = particleBg:FindFirstChildOfClass("Frame")
-                    if particleSystem and particleSystem.setColor then
-                        particleSystem:setColor(theme.Accent)
-                    end
+                if window.ParticleSystem and window.ParticleSystem.setColor then
+                    window.ParticleSystem:setColor(theme.Accent)
                 end
             end
         end
