@@ -1495,6 +1495,122 @@ function ChronixUI:CreateWindow(config)
             end
         end
     })
+        -- 添加主题切换下拉菜单
+        local themeNames = {}
+        for themeName, _ in pairs(ChronixUI.Themes) do
+            table.insert(themeNames, themeName)
+        end
+        table.sort(themeNames) -- 按字母排序，看起来整齐
+    
+        settingsElements:AddDropdown({
+            Label = "界面主题",
+            Options = themeNames,
+            Default = ChronixUI.CurrentTheme,
+            Callback = function(selectedTheme)
+                if ChronixUI.Themes[selectedTheme] then
+                    ChronixUI.CurrentTheme = selectedTheme
+                    
+                    -- 1. 更新主框架背景
+                    mainFrame.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Background
+                    
+                    -- 2. 更新侧边栏
+                    sidebar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Sidebar
+                    
+                    -- 3. 更新标题栏（背景透明，但需要更新文字和按钮颜色）
+                    titleLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
+                    
+                    -- 4. 更新所有按钮（最小化、关闭等）
+                    local function updateButtonStyle(btn)
+                        btn.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                        btn.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                    end
+                    updateButtonStyle(settingsBtn)
+                    updateButtonStyle(minBtn)
+                    updateButtonStyle(closeBtn)
+                    
+                    -- 5. 更新玩家信息栏
+                    playerBar.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                    playerNameLabel.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                    playerInfoLabel.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                    
+                    -- 6. 更新粒子系统颜色（如果存在）
+                    if windowData.ParticleSystem then
+                        windowData.ParticleSystem:setColor(ChronixUI.Themes[selectedTheme].Accent)
+                    end
+                    
+                    -- 7. 遍历所有Tab和内容元素进行更新
+                    for _, tabData in pairs(windowData.Tabs) do
+                        -- 更新Tab按钮样式
+                        if tabData.Button then
+                            tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                            tabData.Button.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                        end
+                        
+                        -- 更新当前选中的Tab样式
+                        if windowData.CurrentTab and windowData.CurrentTab.Name == tabData.Name then
+                            tabData.Button.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Accent
+                            tabData.Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+                        end
+                        
+                        -- 递归更新Tab内容区域内的所有元素
+                        local function updateElementColors(obj)
+                            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                                if obj:IsA("TextButton") then
+                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                                elseif obj:IsA("TextBox") then
+                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
+                                end
+                                
+                                -- 根据文字类型区分颜色
+                                if obj:FindFirstChild("IsTitle") then
+                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].Accent
+                                elseif obj:FindFirstChild("IsDark") then
+                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].TextDark
+                                else
+                                    obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                                end
+                            elseif obj:IsA("Frame") and obj.BackgroundColor3 == Color3.fromRGB(80, 80, 80) then
+                                -- 可能是Toggle的滑块背景
+                            elseif obj:IsA("Frame") and not obj:FindFirstChild("IsAccent") then
+                                -- 保留原有颜色逻辑
+                            end
+                            
+                            for _, child in ipairs(obj:GetChildren()) do
+                                updateElementColors(child)
+                            end
+                        end
+                        
+                        updateElementColors(tabData.Content)
+                    end
+                    
+                    -- 8. 单独处理设置页
+                    if windowData.SettingsTabContent then
+                        local function updateSettingsColors(obj)
+                            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                                if obj:IsA("TextButton") then
+                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Card
+                                elseif obj:IsA("TextBox") then
+                                    obj.BackgroundColor3 = ChronixUI.Themes[selectedTheme].Input
+                                end
+                                obj.TextColor3 = ChronixUI.Themes[selectedTheme].Text
+                            end
+                            for _, child in ipairs(obj:GetChildren()) do
+                                updateSettingsColors(child)
+                            end
+                        end
+                        updateSettingsColors(windowData.SettingsTabContent)
+                    end
+                    
+                    -- 9. 提示主题已切换
+                    ChronixUI:Notify({
+                        Title = "主题已切换",
+                        Content = "当前主题: " .. selectedTheme,
+                        Type = "success",
+                        Duration = 2
+                    })
+                end
+            end
+        })
     settingsElements:AddDivider()
     settingsElements:AddLabel("其他设置")
     windowData.SettingsElements = settingsElements
