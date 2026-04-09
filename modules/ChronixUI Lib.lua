@@ -53,12 +53,12 @@ function IconLibrary:Load()
     -- 使用 coroutine 或 spawn 异步加载
     task.spawn(function()
         local successWhite, resultWhite = pcall(function()
-            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
+            local jsonText = game:HttpGetAsync("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
             return HttpService:JSONDecode(jsonText)
         end)
         
         local successBlack, resultBlack = pcall(function()
-            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
+            local jsonText = game:HttpGetAsync("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
             return HttpService:JSONDecode(jsonText)
         end)
         
