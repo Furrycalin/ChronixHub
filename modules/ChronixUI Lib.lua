@@ -220,15 +220,6 @@ local function playNotificationSound(type)
     game.Debris:AddItem(sound, 2)
 end
 
-local function playWarningNotificationSound()
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://124951621656853"
-    sound.Volume = 0.5
-    sound.Parent = SoundService
-    sound:Play()
-    game.Debris:AddItem(sound, 2)
-end
-
 function ChronixUI:Notify(config)
     local title = config.Title or "通知"
     local content = config.Content or ""
