@@ -50,15 +50,14 @@ function IconLibrary:Load()
     if self.Loaded or self.IsLoading then return end
     self.IsLoading = true
     
-    -- 使用 coroutine 或 spawn 异步加载
     task.spawn(function()
         local successWhite, resultWhite = pcall(function()
-            local jsonText = game:HttpGetAsync("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
+            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
             return HttpService:JSONDecode(jsonText)
         end)
         
         local successBlack, resultBlack = pcall(function()
-            local jsonText = game:HttpGetAsync("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
+            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
             return HttpService:JSONDecode(jsonText)
         end)
         
@@ -66,7 +65,19 @@ function IconLibrary:Load()
             self.White = resultWhite
             self.Black = resultBlack
             self.Loaded = true
-            print("[ChronixUI] 图标库加载成功，白色: " .. table.getn(resultWhite) .. " 个，黑色: " .. table.getn(resultBlack) .. " 个")
+            
+            -- 修复：正确计算字典长度
+            local function countTable(t)
+                local count = 0
+                for _ in pairs(t) do
+                    count = count + 1
+                end
+                return count
+            end
+            
+            print(string.format("[ChronixUI] 图标库加载成功，白色: %d 个，黑色: %d 个", 
+                countTable(resultWhite), 
+                countTable(resultBlack)))
         else
             warn("[ChronixUI] 图标库加载失败，将使用无图标模式")
         end
