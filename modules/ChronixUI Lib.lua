@@ -200,9 +200,29 @@ local function updateNotificationPositions()
     end
 end
 
-local function playNotificationSound()
+local function playNotificationSound(type)
+    local notifitype = type or "info"
+    local soundsid = "rbxassetid://4590662766"
+    if notifitype == "info" then
+        soundsid = "rbxassetid://129485210015224"
+    elseif notifitype == "warning" then
+        soundsid = "rbxassetid://124951621656853"
+    elseif notifitype == "error" then
+        soundsid = "rbxassetid://17525305988"
+    elseif notifitype == "success" then
+        soundsid = "rbxassetid://129485210015224"
+    end
     local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://4590662766"
+    sound.SoundId = soundsid
+    sound.Volume = 0.5
+    sound.Parent = SoundService
+    sound:Play()
+    game.Debris:AddItem(sound, 2)
+end
+
+local function playWarningNotificationSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://124951621656853"
     sound.Volume = 0.5
     sound.Parent = SoundService
     sound:Play()
@@ -312,7 +332,7 @@ function ChronixUI:Notify(config)
     table.insert(notifications, notificationData)
     updateNotificationPositions()
 
-    playNotificationSound()
+    playNotificationSound(type)
 
     local function destroyNotification()
         local index = table.find(notifications, notificationData)
