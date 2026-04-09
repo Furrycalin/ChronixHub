@@ -37,7 +37,7 @@ local function GetDeviceType()
     end
 end
 
--- ========== Phosphor Icons 图标库加载 ==========
+-- ========== Phosphor Icons 图标库加载 (Base64 内嵌版) ==========
 local IconLibrary = {
     White = {},
     Black = {},
@@ -45,64 +45,56 @@ local IconLibrary = {
     IsLoading = false
 }
 
--- 异步加载图标（不阻塞UI创建）
 function IconLibrary:Load()
     if self.Loaded or self.IsLoading then return end
     self.IsLoading = true
     
     task.spawn(function()
-        local successWhite, resultWhite = pcall(function()
-            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
-            return HttpService:JSONDecode(jsonText)
-        end)
-        
-        local successBlack, resultBlack = pcall(function()
-            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
-            return HttpService:JSONDecode(jsonText)
-        end)
-        
-        if successWhite and successBlack then
-            self.White = resultWhite
-            self.Black = resultBlack
-            self.Loaded = true
-            
-            -- 修复：正确计算字典长度
-            local function countTable(t)
-                local count = 0
-                for _ in pairs(t) do
-                    count = count + 1
+        local function loadJSON(url, targetTable)
+            local success, result = pcall(function()
+                local jsonText = game:HttpGet(url)
+                return HttpService:JSONDecode(jsonText)
+            end)
+            if success then
+                for k, v in pairs(result) do
+                    targetTable[k] = v
                 end
-                return count
+                return true
             end
-            
-            print(string.format("[ChronixUI] 图标库加载成功，白色: %d 个，黑色: %d 个", 
-                countTable(resultWhite), 
-                countTable(resultBlack)))
+            return false
+        end
+        
+        local whiteSuccess = loadJSON(
+            "https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json",
+            self.White
+        )
+        local blackSuccess = loadJSON(
+            "https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json",
+            self.Black
+        )
+        
+        if whiteSuccess and blackSuccess then
+            self.Loaded = true
+            local function count(t) local n=0; for _ in pairs(t) do n=n+1 end; return n end
+            print(string.format("[ChronixUI] 图标库加载成功，白色: %d，黑色: %d", count(self.White), count(self.Black)))
         else
-            warn("[ChronixUI] 图标库加载失败，将使用无图标模式")
+            warn("[ChronixUI] 图标库加载失败")
         end
         self.IsLoading = false
     end)
 end
 
--- 获取图标（带降级处理）
 function IconLibrary:GetIcon(iconName, iconColor)
-    if not self.Loaded then
-        return nil
-    end
-    
+    if not self.Loaded then return nil end
     iconColor = iconColor or "White"
-    
     if iconColor == "White" then
         return self.White[iconName]
     elseif iconColor == "Black" then
         return self.Black[iconName]
     end
-    
     return nil
 end
 
--- 启动异步加载
 IconLibrary:Load()
 -- ========== 图标库加载结束 ==========
 
