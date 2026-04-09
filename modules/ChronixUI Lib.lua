@@ -54,8 +54,7 @@ ChronixUI.Themes = {
         Warning = Color3.fromRGB(255, 152, 0),
         Info = Color3.fromRGB(33, 150, 243),
         NotificationBg = Color3.fromRGB(45, 45, 55),
-        NotificationBorder = Color3.fromRGB(60, 60, 70),
-        IconColor = "White"
+        NotificationBorder = Color3.fromRGB(60, 60, 70)
     },
     Light = {
         Background = Color3.fromRGB(245, 245, 250),
@@ -73,8 +72,7 @@ ChronixUI.Themes = {
         Info = Color3.fromRGB(2, 136, 209),
         Notification = Color3.fromRGB(250, 250, 250),
         NotificationBg = Color3.fromRGB(250, 250, 255),
-        NotificationBorder = Color3.fromRGB(200, 200, 210),
-        IconColor = "Black"
+        NotificationBorder = Color3.fromRGB(200, 200, 210)
     }
 }
 ChronixUI.CurrentTheme = "Default"
