@@ -37,6 +37,64 @@ local function GetDeviceType()
     end
 end
 
+-- ========== Phosphor Icons 图标库加载 ==========
+local IconLibrary = {
+    White = {},
+    Black = {},
+    Loaded = false,
+    IsLoading = false
+}
+
+-- 异步加载图标（不阻塞UI创建）
+function IconLibrary:Load()
+    if self.Loaded or self.IsLoading then return end
+    self.IsLoading = true
+    
+    -- 使用 coroutine 或 spawn 异步加载
+    task.spawn(function()
+        local successWhite, resultWhite = pcall(function()
+            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-white.json")
+            return HttpService:JSONDecode(jsonText)
+        end)
+        
+        local successBlack, resultBlack = pcall(function()
+            local jsonText = game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/phosphor-icons-black.json")
+            return HttpService:JSONDecode(jsonText)
+        end)
+        
+        if successWhite and successBlack then
+            self.White = resultWhite
+            self.Black = resultBlack
+            self.Loaded = true
+            print("[ChronixUI] 图标库加载成功，白色: " .. table.getn(resultWhite) .. " 个，黑色: " .. table.getn(resultBlack) .. " 个")
+        else
+            warn("[ChronixUI] 图标库加载失败，将使用无图标模式")
+        end
+        self.IsLoading = false
+    end)
+end
+
+-- 获取图标（带降级处理）
+function IconLibrary:GetIcon(iconName, iconColor)
+    if not self.Loaded then
+        return nil
+    end
+    
+    iconColor = iconColor or "White"
+    
+    if iconColor == "White" then
+        return self.White[iconName]
+    elseif iconColor == "Black" then
+        return self.Black[iconName]
+    end
+    
+    return nil
+end
+
+-- 启动异步加载
+IconLibrary:Load()
+-- ========== 图标库加载结束 ==========
+
 -- 主题颜色配置
 ChronixUI.Themes = {
     Default = {
@@ -828,13 +886,20 @@ function ChronixUI:CreateWindow(config)
     function windowData:CreateTab(tabConfig)
         local tabName = tabConfig.Name or "Tab"
         local isSettings = tabConfig.IsSettings or false
+        -- 图标配置
+        local hasIcon = tabConfig.HasIcon or false
+        local iconName = tabConfig.IconName or ""
+        local iconColor = tabConfig.IconColor or "White"  -- "White" 或 "Black"
+        -- 计算文字偏移量
+        local textPadding = 8 * scale  -- 基础左内边距
+        local iconOffset = 0
 
         local tabBtn = Instance.new("TextButton")
         tabBtn.Parent = tabContainer
         tabBtn.Size = UDim2.new(1, -12*scale, 0, math.floor(36 * scale))
         tabBtn.Position = UDim2.new(0, 6*scale, 0, 0)
         tabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
-        tabBtn.Text = "  " .. tabName
+        tabBtn.Text = ""
         tabBtn.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
         tabBtn.TextSize = math.floor(14 * scale)
         tabBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -844,6 +909,67 @@ function ChronixUI:CreateWindow(config)
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, math.floor(4 * scale))
         btnCorner.Parent = tabBtn
+
+        -- 图标 ImageLabel（如果需要）
+        local iconLabel = nil
+        if hasIcon and iconName ~= "" then
+            iconLabel = Instance.new("ImageLabel")
+            iconLabel.Name = "TabIcon"
+            iconLabel.Size = UDim2.new(0, 18 * scale, 0, 18 * scale)
+            iconLabel.Position = UDim2.new(0, 8 * scale, 0.5, -9 * scale)
+            iconLabel.BackgroundTransparency = 1
+            iconLabel.Visible = false  -- 先隐藏，等图标加载成功再显示
+            iconLabel.Parent = tabBtn
+            
+            iconOffset = 26 * scale  -- 图标宽度 + 间距
+            
+            -- 尝试获取图标（可能还没加载完）
+            local iconData = IconLibrary:GetIcon(iconName, iconColor)
+            if iconData then
+                iconLabel.Image = iconData
+                iconLabel.Visible = true
+            else
+                -- 图标还没加载完或不存在，先隐藏，不影响文字显示
+                iconOffset = 0
+            end
+        end
+        
+        -- 文字 Label（独立控制位置）
+        local tabTextLabel = Instance.new("TextLabel")
+        tabTextLabel.Name = "TabText"
+        tabTextLabel.Size = UDim2.new(1, -textPadding - iconOffset - 8*scale, 1, 0)
+        tabTextLabel.Position = UDim2.new(0, textPadding + iconOffset, 0, 0)
+        tabTextLabel.BackgroundTransparency = 1
+        tabTextLabel.Text = tabName
+        tabTextLabel.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
+        tabTextLabel.TextSize = math.floor(14 * scale)
+        tabTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tabTextLabel.Font = Enum.Font.GothamSemibold
+        tabTextLabel.Parent = tabBtn
+
+        -- 如果之前没获取到图标，但库加载完成后可以再试一次（可选）
+        if hasIcon and iconName ~= "" and iconLabel and not iconLabel.Visible then
+            -- 延迟检查，等待图标库加载完成
+            task.spawn(function()
+                local waited = 0
+                while not IconLibrary.Loaded and waited < 3 do
+                    task.wait(0.5)
+                    waited = waited + 0.5
+                end
+                
+                if IconLibrary.Loaded then
+                    local iconData = IconLibrary:GetIcon(iconName, iconTheme)
+                    if iconData and iconLabel then
+                        iconLabel.Image = iconData
+                        iconLabel.Visible = true
+                        -- 调整文字位置
+                        local newIconOffset = 26 * scale
+                        tabTextLabel.Position = UDim2.new(0, textPadding + newIconOffset, 0, 0)
+                        tabTextLabel.Size = UDim2.new(1, -textPadding - newIconOffset - 8*scale, 1, 0)
+                    end
+                end
+            end)
+        end
 
         tabBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
