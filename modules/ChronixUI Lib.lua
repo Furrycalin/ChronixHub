@@ -24,6 +24,51 @@ local Mouse = LocalPlayer:GetMouse()
 
 local UIParticleSystem = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/UIParticleSystem.lua"))()
 
+-- ========== Lucide 图标库加载 (基于 Roblox 资产 ID) ==========
+local IconLibrary = {
+    Icons = {},
+    Loaded = false,
+    IsLoading = false
+}
+
+-- 异步加载图标库
+function IconLibrary:Load()
+    if self.Loaded or self.IsLoading then return end
+    self.IsLoading = true
+    
+    task.spawn(function()
+        local success, result = pcall(function()
+            -- 使用 loadstring 执行远程 Lua 脚本，它会返回一个包含图标映射的表
+            local iconModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/icons.lua"))()
+            return iconModule
+        end)
+        
+        if success and type(result) == "table" then
+            self.Icons = result
+            self.Loaded = true
+            local count = 0
+            for _ in pairs(self.Icons) do count = count + 1 end
+            print("[ChronixUI] 图标库加载成功，共 " .. count .. " 个图标")
+        else
+            warn("[ChronixUI] 图标库加载失败，将使用无图标模式")
+        end
+        self.IsLoading = false
+    end)
+end
+
+-- 获取图标资产 ID
+-- @param iconName 图标名称，如 "home", "settings", "user"
+function IconLibrary:GetIconId(iconName)
+    if not self.Loaded then
+        return nil
+    end
+    return self.Icons[iconName]
+end
+
+-- 启动异步加载
+IconLibrary:Load()
+-- ========== 图标库加载结束 ==========
+
 -- 设备类型判断
 local function GetDeviceType()
     if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
@@ -539,42 +584,42 @@ function ChronixUI:CreateWindow(config)
                                          self.Themes[self.CurrentTheme].TextDark, math.floor(12 * scale), 12)
     playerInfoLabel.Name = "PlayerInfoLabel"
 
-        -- 获取游戏名的函数（需在 safePlayerInfo 前定义）
-        local gameInfoCache = nil
-        local function getGameName(universeId)
-            if gameInfoCache then return gameInfoCache end
-            local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
-            local success, response = pcall(function()
-                return game:HttpGet(url)
-            end)
-            if success then
-                local data = HttpService:JSONDecode(response)
-                if data.data and #data.data > 0 then
-                    gameInfoCache = data.data[1]
-                    return gameInfoCache
-                end
-            end
-            return nil
-        end
-    
-        -- 安全获取玩家信息
-        local function safePlayerInfo()
-            local player = Players.LocalPlayer
-            if not player then return end
-            local isPremium = player.MembershipType == Enum.MembershipType.Premium
-            local infotitle = UserInputService:GetPlatform().Name .. "用户"
-            local nameStr = "欢迎使用! " .. infotitle .. player.DisplayName .. " | ID:" .. player.UserId
-            if isPremium then nameStr = nameStr .. " | 已开通Premium" end
-            playerNameLabel.Text = nameStr
-    
-            local gameInfo = getGameName(game.GameId)
-            if gameInfo then
-                playerInfoLabel.Text = "在玩: " .. gameInfo.name .. " | ID: " .. game.GameId
-            else
-                playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
+    -- 获取游戏名的函数（需在 safePlayerInfo 前定义）
+    local gameInfoCache = nil
+    local function getGameName(universeId)
+        if gameInfoCache then return gameInfoCache end
+        local url = "https://games.roblox.com/v1/games?universeIds=" .. universeId
+        local success, response = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if success then
+            local data = HttpService:JSONDecode(response)
+            if data.data and #data.data > 0 then
+                gameInfoCache = data.data[1]
+                return gameInfoCache
             end
         end
-        safePlayerInfo()
+        return nil
+    end
+    
+    -- 安全获取玩家信息
+    local function safePlayerInfo()
+        local player = Players.LocalPlayer
+        if not player then return end
+        local isPremium = player.MembershipType == Enum.MembershipType.Premium
+        local infotitle = UserInputService:GetPlatform().Name .. "用户"
+        local nameStr = "欢迎使用! " .. infotitle .. player.DisplayName .. " | ID:" .. player.UserId
+        if isPremium then nameStr = nameStr .. " | 已开通Premium" end
+        playerNameLabel.Text = nameStr
+    
+        local gameInfo = getGameName(game.GameId)
+        if gameInfo then
+            playerInfoLabel.Text = "在玩: " .. gameInfo.name .. " | ID: " .. game.GameId
+        else
+            playerInfoLabel.Text = "未找到游戏信息, 未找到游戏ID | Debug: InConsole"
+        end
+    end
+    safePlayerInfo()
 
     -- 侧边栏
     local sidebarWidth = math.floor(160 * scale)
@@ -840,12 +885,21 @@ function ChronixUI:CreateWindow(config)
         local tabName = tabConfig.Name or "Tab"
         local isSettings = tabConfig.IsSettings or false
 
+        -- 图标配置
+        local hasIcon = tabConfig.HasIcon or false
+        local iconName = tabConfig.IconName or ""
+        -- 注意：这个图标库的资产 ID 已经包含了颜色（通常是黑色或白色），不需要额外的颜色参数
+        
+        -- 计算文字偏移量
+        local textPadding = 8 * scale
+        local iconOffset = 0
+
         local tabBtn = Instance.new("TextButton")
         tabBtn.Parent = tabContainer
         tabBtn.Size = UDim2.new(1, -12*scale, 0, math.floor(36 * scale))
         tabBtn.Position = UDim2.new(0, 6*scale, 0, 0)
         tabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
-        tabBtn.Text = "  " .. tabName
+        tabBtn.Text = ""
         tabBtn.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
         tabBtn.TextSize = math.floor(14 * scale)
         tabBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -855,6 +909,64 @@ function ChronixUI:CreateWindow(config)
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, math.floor(4 * scale))
         btnCorner.Parent = tabBtn
+
+        -- 图标 ImageLabel（如果需要）
+        local iconLabel = nil
+        if hasIcon and iconName ~= "" then
+            iconLabel = Instance.new("ImageLabel")
+            iconLabel.Name = "TabIcon"
+            iconLabel.Size = UDim2.new(0, 18 * scale, 0, 18 * scale)
+            iconLabel.Position = UDim2.new(0, 8 * scale, 0.5, -9 * scale)
+            iconLabel.BackgroundTransparency = 1
+            iconLabel.Visible = false
+            iconLabel.Parent = tabBtn
+            
+            iconOffset = 26 * scale
+            
+            -- 尝试获取图标 ID
+            local iconId = IconLibrary:GetIconId(iconName)
+            if iconId then
+                iconLabel.Image = iconId
+                iconLabel.Visible = true
+            else
+                iconOffset = 0
+            end
+        end
+        
+        -- 文字 Label
+        local tabTextLabel = Instance.new("TextLabel")
+        tabTextLabel.Name = "TabText"
+        tabTextLabel.Size = UDim2.new(1, -textPadding - iconOffset - 8*scale, 1, 0)
+        tabTextLabel.Position = UDim2.new(0, textPadding + iconOffset, 0, 0)
+        tabTextLabel.BackgroundTransparency = 1
+        tabTextLabel.Text = tabName
+        tabTextLabel.TextColor3 = ChronixUI.Themes[ChronixUI.CurrentTheme].TextDark
+        tabTextLabel.TextSize = math.floor(14 * scale)
+        tabTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tabTextLabel.Font = Enum.Font.GothamSemibold
+        tabTextLabel.Parent = tabBtn
+
+        -- 延迟补加载图标
+        if hasIcon and iconName ~= "" and iconLabel and not iconLabel.Visible then
+            task.spawn(function()
+                local waited = 0
+                while not IconLibrary.Loaded and waited < 3 do
+                    task.wait(0.5)
+                    waited = waited + 0.5
+                end
+                
+                if IconLibrary.Loaded then
+                    local iconId = IconLibrary:GetIconId(iconName)
+                    if iconId and iconLabel then
+                        iconLabel.Image = iconId
+                        iconLabel.Visible = true
+                        local newIconOffset = 26 * scale
+                        tabTextLabel.Position = UDim2.new(0, textPadding + newIconOffset, 0, 0)
+                        tabTextLabel.Size = UDim2.new(1, -textPadding - newIconOffset - 8*scale, 1, 0)
+                    end
+                end
+            end)
+        end
 
         tabBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
