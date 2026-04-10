@@ -616,11 +616,11 @@ local ToolsTab = mainWindow:CreateTab({ Name = "工具", HasIcon = true, IconNam
 
 ToolsTab:AddTitle("各种实用工具")
 
-ToolsTab:AddButton({ Text = "回满血", Callback = function() LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth end })
+ToolsTab:AddButton({ Text = "回满血", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth end })
 
-ToolsTab:AddButton({ Text = "自杀", Callback = function() LocalPlayer.Character.Humanoid.Health = 0 end })
+ToolsTab:AddButton({ Text = "自杀", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() LocalPlayer.Character.Humanoid.Health = 0 end })
 
-ToolsTab:AddButton({ Text = "获得点击传送工具", Callback = function() mouse = LocalPlayer:GetMouse() tool = Instance.new("Tool") tool.RequiresHandle = false tool.Name = "手持点击传送" tool.Activated:connect(function() local pos = mouse.Hit+Vector3.new(0,2.5,0) pos = CFrame.new(pos.X,pos.Y,pos.Z) character.HumanoidRootPart.CFrame = pos end) tool.Parent = LocalPlayer.Backpack end })
+ToolsTab:AddButton({ Text = "获得点击传送工具", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() mouse = LocalPlayer:GetMouse() tool = Instance.new("Tool") tool.RequiresHandle = false tool.Name = "手持点击传送" tool.Activated:connect(function() local pos = mouse.Hit+Vector3.new(0,2.5,0) pos = CFrame.new(pos.X,pos.Y,pos.Z) character.HumanoidRootPart.CFrame = pos end) tool.Parent = LocalPlayer.Backpack end })
 
 ToolsTab:AddToggle({
     Label = "TPWalk",
@@ -879,11 +879,11 @@ ToolsTab:AddToggle({
     end
 })
 
-ToolsTab:AddButton({ Text = "重新加入当前房间(服务器)", Callback = function() rejoinCurrentGame() end })
-ToolsTab:AddButton({ Text = "切换时间为白天", Callback = function() setDay() end })
-ToolsTab:AddButton({ Text = "切换时间为黑夜", Callback = function() setNight() end })
-ToolsTab:AddButton({ Text = "优化世界光效", Callback = function() loadstring(game:HttpGet("https://raw.gitcode.com/Furrycalin/ChronixHub/raw/main/modules/WorldShader.lua"))() end })
-ToolsTab:AddButton({ Text = "打印眼前实例名到控制台", Callback = function()
+ToolsTab:AddButton({ Text = "重新加入当前房间(服务器)", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() rejoinCurrentGame() end })
+ToolsTab:AddButton({ Text = "切换时间为白天", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() setDay() end })
+ToolsTab:AddButton({ Text = "切换时间为黑夜", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() setNight() end })
+ToolsTab:AddButton({ Text = "优化世界光效", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.gitcode.com/Furrycalin/ChronixHub/raw/main/modules/WorldShader.lua"))() end })
+ToolsTab:AddButton({ Text = "打印眼前实例名到控制台", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
     -- 使用已有的 player 和 character，从 character 获取 head
     local head = character:WaitForChild("Head")
 
@@ -905,16 +905,16 @@ ToolsTab:AddButton({ Text = "打印眼前实例名到控制台", Callback = func
         print("面前没有检测到实例")
     end
 end })
-ToolsTab:AddButton({ Text = "打印当前玩家坐标到控制台", Callback = function()
+ToolsTab:AddButton({ Text = "打印当前玩家坐标到控制台", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
     -- 防止跟现有的重复导致冲突
     local rootPart1 = character:WaitForChild("HumanoidRootPart")
     local position1 = rootPart1.Position
     print(string.format("玩家坐标: (%.2f, %.2f, %.2f)", position1.X, position1.Y, position1.Z))
 end })
-ToolsTab:AddButton({ Text = "开启控制台界面", Callback = function()
+ToolsTab:AddButton({ Text = "开启控制台界面", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
     StarterGui:SetCore("DevConsoleVisible", true)
 end })
-ToolsTab:AddButton({ Text = "启用所有ROBLOXUI", Callback = function()
+ToolsTab:AddButton({ Text = "启用所有ROBLOXUI", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) 
 end })
 
@@ -922,7 +922,7 @@ end })
 local scripthubTab = mainWindow:CreateTab({ Name = "脚本中心", HasIcon = true, IconName = "computer", IconColor = Color3.fromRGB(255, 255, 255) })
 scripthubTab:AddTitle("各种脚本")
 local function addscripts(name, link)
-    scripthubTab:AddButton({ Text = name, Callback = function()
+    scripthubTab:AddButton({ Text = name, HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
         ChronixUI:Notify({ Title = "提示", Content = name .. "正在启动，请耐心等待。", Type = "success", Duration = 5 })
         loadstring(game:HttpGet(link))()
         ChronixUI:Notify({ Title = "提示", Content = name .. "启动成功。", Type = "success", Duration = 5 })
@@ -948,7 +948,7 @@ local function updatePlayerList()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local button = playerteleporterTab:AddButton({
-                Text = player.DisplayName .. " (" .. player.Name .. ")",
+                Text = player.DisplayName .. " (" .. player.Name .. ")", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
                 Callback = function()
                     local character = LocalPlayer.Character
                     if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1032,6 +1032,9 @@ local function refreshWaypointList()
         local noteInput = waypointTab:AddInput({
             Label = "备注",
             Placeholder = "输入备注信息...",
+            HasIcon = true,
+            IconName = "text-cursor-input",
+            IconColor = Color3.fromRGB(255, 255, 255),
             Callback = function(text)
                 waypoint.note = text or ""
                 refreshWaypointList()
@@ -1046,7 +1049,7 @@ local function refreshWaypointList()
 
         -- 传送按钮
         local teleportBtn = waypointTab:AddButton({
-            Text = "🚀 传送到此路径点",
+            Text = "🚀 传送到此路径点", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
             Callback = function()
                 local char = game.Players.LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
@@ -1071,7 +1074,7 @@ local function refreshWaypointList()
 
         -- 删除按钮
         local deleteBtn = waypointTab:AddButton({
-            Text = "🗑️ 删除此路径点",
+            Text = "🗑️ 删除此路径点", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
             Callback = function()
                 -- 从数据中删除
                 for i, data in ipairs(waypointsData) do
@@ -1117,7 +1120,7 @@ waypointTab:AddTitle("路径点管理")
 waypointTab:AddDivider()
 waypointTab:AddLabel("点击下方按钮保存当前位置作为路径点")
 waypointTab:AddButton({
-    Text = "➕ 添加当前路径点",
+    Text = "➕ 添加当前路径点", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         local character = game.Players.LocalPlayer.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
@@ -1174,6 +1177,9 @@ local customIdInput = musicTab:AddInput({
     Label = "自定义音乐ID",
     Default = data.basicdata.otherdata.musicData.currentId,
     Placeholder = "输入 rbxassetid，例如: 142376088",
+    HasIcon = true,
+    IconName = "text-cursor-input",
+    IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function(text)
         -- 当用户输入时，更新当前ID
         if text and text ~= "" then
@@ -1191,7 +1197,7 @@ local pauseResumeButton = nil
 
 -- 先创建播放按钮（显示在上方）
 playStopButton = musicTab:AddButton({
-    Text = "▶️ 播放",
+    Text = "▶️ 播放", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.otherdata.musicData.isPlay then
             -- 停止播放
@@ -1247,7 +1253,7 @@ playStopButton = musicTab:AddButton({
 
 -- 再创建暂停按钮（显示在下方）
 pauseResumeButton = musicTab:AddButton({
-    Text = "⏸️ 暂停",
+    Text = "⏸️ 暂停", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if not data.basicdata.otherdata.musicData.isPlay then
             ChronixUI:Notify({
@@ -1289,7 +1295,7 @@ pauseResumeButton = musicTab:AddButton({
 
 -- 循环播放按钮
 loopButton = musicTab:AddButton({
-    Text = "🔄 循环播放",
+    Text = "🔄 循环播放", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         data.basicdata.otherdata.musicbox.Looped = not data.basicdata.otherdata.musicbox.Looped
         loopButton.Text = data.basicdata.otherdata.musicbox.Looped and "🔁 不循环播放" or "🔄 循环播放"
@@ -1305,7 +1311,7 @@ musicTab:AddDivider()
 musicTab:AddLabel("音量控制")
 local volumeLabel = musicTab:AddLabel(string.format("当前音量: %.0f%%", data.basicdata.otherdata.musicbox.Volume * 100))
 musicTab:AddButton({
-    Text = "🔊 音量 +",
+    Text = "🔊 音量 +", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.otherdata.musicbox.Volume < 1 then
             data.basicdata.otherdata.musicbox.Volume = math.min(1, data.basicdata.otherdata.musicbox.Volume + 0.1)
@@ -1314,7 +1320,7 @@ musicTab:AddButton({
     end
 })
 musicTab:AddButton({
-    Text = "🔉 音量 -",
+    Text = "🔉 音量 -", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.otherdata.musicbox.Volume > 0 then
             data.basicdata.otherdata.musicbox.Volume = math.max(0, data.basicdata.otherdata.musicbox.Volume - 0.1)
@@ -1326,14 +1332,14 @@ musicTab:AddDivider()
 musicTab:AddLabel("音高控制")
 local pitchLabel = musicTab:AddLabel(string.format("当前音高: %.1f", data.basicdata.otherdata.musicbox.Pitch))
 musicTab:AddButton({
-    Text = "🎵 音高 +",
+    Text = "🎵 音高 +", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         data.basicdata.otherdata.musicbox.Pitch = data.basicdata.otherdata.musicbox.Pitch + 0.1
         pitchLabel.Text = string.format("当前音高: %.1f", data.basicdata.otherdata.musicbox.Pitch)
     end
 })
 musicTab:AddButton({
-    Text = "🎵 音高 -",
+    Text = "🎵 音高 -", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.otherdata.musicbox.Pitch > 0.1 then
             data.basicdata.otherdata.musicbox.Pitch = data.basicdata.otherdata.musicbox.Pitch - 0.1
@@ -1342,7 +1348,7 @@ musicTab:AddButton({
     end
 })
 musicTab:AddButton({
-    Text = "🔄 重置音高",
+    Text = "🔄 重置音高", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         data.basicdata.otherdata.musicbox.Pitch = 1
         pitchLabel.Text = string.format("当前音高: %.1f", data.basicdata.otherdata.musicbox.Pitch)
@@ -1403,7 +1409,7 @@ local function refreshAudioList()
             )
             
             local soundButton = audioCheckerTab:AddButton({
-                Text = displayText,
+                Text = displayText, HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
                 Callback = function()
                     local id = soundInfo.SoundId:match("rbxassetid://(%d+)")
                     if id then
@@ -1454,6 +1460,9 @@ local thresholdInput = audioCheckerTab:AddInput({
     Label = "音量阈值",
     Default = tostring(data.basicdata.otherdata.audioData.threshold),
     Placeholder = "输入阈值，例如: 50",
+    HasIcon = true,
+    IconName = "text-cursor-input",
+    IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function(text)
         local num = tonumber(text)
         if num then
@@ -1498,7 +1507,7 @@ audioCheckerTab:AddToggle({
 audioCheckerTab:AddDivider()
 local selectedIdLabel = audioCheckerTab:AddLabel("当前选中: 无")
 audioCheckerTab:AddButton({
-    Text = "📋 复制选中ID到剪贴板",
+    Text = "📋 复制选中ID到剪贴板", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.otherdata.audioData.currentSelectedId then
             setclipboard(data.basicdata.otherdata.audioData.currentSelectedId)
@@ -1522,7 +1531,7 @@ audioCheckerTab:AddDivider()
 audioCheckerTab:AddTitle("测试播放")
 testIdLabel = audioCheckerTab:AddLabel("测试ID: 未选择")
 testPlayButton = audioCheckerTab:AddButton({
-    Text = "🎵 尝试播放",
+    Text = "🎵 尝试播放", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if not data.basicdata.otherdata.audioData.currentSelectedId then
             ChronixUI:Notify({
@@ -1606,7 +1615,7 @@ local function addChatMessage(sender, text)
     local messageLabel = chatReceiverTab:AddLabel(messageText)
     table.insert(chatMessages, messageLabel)
     local copyButton = chatReceiverTab:AddButton({
-        Text = "📋 复制这条消息",
+        Text = "📋 复制这条消息", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
         Callback = function()
             local fullText = sender .. ": " .. text
             setclipboard(fullText)
@@ -1628,7 +1637,7 @@ chatReceiverTab:AddLabel("实时接收游戏中所有玩家的聊天消息")
 chatReceiverTab:AddDivider()
 chatReceiverTab:AddTitle("消息列表")
 chatReceiverTab:AddButton({
-    Text = "🗑️ 清空所有消息",
+    Text = "🗑️ 清空所有消息", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         clearChatMessages()
         ChronixUI:Notify({
@@ -1646,14 +1655,17 @@ chatReceiverTab:AddLabel("💡 提示：点击消息下方的按钮可复制该�
 local executerTab = mainWindow:CreateTab({ Name = "执行器", HasIcon = true, IconName = "braces", IconColor = Color3.fromRGB(255, 255, 255) })
 executerTab:AddTitle("执行器")
 executerTab:AddInput({
-Label = "请输入代码",
+    Label = "请输入代码",
     Placeholder = "",
+    HasIcon = true,
+    IconName = "text-cursor-input",
+    IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function(text)
         data.basicdata.releasetools.executecode = text
     end
 })
 executerTab:AddButton({
-    Text = "执行",
+    Text = "执行", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         if data.basicdata.releasetools.executecode and data.basicdata.releasetools.executecode ~= "" then
             -- 尝试执行脚本
@@ -1776,7 +1788,7 @@ local function refreshFilterList(showNotification)
     table.insert(dynamicControls, resetDivider)
     
     local resetButton = filterTab:AddButton({
-        Text = "重置所有滤镜为默认状态",
+        Text = "重置所有滤镜为默认状态", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
         Callback = function()
             for _, effect in ipairs(getAllPostEffects()) do
                 effect.Enabled = true
@@ -1812,7 +1824,7 @@ local function refreshFilterList(showNotification)
     end
 end
 local refreshButton = filterTab:AddButton({
-    Text = "手动刷新滤镜列表",
+    Text = "手动刷新滤镜列表", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255),
     Callback = function()
         refreshFilterList(true)
     end
@@ -1827,7 +1839,7 @@ local supportedgamesTab = mainWindow:CreateTab({ Name = "支持的游戏", HasIc
 supportedgamesTab:AddTitle("支持的游戏")
 for _, GetgameInfo in ipairs(data.Supported_Games) do
     if GetgameInfo.gameid then
-        supportedgamesTab:AddButton({ Text = GetgameInfo.name .. "(点击进入)", Callback = function() if game.GameId == GetgameInfo.gameid then ChronixUI:Notify({ Title = "提示", Content = "你已经在这个游戏里了。", Type = "success", Duration = 5 }) else GameTeleport.teleportByGameId(GetgameInfo.gameid) end end })
+        supportedgamesTab:AddButton({ Text = GetgameInfo.name .. "(点击进入)", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() if game.GameId == GetgameInfo.gameid then ChronixUI:Notify({ Title = "提示", Content = "你已经在这个游戏里了。", Type = "success", Duration = 5 }) else GameTeleport.teleportByGameId(GetgameInfo.gameid) end end })
     end
 end
 
@@ -1849,30 +1861,33 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
             })
         elseif GetgameInfo.name == "小屋角色扮演" then
-            OtherGameTab:AddButton({ Text = "变正常", Callback = function() ChatControl:chat("/re") end })
-            OtherGameTab:AddButton({ Text = "变小孩", Callback = function() ChatControl:chat("/kid") end })
-            OtherGameTab:AddButton({ Text = "鲨鱼服装", Callback = function() ChatControl:chat("/shark") end })
-            OtherGameTab:AddButton({ Text = "修狗服装", Callback = function() ChatControl:chat("/dog") end })
-            OtherGameTab:AddButton({ Text = "修猫服装", Callback = function() ChatControl:chat("/cat") end })
+            OtherGameTab:AddButton({ Text = "变正常", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() ChatControl:chat("/re") end })
+            OtherGameTab:AddButton({ Text = "变小孩", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() ChatControl:chat("/kid") end })
+            OtherGameTab:AddButton({ Text = "鲨鱼服装", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() ChatControl:chat("/shark") end })
+            OtherGameTab:AddButton({ Text = "修狗服装", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() ChatControl:chat("/dog") end })
+            OtherGameTab:AddButton({ Text = "修猫服装", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() ChatControl:chat("/cat") end })
         elseif GetgameInfo.name == "南极探险队" then
             OtherGameTab:AddLabel("基础操作")
-            OtherGameTab:AddButton({ Text = "传送到 大本营", Callback = function() TeleportTo(-6015, -158, -35) end })
-            OtherGameTab:AddButton({ Text = "传送到 营地1", Callback = function() TeleportTo(-3719, 226, 235) end })
-            OtherGameTab:AddButton({ Text = "传送到 营地2", Callback = function() TeleportTo(1790, 106, -138) end })
-            OtherGameTab:AddButton({ Text = "传送到 营地3", Callback = function() TeleportTo(5892, 321, -18) end })
-            OtherGameTab:AddButton({ Text = "传送到 营地4", Callback = function() TeleportTo(8992, 596, 102) end })
-            OtherGameTab:AddButton({ Text = "传送到 营地5", Callback = function() TeleportTo(10990, 550, 104) end })
+            OtherGameTab:AddButton({ Text = "传送到 大本营", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(-6015, -158, -35) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地1", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(-3719, 226, 235) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地2", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(1790, 106, -138) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地3", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(5892, 321, -18) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地4", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(8992, 596, 102) end })
+            OtherGameTab:AddButton({ Text = "传送到 营地5", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(10990, 550, 104) end })
             OtherGameTab:AddLabel("圣诞活动")
-            OtherGameTab:AddButton({ Text = "获取所有礼物", Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
+            OtherGameTab:AddButton({ Text = "获取所有礼物", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
             local njtx_giftnumber = 0
             OtherGameTab:AddInput({
                 Label = "礼物号",
                 Placeholder = "",
+                HasIcon = true,
+                IconName = "text-cursor-input",
+                IconColor = Color3.fromRGB(255, 255, 255),
                 Callback = function(text)
                     njtx_giftnumber = text
                 end
             })
-            OtherGameTab:AddButton({ Text = "传送到礼物", Callback = function() TeleportToPresent(tonumber(njtx_giftnumber)) end })
+            OtherGameTab:AddButton({ Text = "传送到礼物", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportToPresent(tonumber(njtx_giftnumber)) end })
         elseif GetgameInfo.name == "西部森林" then
             OtherGameTab:AddToggle({
                 Label = "怪物标签",
@@ -1912,7 +1927,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            OtherGameTab:AddButton({ Text = "传送到树顶", Callback = function() TeleportTo(69, 206, -72) end })
+            OtherGameTab:AddButton({ Text = "传送到树顶", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(69, 206, -72) end })
         elseif GetgameInfo.name == "噩梦之行" then
             OtherGameTab:AddToggle({
                 Label = "高亮怪物",
@@ -1925,8 +1940,8 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                     end
                 end
             })
-            OtherGameTab:AddButton({ Text = "高亮芝士", Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
-            OtherGameTab:AddButton({ Text = "无敌(怪物不追不杀)", Callback = function()
+            OtherGameTab:AddButton({ Text = "高亮芝士", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() data.othergamedata.nightmare_run.HLCheese.apply() end })
+            OtherGameTab:AddButton({ Text = "无敌(怪物不追不杀)", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 -- 无敌实现
                 local ClientScripts = LocalPlayer.PlayerGui.ClientScripts
                 if ClientScripts:FindFirstChild("SafeSpaceHandler") then
@@ -1939,7 +1954,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
             end })
         elseif GetgameInfo.name == "兽化项目" then
             OtherGameTab:AddLabel("基础操作")
-            OtherGameTab:AddButton({ Text = "删除捕兽夹", Callback = function()
+            OtherGameTab:AddButton({ Text = "删除捕兽夹", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "__SnarePhysical" then
@@ -1949,7 +1964,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
                 ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个捕兽夹", Type = "success", Duration = 10 })
             end })
-            OtherGameTab:AddButton({ Text = "删除地雷", Callback = function()
+            OtherGameTab:AddButton({ Text = "删除地雷", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "Landmine" then
@@ -1959,7 +1974,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 end
                 ChronixUI:Notify({ Title = "提示", Content = "已删除" .. deletedCount .. "个地雷", Type = "success", Duration = 10 })
             end })
-            OtherGameTab:AddButton({ Text = "删除阔剑地雷", Callback = function()
+            OtherGameTab:AddButton({ Text = "删除阔剑地雷", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 local deletedCount = 0
                 for _, model in ipairs(Workspace:GetDescendants()) do
                     if model:IsA("Model") and model.Name == "__ClaymorePhysical" then
@@ -2070,15 +2085,15 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
                 Default = false,
                 Callback = function(v) data.othergamedata.grace.autolever = v end
             })
-            OtherGameTab:AddButton({ Text = "删除全部实体(无法关闭)", Callback = function() data.othergamedata.grace.deleteentity = true end })
+            OtherGameTab:AddButton({ Text = "删除全部实体(无法关闭)", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() data.othergamedata.grace.deleteentity = true end })
         elseif GetgameInfo.name == "深渊" then
-            OtherGameTab:AddButton({ Text = "一键获取全地图深渊能量和回音", Callback = function()
+            OtherGameTab:AddButton({ Text = "一键获取全地图深渊能量和回音", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 OBOTeleportModule.TeleportToParts({"AbyssalEnergy", "BigAbyssalEnergy", "Echo"}, 0)
             end })
-            OtherGameTab:AddButton({ Text = "一键解锁全地图路径点", Callback = function()
+            OtherGameTab:AddButton({ Text = "一键解锁全地图路径点", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
                 OBOTeleportModule.TeleportToParts("SpawnLocation", 0.1)
             end })
-            OtherGameTab:AddButton({ Text = "传送到 灯笼商店", Callback = function() TeleportTo(-375, -11932, -504) end })
+            OtherGameTab:AddButton({ Text = "传送到 灯笼商店", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(-375, -11932, -504) end })
         end
     end
 end
@@ -2141,6 +2156,9 @@ settingsContent:AddKeybind({
 settingsContent:AddInput({
     Label = "TPWalk距离",
     Placeholder = "",
+    HasIcon = true,
+    IconName = "text-cursor-input",
+    IconColor = Color3.fromRGB(255, 255, 255),
     Default = tpWalk:GetSpeed(),
     Callback = function(text)
         local num = tonumber(text)
