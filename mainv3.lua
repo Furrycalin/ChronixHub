@@ -29,32 +29,32 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 
-local ChronixUI = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChronixUI%20Lib.lua"))()
-local LoadAnimationModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/start_animation.lua"))()
-local tpWalk = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/tpWalk.lua"))()
-local StandRecovery = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/StandRecovery.lua"))()
-local HighlightModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/HighlightModule.lua"))()
-local PlayerLightModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerLightModule.lua"))()
-local SpectatorModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SpectatorModule.lua"))()
-local FreecamModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/FreecamModule.lua"))()
-local LandingEffect = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/LandingEffect.lua"))()
-local NameTagModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/NameTagModule.lua"))()
-local PlayerVisibleModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerVisibleModule.lua"))()
-local movementModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MovementModule.lua"))()
-local MouseUnlockModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MouseUnlockModule.lua"))()
-local DeathballScripts = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/DeathBallScripts.lua"))()
-local ZoomModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ZoomModule.lua"))()
-local FlingDetector = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/FlingDetector.lua"))()
-local SystemNotification = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SystemNotification.lua"))()
-local PlayerESP = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/PlayerESP.lua"))()
-local MovableHighlighter_NM = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/MovableHighlighter-NM.lua"))()
-local GameTeleport = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/GameTeleport.lua"))()
-local AntiVoidModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/AntiVoid.lua"))()
-local ChatSpy = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/ChatSpy.lua"))()
-local ChatControl = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/chat_test.lua"))()
-local AirWalk = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/AirWalk.lua"))()
-local LockCameraModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/LockCameraModule.lua"))()
-local OBOTeleportModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/OBOTeleportModule.lua"))()
+local ChronixUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/ChronixUI%20Lib.lua"))()
+local LoadAnimationModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/start_animation.lua"))()
+local tpWalk = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/RobloxScripts/refs/heads/main/tpWalk.lua"))()
+local StandRecovery = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/StandRecovery.lua"))()
+local HighlightModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/HighlightModule.lua"))()
+local PlayerLightModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/PlayerLightModule.lua"))()
+local SpectatorModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/SpectatorModule.lua"))()
+local FreecamModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/FreecamModule.lua"))()
+local LandingEffect = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/LandingEffect.lua"))()
+local NameTagModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/NameTagModule.lua"))()
+local PlayerVisibleModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/PlayerVisibleModule.lua"))()
+local movementModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/MovementModule.lua"))()
+local MouseUnlockModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/MouseUnlockModule.lua"))()
+local DeathballScripts = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/DeathBallScripts.lua"))()
+local ZoomModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/ZoomModule.lua"))()
+local FlingDetector = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/FlingDetector.lua"))()
+local SystemNotification = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/SystemNotification.lua"))()
+local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/PlayerESP.lua"))()
+local MovableHighlighter_NM = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/MovableHighlighter-NM.lua"))()
+local GameTeleport = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/GameTeleport.lua"))()
+local AntiVoidModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/AntiVoid.lua"))()
+local ChatSpy = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/ChatSpy.lua"))()
+local ChatControl = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/RobloxScripts/refs/heads/main/chat_test.lua"))()
+local AirWalk = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/AirWalk.lua"))()
+local LockCameraModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/LockCameraModule.lua"))()
+local OBOTeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/OBOTeleportModule.lua"))()
 
 --=============================================================================================
 
@@ -197,23 +197,23 @@ local data = {
     scriptlist = {
         {
             name = "高级聊天系统",
-            link = "https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/customChatSystem.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/RobloxScripts/refs/heads/main/customChatSystem.lua"
         },
         {
             name = "飞行V4",
-            link = "https://raw.atomgit.com/Furrycalin/RobloxScripts/raw/main/FlyV4.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/RobloxScripts/refs/heads/main/FlyV4.lua"
         },
         {
             name = "超高画质",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Graphics.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/Graphics.lua"
         },
         {
             name = "光影",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Shader.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/Shader.lua"
         },
         {
             name = "通用自瞄",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Zimiao.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/Zimiao.lua"
         },
         {
             name = "IY5.5.9(指令挂)",
@@ -225,7 +225,7 @@ local data = {
         },
         {
             name = "DexDark",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DexDark.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/DexDark.lua"
         },
         {
             name = "OldMSPaint",
@@ -237,31 +237,31 @@ local data = {
         },
         {
             name = "Doors扫描器",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DoorsNVC3000.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/DoorsNVC3000.lua"
         },
         {
             name = "Doors剪刀",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/shears_done.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/shears_done.lua"
         },
         {
             name = "Doors紫色手电筒",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/PurpleFlashlightScript.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/PurpleFlashlightScript.lua"
         },
         {
             name = "Doors巧克力罐",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/ChocolateBar.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/ChocolateBar.lua"
         },
         {
             name = "通用ESP",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/ESP.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/ESP.lua"
         },
         {
             name = "冬凌中心",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/DongLingLobby.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/DongLingLobby.lua"
         },
         {
             name = "玩家控制",
-            link = "https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/PlayerControl.lua"
+            link = "https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/PlayerControl.lua"
         },
         {
             name = "吃掉世界",
@@ -882,7 +882,7 @@ ToolsTab:AddToggle({
 ToolsTab:AddButton({ Text = "重新加入当前房间(服务器)", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() rejoinCurrentGame() end })
 ToolsTab:AddButton({ Text = "切换时间为白天", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() setDay() end })
 ToolsTab:AddButton({ Text = "切换时间为黑夜", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() setNight() end })
-ToolsTab:AddButton({ Text = "优化世界光效", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.gitcode.com/Furrycalin/ChronixHub/raw/main/modules/WorldShader.lua"))() end })
+ToolsTab:AddButton({ Text = "优化世界光效", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/WorldShader.lua"))() end })
 ToolsTab:AddButton({ Text = "打印眼前实例名到控制台", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function()
     -- 使用已有的 player 和 character，从 character 获取 head
     local head = character:WaitForChild("Head")
@@ -1875,7 +1875,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
             OtherGameTab:AddButton({ Text = "传送到 营地4", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(8992, 596, 102) end })
             OtherGameTab:AddButton({ Text = "传送到 营地5", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() TeleportTo(10990, 550, 104) end })
             OtherGameTab:AddLabel("圣诞活动")
-            OtherGameTab:AddButton({ Text = "获取所有礼物", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
+            OtherGameTab:AddButton({ Text = "获取所有礼物", HasIcon = true, IconName = "mouse-pointer-click", IconColor = Color3.fromRGB(255, 255, 255), Callback = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/SouthExpedition_Christmas_getallgifts.lua"))() end })
             local njtx_giftnumber = 0
             OtherGameTab:AddInput({
                 Label = "礼物号",
