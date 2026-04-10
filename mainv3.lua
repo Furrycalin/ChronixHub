@@ -2102,7 +2102,7 @@ for _, GetgameInfo in ipairs(data.Supported_Games) do
 end
 
 
-local infoTab = mainWindow:CreateTab({ Name = "关于", HasIcon = true, IconName = "info" })
+local infoTab = mainWindow:CreateTab({ Name = "关于", HasIcon = true, IconName = "info", IconColor = Color3.fromRGB(255, 255, 255) })
 infoTab:AddParagraph({
     Title = "关于 ChronixHub V3",
     Content = "ChronixHub V3 是一个功能强大的 Roblox 多功能工具集\n\n"
