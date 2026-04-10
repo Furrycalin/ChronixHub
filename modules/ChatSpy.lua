@@ -27,7 +27,7 @@ local LocalPlayer = Players.LocalPlayer
 local isLegacyChat = TextChatService.ChatVersion == Enum.ChatVersion.LegacyChatService
 
 -- 加载系统通知模块（路径保持不变）
-local SystemNotification = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/SystemNotification.lua"))()
+local SystemNotification = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/SystemNotification.lua"))()
 
 -- 新版聊天系统的核心频道
 local generalChannel = nil
