@@ -7,7 +7,7 @@
 ## **▶ ChronixHubV3**  
 **执行代码：**  
 ```lua
-loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/mainv3.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/mainv3.lua"))()
 ```
 **描述**  
 > 第三次重构UI和代码体系，进行模块化和现代化设计，抛弃V2的不成熟体系，保证兼容性和功能性最大化。  
