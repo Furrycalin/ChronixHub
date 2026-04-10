@@ -1,2 +1,2 @@
-loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Shader.lua"))()
-loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ScriptStorage/raw/main/Graphics.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/Shader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ScriptStorage/refs/heads/main/Graphics.lua"))()
