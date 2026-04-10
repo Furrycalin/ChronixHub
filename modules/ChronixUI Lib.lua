@@ -1122,6 +1122,13 @@ function ChronixUI:CreateWindow(config)
             local btnText = btnConfig.Text or "按钮"
             local callback = btnConfig.Callback or function() end
 
+            -- === 新增：图标配置 ===
+            local hasIcon = btnConfig.HasIcon or false
+            local iconName = btnConfig.IconName or ""
+            local iconType = btnConfig.IconType or "lucide"
+            local iconColor = btnConfig.IconColor
+            -- =====================
+
             local btn = Instance.new("TextButton")
             btn.Parent = tabContent
             btn.Size = UDim2.new(1, 0, 0, math.floor(38 * scale))
@@ -1135,6 +1142,32 @@ function ChronixUI:CreateWindow(config)
             btnCorner.CornerRadius = UDim.new(0, math.floor(4 * scale))
             btnCorner.Parent = btn
             AddStroke(btn, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+
+            -- === 新增：右侧图标 ===
+            if hasIcon and iconName ~= "" then
+                local iconLabel = IconModule:CreateIcon(iconName, UDim2.new(0, 20 * scale, 0, 20 * scale), iconColor, iconType)
+                if iconLabel then
+                    iconLabel.Name = "ButtonIcon"
+                    iconLabel.Position = UDim2.new(1, -28 * scale, 0.5, -10 * scale)
+                    iconLabel.Parent = btn
+                else
+                    -- 异步加载
+                    IconModule:WaitForIcon(iconName, iconType, function(iconId)
+                        if iconId and btn and btn.Parent then
+                            local newIcon = Instance.new("ImageLabel")
+                            newIcon.Name = "ButtonIcon"
+                            newIcon.Size = UDim2.new(0, 20 * scale, 0, 20 * scale)
+                            newIcon.Position = UDim2.new(1, -28 * scale, 0.5, -10 * scale)
+                            newIcon.BackgroundTransparency = 1
+                            newIcon.Image = iconId
+                            newIcon.ScaleType = Enum.ScaleType.Fit
+                            if iconColor then newIcon.ImageColor3 = iconColor end
+                            newIcon.Parent = btn
+                        end
+                    end)
+                end
+            end
+            -- =====================
 
             btn.MouseButton1Click:Connect(function()
                 PlayClickSound()
@@ -1411,6 +1444,13 @@ function ChronixUI:CreateWindow(config)
             local default = inputConfig.Default or ""
             local callback = inputConfig.Callback or function() end
 
+            -- === 新增：图标配置 ===
+            local hasIcon = inputConfig.HasIcon or false
+            local iconName = inputConfig.IconName or ""
+            local iconType = inputConfig.IconType or "lucide"
+            local iconColor = inputConfig.IconColor
+            -- =====================
+
             local container = Instance.new("Frame")
             container.Parent = tabContent
             container.Size = UDim2.new(1, 0, 0, math.floor(70 * scale))
@@ -1435,6 +1475,32 @@ function ChronixUI:CreateWindow(config)
             inputCorner.CornerRadius = UDim.new(0, math.floor(4 * scale))
             inputCorner.Parent = inputBox
             AddStroke(inputBox, ChronixUI.Themes[ChronixUI.CurrentTheme].Border)
+
+            -- === 新增：右侧图标 ===
+            if hasIcon and iconName ~= "" then
+                local iconLabel = IconModule:CreateIcon(iconName, UDim2.new(0, 20 * scale, 0, 20 * scale), iconColor, iconType)
+                if iconLabel then
+                    iconLabel.Name = "InputIcon"
+                    iconLabel.Position = UDim2.new(1, -28 * scale, 0.5, -10 * scale)
+                    iconLabel.Parent = inputBox
+                else
+                    -- 异步加载
+                    IconModule:WaitForIcon(iconName, iconType, function(iconId)
+                        if iconId and inputBox and inputBox.Parent then
+                            local newIcon = Instance.new("ImageLabel")
+                            newIcon.Name = "InputIcon"
+                            newIcon.Size = UDim2.new(0, 20 * scale, 0, 20 * scale)
+                            newIcon.Position = UDim2.new(1, -28 * scale, 0.5, -10 * scale)
+                            newIcon.BackgroundTransparency = 1
+                            newIcon.Image = iconId
+                            newIcon.ScaleType = Enum.ScaleType.Fit
+                            if iconColor then newIcon.ImageColor3 = iconColor end
+                            newIcon.Parent = inputBox
+                        end
+                    end)
+                end
+            end
+            -- =====================
 
             inputBox.FocusLost:Connect(function()
                 callback(inputBox.Text)
