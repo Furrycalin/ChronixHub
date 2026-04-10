@@ -22,7 +22,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
-local UIParticleSystem = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/UIParticleSystem.lua"))()
+local UIParticleSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/UIParticleSystem.lua"))()
 
 -- ========== 多图标库集成模块 ==========
 local cloneref = cloneref or clonereference or function(instance)
