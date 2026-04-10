@@ -29,17 +29,6 @@ local cloneref = cloneref or clonereference or function(instance)
     return instance
 end
 
-local function SafeHttpGet(url)
-    local success, result = pcall(function()
-        if game:HttpGet then
-            return game:HttpGet(url)
-        else
-            return HttpService:GetAsync(url)
-        end
-    end)
-    return success and result or nil
-end
-
 local IconModule = {
     -- 默认图标类型
     DefaultType = "lucide",
@@ -73,7 +62,7 @@ function IconModule:LoadIconSet(iconType)
     
     task.spawn(function()
         local url = "https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/icons/" .. iconType .. "/Icons.lua"
-        local data = SafeHttpGet(url)
+        local data = game:HttpGet(url)
         
         if data then
             local success, icons = pcall(loadstring(data))
