@@ -52,6 +52,7 @@ local IconModule = {
         "geist",
         "sfsymbols",
         "gravity",
+        "other",
     },
     
     -- 存储所有图标数据
@@ -71,7 +72,7 @@ function IconModule:LoadIconSet(iconType)
     self.IsLoading[iconType] = true
     
     task.spawn(function()
-        local url = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/" .. iconType .. "/dist/Icons.lua"
+        local url = "https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/icons/" .. iconType .. "/Icons.lua"
         local data = SafeHttpGet(url)
         
         if data then
@@ -1001,7 +1002,7 @@ function ChronixUI:CreateWindow(config)
         -- 图标配置
         local hasIcon = tabConfig.HasIcon or false
         local iconName = tabConfig.IconName or ""
-        local iconType = tabConfig.IconType or "lucide"  -- lucide, solar, craft, geist, sfsymbols, gravity
+        local iconType = tabConfig.IconType or "lucide"  -- lucide, solar, craft, geist, sfsymbols, gravity, other
         local iconColor = tabConfig.IconColor  -- 可选
         
         -- 计算文字偏移量
