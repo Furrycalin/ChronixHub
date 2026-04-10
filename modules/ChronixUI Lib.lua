@@ -61,7 +61,7 @@ function IconModule:LoadIconSet(iconType)
     self.IsLoading[iconType] = true
     
     task.spawn(function()
-        local url = "https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/icons/" .. iconType .. "/Icons.lua"
+        local url = "https://raw.githubusercontent.com/Furrycalin/ChronixHub/refs/heads/main/modules/icons/" .. iconType .. "/Icons.lua"
         local data = game:HttpGet(url)
         
         if data then
