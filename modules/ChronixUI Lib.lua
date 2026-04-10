@@ -24,50 +24,163 @@ local Mouse = LocalPlayer:GetMouse()
 
 local UIParticleSystem = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/UIParticleSystem.lua"))()
 
--- ========== Lucide 图标库加载 (基于 Roblox 资产 ID) ==========
-local IconLibrary = {
+-- ========== 多图标库集成模块 ==========
+local cloneref = cloneref or clonereference or function(instance)
+    return instance
+end
+
+local function SafeHttpGet(url)
+    local success, result = pcall(function()
+        if game:HttpGet then
+            return game:HttpGet(url)
+        else
+            return HttpService:GetAsync(url)
+        end
+    end)
+    return success and result or nil
+end
+
+local IconModule = {
+    -- 默认图标类型
+    DefaultType = "lucide",
+    
+    -- 所有可用的图标库
+    AvailableTypes = {
+        "lucide",
+        "solar", 
+        "craft",
+        "geist",
+        "sfsymbols",
+        "gravity",
+    },
+    
+    -- 存储所有图标数据
     Icons = {},
-    Loaded = false,
-    IsLoading = false
+    
+    -- 加载状态
+    Loaded = {},
+    IsLoading = {},
 }
 
--- 异步加载图标库
-function IconLibrary:Load()
-    if self.Loaded or self.IsLoading then return end
-    self.IsLoading = true
+-- 异步加载指定类型的图标库
+function IconModule:LoadIconSet(iconType)
+    if self.Loaded[iconType] or self.IsLoading[iconType] then
+        return
+    end
+    
+    self.IsLoading[iconType] = true
     
     task.spawn(function()
-        local success, result = pcall(function()
-            -- 使用 loadstring 执行远程 Lua 脚本，它会返回一个包含图标映射的表
-            local iconModule = loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/modules/icons.lua"))()
-            return iconModule
-        end)
+        local url = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/" .. iconType .. "/dist/Icons.lua"
+        local data = SafeHttpGet(url)
         
-        if success and type(result) == "table" then
-            self.Icons = result
-            self.Loaded = true
-            local count = 0
-            for _ in pairs(self.Icons) do count = count + 1 end
-            print("[ChronixUI] 图标库加载成功，共 " .. count .. " 个图标")
+        if data then
+            local success, icons = pcall(loadstring(data))
+            if success and type(icons) == "table" then
+                self.Icons[iconType] = icons
+                self.Loaded[iconType] = true
+                print("[ChronixUI] 图标库加载成功: " .. iconType)
+            else
+                warn("[ChronixUI] 图标库解析失败: " .. iconType)
+            end
         else
-            warn("[ChronixUI] 图标库加载失败，将使用无图标模式")
+            warn("[ChronixUI] 图标库下载失败: " .. iconType)
         end
-        self.IsLoading = false
+        
+        self.IsLoading[iconType] = false
     end)
 end
 
--- 获取图标资产 ID
--- @param iconName 图标名称，如 "home", "settings", "user"
-function IconLibrary:GetIconId(iconName)
-    if not self.Loaded then
-        return nil
+-- 加载所有图标库
+function IconModule:LoadAll()
+    for _, iconType in ipairs(self.AvailableTypes) do
+        self:LoadIconSet(iconType)
     end
-    return self.Icons[iconName]
 end
 
--- 启动异步加载
-IconLibrary:Load()
--- ========== 图标库加载结束 ==========
+-- 设置默认图标类型
+function IconModule:SetDefaultType(iconType)
+    if table.find(self.AvailableTypes, iconType) then
+        self.DefaultType = iconType
+    end
+end
+
+-- 获取图标（支持指定类型）
+function IconModule:GetIcon(iconName, iconType)
+    iconType = iconType or self.DefaultType
+    
+    -- 如果还没加载，尝试同步加载（可能会阻塞，所以只做 fallback）
+    if not self.Loaded[iconType] then
+        self:LoadIconSet(iconType)
+        return nil
+    end
+    
+    local iconSet = self.Icons[iconType]
+    if not iconSet then
+        return nil
+    end
+    
+    -- 直接返回资产 ID
+    if iconSet[iconName] and type(iconSet[iconName]) == "string" and iconSet[iconName]:find("rbxassetid://") then
+        return iconSet[iconName]
+    end
+    
+    -- 如果是复杂格式，提取 Image 字段
+    if iconSet.Icons and iconSet.Icons[iconName] then
+        return iconSet.Icons[iconName].Image
+    end
+    
+    return nil
+end
+
+-- 检查图标是否已加载
+function IconModule:IsIconLoaded(iconName, iconType)
+    iconType = iconType or self.DefaultType
+    return self.Loaded[iconType] and self:GetIcon(iconName, iconType) ~= nil
+end
+
+-- 创建图标 ImageLabel
+function IconModule:CreateIcon(iconName, size, color, iconType)
+    local iconId = self:GetIcon(iconName, iconType)
+    if not iconId then
+        return nil
+    end
+    
+    local iconLabel = Instance.new("ImageLabel")
+    iconLabel.Size = size or UDim2.new(0, 24, 0, 24)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Image = iconId
+    iconLabel.ScaleType = Enum.ScaleType.Fit
+    
+    if color then
+        iconLabel.ImageColor3 = color
+    end
+    
+    return iconLabel
+end
+
+-- 等待图标加载完成（异步）
+function IconModule:WaitForIcon(iconName, iconType, callback)
+    iconType = iconType or self.DefaultType
+    
+    task.spawn(function()
+        local waited = 0
+        while not self:IsIconLoaded(iconName, iconType) and waited < 5 do
+            task.wait(0.5)
+            waited = waited + 0.5
+        end
+        
+        if self:IsIconLoaded(iconName, iconType) then
+            callback(self:GetIcon(iconName, iconType))
+        else
+            callback(nil)
+        end
+    end)
+end
+
+-- 启动加载所有图标库
+IconModule:LoadAll()
+-- ========== 多图标库集成结束 ==========
 
 -- 设备类型判断
 local function GetDeviceType()
@@ -888,7 +1001,8 @@ function ChronixUI:CreateWindow(config)
         -- 图标配置
         local hasIcon = tabConfig.HasIcon or false
         local iconName = tabConfig.IconName or ""
-        -- 注意：这个图标库的资产 ID 已经包含了颜色（通常是黑色或白色），不需要额外的颜色参数
+        local iconType = tabConfig.IconType or "lucide"  -- lucide, solar, craft, geist, sfsymbols, gravity
+        local iconColor = tabConfig.IconColor  -- 可选
         
         -- 计算文字偏移量
         local textPadding = 8 * scale
@@ -913,23 +1027,18 @@ function ChronixUI:CreateWindow(config)
         -- 图标 ImageLabel（如果需要）
         local iconLabel = nil
         if hasIcon and iconName ~= "" then
-            iconLabel = Instance.new("ImageLabel")
-            iconLabel.Name = "TabIcon"
-            iconLabel.Size = UDim2.new(0, 18 * scale, 0, 18 * scale)
-            iconLabel.Position = UDim2.new(0, 8 * scale, 0.5, -9 * scale)
-            iconLabel.BackgroundTransparency = 1
-            iconLabel.Visible = false
-            iconLabel.Parent = tabBtn
+            local iconSize = UDim2.new(0, 18 * scale, 0, 18 * scale)
+            local createdIcon = IconModule:CreateIcon(iconName, iconSize, iconColor, iconType)
             
-            iconOffset = 26 * scale
-            
-            -- 尝试获取图标 ID
-            local iconId = IconLibrary:GetIconId(iconName)
-            if iconId then
-                iconLabel.Image = iconId
-                iconLabel.Visible = true
+            if createdIcon then
+                iconLabel = createdIcon
+                iconLabel.Name = "TabIcon"
+                iconLabel.Position = UDim2.new(0, 8 * scale, 0.5, -9 * scale)
+                iconLabel.Parent = tabBtn
+                iconOffset = 26 * scale
             else
-                iconOffset = 0
+                -- 图标还没加载完，先预留位置，等加载完再补上
+                iconOffset = 26 * scale
             end
         end
         
@@ -947,23 +1056,20 @@ function ChronixUI:CreateWindow(config)
         tabTextLabel.Parent = tabBtn
 
         -- 延迟补加载图标
-        if hasIcon and iconName ~= "" and iconLabel and not iconLabel.Visible then
-            task.spawn(function()
-                local waited = 0
-                while not IconLibrary.Loaded and waited < 3 do
-                    task.wait(0.5)
-                    waited = waited + 0.5
-                end
-                
-                if IconLibrary.Loaded then
-                    local iconId = IconLibrary:GetIconId(iconName)
-                    if iconId and iconLabel then
-                        iconLabel.Image = iconId
-                        iconLabel.Visible = true
-                        local newIconOffset = 26 * scale
-                        tabTextLabel.Position = UDim2.new(0, textPadding + newIconOffset, 0, 0)
-                        tabTextLabel.Size = UDim2.new(1, -textPadding - newIconOffset - 8*scale, 1, 0)
+        if hasIcon and iconName ~= "" and not iconLabel then
+            IconModule:WaitForIcon(iconName, iconType, function(iconId)
+                if iconId and tabBtn and tabBtn.Parent then
+                    local newIcon = Instance.new("ImageLabel")
+                    newIcon.Name = "TabIcon"
+                    newIcon.Size = UDim2.new(0, 18 * scale, 0, 18 * scale)
+                    newIcon.Position = UDim2.new(0, 8 * scale, 0.5, -9 * scale)
+                    newIcon.BackgroundTransparency = 1
+                    newIcon.Image = iconId
+                    newIcon.ScaleType = Enum.ScaleType.Fit
+                    if iconColor then
+                        newIcon.ImageColor3 = iconColor
                     end
+                    newIcon.Parent = tabBtn
                 end
             end)
         end
