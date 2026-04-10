@@ -71,6 +71,7 @@ loadstring(game:HttpGet("https://raw.atomgit.com/Furrycalin/ChronixHub/raw/main/
 | **K6** | 提供隐身代码支持 |
 | **OrionLib** | UI排版灵感来源 |
 | **Wally's UI Library** | UI排版灵感来源 |
+| [**WindUI**](https://github.com/Footagesus/WindUI) | 使用了Icon库 |
 
 > 若你有为本项目贡献代码或提供帮助，欢迎通过 Pull Request 或 Issue 告知，我会将你加入鸣谢列表。
 
